@@ -129,7 +129,7 @@ our.data = cbind(our.data, TYPE)
 # read in other datasets and calculate numbers of LoF and NS, SNVs and indels
 
 ########### ID datasets ###############
-rauch = read.delim(file.path(DE_NOVO_DIR, "Meta_analysis_other_DNM_studies/rauch_v2.txt"), header=T)
+rauch = read.delim(file.path(DE_NOVO_DIR, "rauch_v2.txt"), header=T)
 deligt = read.delim(file.path(DE_NOVO_DIR, "deligt_v2.txt"), header=T)
 
 ########### Epi4K dataset ############
@@ -175,7 +175,7 @@ merged.CQ = c(as.character(our.data$curated_CQ), as.character(deligt$INFO.CQ), a
 merged.POS = c(as.character(our.data$pos), as.character(deligt$POS), as.character(rauch$POS), as.character(autism$pos), as.character(fromer$pos), as.character(epi4k$pos), as.character(zaidi$pos))
 merged.CHROM = c(as.character(our.data$chr), as.character(deligt$CHROM), as.character(rauch$CHROM), as.character(autism$CHROM), as.character(fromer$chrom), as.character(epi4k$chrom), as.character(zaidi$chrom))
 merged.TYPE = c(as.character(our.data$TYPE), as.character(deligt$TYPE), as.character(rauch$TYPE), as.character(autism$TYPE), as.character(fromer$TYPE), as.character(epi4k$TYPE), as.character(zaidi$TYPE))
-merged.STUDY = c(rep("DDD", nrow(our.data), rep("deligt", nrow(deligt), rep("rauch", nrow(rauch), rep("autism", nrow(autism), rep("fromer", nrow(fromer), rep("epi4k", nrow(epi4k), rep("zaidi", nrow(zaidi))
+merged.STUDY = c(rep("DDD", nrow(our.data)), rep("deligt", nrow(deligt)), rep("rauch", nrow(rauch)), rep("autism", nrow(autism)), rep("fromer", nrow(fromer)), rep("epi4k", nrow(epi4k)), rep("zaidi", nrow(zaidi)))
 raw.data = data.frame(merged.HGNC, merged.CQ, merged.POS, merged.CHROM, merged.TYPE, merged.STUDY) 
 names(raw.data) = c("HGNC", "CQ", "POS", "CHROM", "TYPE", "STUDY")
 
@@ -217,6 +217,16 @@ num.genes = length(input.data[,1])
 
 ######### Calculate MUPit mutation rates ###########
 
+auto.transmissions = 2 * (num.trios.male + num.trios.female)
+female.transmissions = num.trios.male + num.trios.female
+male.transmissions = num.trios.female
+
+# get scaling factors using the alpha from the most recent SFHS (Scottish 
+# Family Health Study) phased de novo data.
+alpha = 3.4 
+male.chrx.scaling = 2 / (1 + (1 / alpha))
+female.chrx.scaling = 2 / (1 + alpha)
+
 #set mutation rates for snvs and indels
 snv.mut.rate = 1.5E-8 # higher than genome-wide mutation rate, due to higher GC ...
 indel.mut.rate = 0.53E-9 # ~10% of genome-wide SNV mutation rate, no reason to think higher in exome
@@ -252,7 +262,7 @@ gene.indel.lof.rate[gene.index.chrx] = cds.length[gene.index.chrx]*indel.prop.lo
 # checked chrX rate is now slower with plot(gene.snv.missense.rate, cds.length)
 
 # calculate the Daly mutation rates
-rates = get_mutation_rates()
+rates = get_mutation_rates(num.trios.male, num.trios.female)
 
 # set-up vectors to store gene-specific information only for observed genes
 observed.cds.length = rep(0,num.genes)
@@ -321,7 +331,7 @@ for (i in 1:num.genes) {
 for (i in 1:num.genes) {
     #catch if info not available for that gene
 
-    if (length(which(as.character(daly$gene) == as.character(input.data$V1[i])))==0) {
+    if (length(which(as.character(rates$daly$gene) == as.character(input.data$V1[i])))==0) {
         daly.observed.snv.missense.rate[i] = NA
         daly.observed.snv.lof.rate[i] = NA
         daly.observed.indel.missense.rate[i] = NA
@@ -330,12 +340,12 @@ for (i in 1:num.genes) {
         daly.p.DNM.func[i] = NA
         daly.p.DNM.lof[i] = NA
     } else {
-        gene.index = which(as.character(daly$gene) == as.character(input.data$V1[i]))
+        gene.index = which(as.character(rates$daly$gene) == as.character(input.data$V1[i]))
         
-        daly.observed.snv.missense.rate[i] = daly.gene.snv.missense.rate[gene.index]
-        daly.observed.snv.lof.rate[i] = daly.gene.snv.lof.rate[gene.index]
-        daly.observed.indel.missense.rate[i] = daly.gene.indel.missense.rate[gene.index]
-        daly.observed.indel.lof.rate[i] = daly.gene.indel.lof.rate[gene.index]
+        daly.observed.snv.missense.rate[i] = rates$snv.missense.rate[gene.index]
+        daly.observed.snv.lof.rate[i] = rates$snv.lof.rate[gene.index]
+        daly.observed.indel.missense.rate[i] = rates$indel.missense.rate[gene.index]
+        daly.observed.indel.lof.rate[i] = rates$indel.lof.rate[gene.index]
         
         observed.lof = as.numeric(input.data$LOF.snvs[i])+as.numeric(input.data$LOF.indels[i]) 
            
@@ -362,7 +372,7 @@ input.data.plus = cbind(input.data, observed.chr, observed.coord, observed.cds.l
 
 # input.data.plus = cbind(input.data, observed.chr, observed.coord, observed.cds.length, observed.snv.missense.rate, observed.snv.lof.rate, p.DNM.lof, p.DNM.func)
 
-write.table(input.data.plus, file="/Volumes/DDD_meh/Analysis/Exome/For_1133_trio_ms/Meta_DD_undiagnosed/Mup-it_Daly_100414_META_undiagnosed.output.txt", row.names=F, quote=F, sep="\t")
+write.table(input.data.plus, file=file.path(DATA_DIR, "Mup-it_Daly_100414_META_undiagnosed.output.txt"), row.names=F, quote=F, sep="\t")
 
 #found.gene.index = which(gene.info$HGNC %in% input.data$HGNC)
 
