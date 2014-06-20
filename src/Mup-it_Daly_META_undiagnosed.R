@@ -27,9 +27,13 @@
 
 ######### SETTINGS ################
 
+CODE_DIR = "/nfs/users/nfs_j/jm33/apps/enrichment_analysis"
+DATA_DIR = file.path(CODE_DIR, "data")
+SRC_DIR = file.path(CODE_DIR, "src")
+source(file.path(SRC_DIR, "mutation_rates_daly.R"))
+
 
 CQ.LOF<-c("stop_gained", "splice_acceptor_variant", "splice_donor_variant", "frameshift_variant")
-
 CQ.NS<-c( "missense_variant", "initiator_codon_variant", "stop_lost", "inframe_deletion", "inframe_insertion")
 
 #number of trios studied in our data
@@ -92,21 +96,6 @@ num.trios.female<-num.trios.female.ddd +  num.trios.female.deligt + num.trios.fe
 
 
 num.trios<-num.trios.male + num.trios.female # to give total of 1130 (1133 minus 1 twin of 3 identical twins)
-
-auto.transmissions<-2*num.trios
-
-female.transmissions<-num.trios # for chrX analyses
-
-male.transmissions<-num.trios.female # for chrX analyses
-
-
-#specify ratio of male and female mutation rate to estimate sex-specific rate to allow rate estimation for chrX
-
-alpha=3.4
-
-male.chrx.scaling<-2/(1+1/alpha)
-
-female.chrx.scaling<-2/(1+alpha)
 
 
 #read-in length of coding sequence of each gene, from Ensembl biomart
@@ -208,50 +197,34 @@ zaidi<-cbind(zaidi, TYPE)
 
 # remove DNMs in controls
 
-zaidi<-zaidi[-which(zaidi$Primary_Cardiac_Class=="Control"),]
+zaidi<-zaidi[-which(zaidi$Primary_Cardiac_Class=="Control"), ]
 
 
 
 # get complete lists of genes
 #WITH ZAIDI
-
 merged.HGNC<-c(as.character(our.data$curated_HGNC), as.character(deligt$INFO.HGNC), as.character(rauch$INFO.HGNC), as.character(autism$INFO.HGNC), as.character(fromer$INFO.HGNC), as.character(epi4k$INFO.HGNC), as.character(zaidi$INFO.HGNC))
-
 merged.CQ<-c(as.character(our.data$curated_CQ), as.character(deligt$INFO.CQ), as.character(rauch$INFO.CQ), as.character(autism$INFO.CQ), as.character(fromer$INFO.CQ), as.character(epi4k$INFO.CQ), as.character(zaidi$INFO.CQ))
-
 merged.POS<-c(as.character(our.data$pos), as.character(deligt$POS), as.character(rauch$POS), as.character(autism$pos), as.character(fromer$pos), as.character(epi4k$pos), as.character(zaidi$pos))
-
 merged.CHROM<-c(as.character(our.data$chr), as.character(deligt$CHROM), as.character(rauch$CHROM), as.character(autism$CHROM), as.character(fromer$chrom), as.character(epi4k$chrom), as.character(zaidi$chrom))
-
 merged.TYPE<-c(as.character(our.data$TYPE), as.character(deligt$TYPE), as.character(rauch$TYPE), as.character(autism$TYPE), as.character(fromer$TYPE), as.character(epi4k$TYPE), as.character(zaidi$TYPE))
-
-merged.STUDY<-c(rep("DDD", length(our.data[,1])), rep("deligt", length(deligt[,1])), rep("rauch", length(rauch[,1])), rep("autism", length(autism[,1])), rep("fromer", length(fromer[,1])), rep("epi4k", length(epi4k[,1])), rep("zaidi", length(zaidi[,1])))
-
+merged.STUDY<-c(rep("DDD", nrow(our.data), rep("deligt", nrow(deligt), rep("rauch", nrow(rauch), rep("autism", nrow(autism), rep("fromer", nrow(fromer), rep("epi4k", nrow(epi4k), rep("zaidi", nrow(zaidi))
 raw.data<-data.frame(merged.HGNC, merged.CQ, merged.POS, merged.CHROM, merged.TYPE, merged.STUDY) 
-
 names(raw.data)<-c("HGNC", "CQ", "POS", "CHROM", "TYPE", "STUDY")
 
 #WITHOUT ZAIDI
-
 #merged.HGNC<-c(as.character(our.data$curated_HGNC), as.character(deligt$INFO.HGNC), as.character(rauch$INFO.HGNC), as.character(autism$INFO.HGNC), as.character(fromer$INFO.HGNC), as.character(epi4k$INFO.HGNC))
-
 #merged.CQ<-c(as.character(our.data$curated_CQ), as.character(deligt$INFO.CQ), as.character(rauch$INFO.CQ), as.character(autism$INFO.CQ), as.character(fromer$INFO.CQ), as.character(epi4k$INFO.CQ))
-
 #merged.POS<-c(as.character(our.data$pos), as.character(deligt$POS), as.character(rauch$POS), as.character(autism$POS), as.character(fromer$POS), as.character(epi4k$POS))
-
 #merged.CHROM<-c(as.character(our.data$chr), as.character(deligt$CHROM), as.character(rauch$CHROM), as.character(autism$CHROM), as.character(fromer$CHROM), as.character(epi4k$CHROM))
-
 #merged.TYPE<-c(as.character(our.data$TYPE), as.character(deligt$TYPE), as.character(rauch$TYPE), as.character(autism$TYPE), as.character(fromer$TYPE), as.character(epi4k$TYPE))
-
 #raw.data<-data.frame(merged.HGNC, merged.CQ, merged.POS, merged.CHROM, merged.TYPE, merged.STUDY) 
-
 #names(raw.data)<-c("HGNC", "CQ", "POS", "CHROM", "TYPE", "STUDY")
 
 
 #write.table(raw.data, file="/Volumes/DDD_meh/Analysis/Exome/Recurrent_DNM_signif/DNMs_280114/Meta_analysis_other_DNM_studies/Meta_DNMs_4Jeremy_100314.txt",  quote=F, row.names=F, sep="\t")
 
 ############
-
 
 num.variants<-length(raw.data[,1])
 
@@ -265,13 +238,9 @@ LOF.counts<-table(as.character(raw.data$HGNC), raw.data$TYPE, LOF.variants)
 NS.counts<-table(as.character(raw.data$HGNC), raw.data$TYPE, NS.variants)
 
 LOF.snvs<-LOF.counts[,2,2]
-
 LOF.indels<-LOF.counts[,1,2]
-
 NS.snvs<-NS.counts[,2,2]
-
 NS.indels<-NS.counts[,1,2]
-
 tot.NS.LOF<-rowSums(cbind(LOF.snvs, NS.snvs, LOF.indels, NS.indels))
 
 input.data<-data.frame(cbind(dimnames(data.frame(LOF.snvs))[[1]] , LOF.snvs, NS.snvs, LOF.indels, NS.indels, tot.NS.LOF), stringsAsFactors=F)
@@ -279,15 +248,10 @@ input.data<-data.frame(cbind(dimnames(data.frame(LOF.snvs))[[1]] , LOF.snvs, NS.
 num.genes<-length(input.data[,1])
 
 
-
-
-
 ######### Calculate MUPit mutation rates ###########
 
 #set mutation rates for snvs and indels
-
 snv.mut.rate<-1.5E-8 # higher than genome-wide mutation rate, due to higher GC ...
-
 indel.mut.rate<-0.53E-9 # ~10% of genome-wide SNV mutation rate, no reason to think higher in exome
 
 male.snv.mut.rate<-snv.mut.rate*male.chrx.scaling
@@ -297,22 +261,16 @@ male.indel.mut.rate<-indel.mut.rate*male.chrx.scaling
 female.indel.mut.rate<-indel.mut.rate*female.chrx.scaling
 
 # specify proportion of coding mutations of different types
-
 snv.prop.lof<-0.0485 # from Daly
 snv.prop.missense<-0.6597 # from Daly
 
 indel.prop.lof<-0.9 # non-3n, from size distribution in neutral sequence
 indel.prop.missense<-0.1
 
-
 #calculate rates of missense and lof mutations, multiply by 2 for 2 transmissions/child and number of trios
-
 gene.snv.missense.rate<-cds.length*snv.mut.rate*snv.prop.missense*auto.transmissions
-
 gene.snv.lof.rate<-cds.length*snv.mut.rate*snv.prop.lof*auto.transmissions
-
 gene.indel.missense.rate<-cds.length*indel.mut.rate*indel.prop.missense*auto.transmissions
-
 gene.indel.lof.rate<-cds.length*indel.mut.rate*indel.prop.lof*auto.transmissions
 
 
@@ -321,73 +279,14 @@ gene.indel.lof.rate<-cds.length*indel.mut.rate*indel.prop.lof*auto.transmissions
 
 
 gene.snv.missense.rate[gene.index.chrx]<-cds.length[gene.index.chrx]*snv.prop.missense*(male.transmissions*male.snv.mut.rate + female.transmissions*female.snv.mut.rate)
-
 gene.snv.lof.rate[gene.index.chrx]<-cds.length[gene.index.chrx]*snv.prop.lof*(male.transmissions*male.snv.mut.rate + female.transmissions*female.snv.mut.rate)
-
 gene.indel.missense.rate[gene.index.chrx]<-cds.length[gene.index.chrx]*indel.prop.missense*(male.transmissions*male.indel.mut.rate + female.transmissions*female.indel.mut.rate)
-
 gene.indel.lof.rate[gene.index.chrx]<-cds.length[gene.index.chrx]*indel.prop.lof*(male.transmissions*male.indel.mut.rate + female.transmissions*female.indel.mut.rate)
 
 # checked chrX rate is now slower with plot(gene.snv.missense.rate, cds.length)
 
-
-##### Calculate Daly mutation rates #######
-
-daly<-read.delim("/Volumes/DDD_meh/Analysis/Exome/Recurrent_DNM_signif/Compare_Daly_MUPIT/fixed_mut_prob_fs_adjdepdiv.txt", header=T)
-
-daly<-merge(daly, gene.info, by.x=2, by.y=4, all.x=T) #add chromosome annotation
-
-daly.gene.snv.missense.rate<-(10^daly$mis+10^daly$rdt)*auto.transmissions
-
-daly.gene.snv.lof.rate<-(10^daly$non+10^daly$css)*auto.transmissions
-
-daly.gene.indel.missense.rate<-(10^daly$frameshift)/9*auto.transmissions
-
-daly.gene.indel.lof.rate<-(10^daly$frameshift)*auto.transmissions
-
-
-# could scale to take account of longer transcript
-
-#adapt indel rates to take account of lower rate estimate from validated de novos
-
-valid.nonsense<-102
-valid.frameshift<-95
-daly.scaling<-1.25 # ratio of frameshift to nonsense
-
-daly.gene.indel.missense.rate<-daly.gene.indel.missense.rate/1.25*valid.frameshift/valid.nonsense
-
-daly.gene.indel.lof.rate<-daly.gene.indel.lof.rate/1.25*valid.frameshift/valid.nonsense
-
-
-# catch cases where there is no rdt or css mutation rate, resulting in an NA for composite rates
-
-daly.gene.snv.missense.rate[is.na(daly.gene.snv.missense.rate)]<-(10^daly$mis[is.na(daly.gene.snv.missense.rate)])*auto.transmissions
-
-daly.gene.snv.lof.rate[is.na(daly.gene.snv.lof.rate)]<-(10^daly$non[is.na(daly.gene.snv.lof.rate)])*auto.transmissions
-
-
-#correct non-PAR chrX genes for  fewer transmissions and lower rate (dependent on alpha)
-
-
-daly.gene.index.chrx<-which(daly$chr=="X")
-
-
-daly.gene.snv.missense.rate[daly.gene.index.chrx]<-daly.gene.snv.missense.rate[daly.gene.index.chrx]/auto.transmissions*(male.transmissions*male.chrx.scaling + female.transmissions*female.chrx.scaling)
-
-#daly.gene.snv.missense.rate[daly.gene.index.chrx]<-(10^daly$mis[daly.gene.index.chrx]+10^daly$rdt[daly.gene.index.chrx])*(male.transmissions*male.chrx.scaling + female.transmissions*female.chrx.scaling)
-
-daly.gene.snv.lof.rate[daly.gene.index.chrx]<-daly.gene.snv.lof.rate[daly.gene.index.chrx]/auto.transmissions*(male.transmissions*male.chrx.scaling + female.transmissions*female.chrx.scaling)
-
-#daly.gene.snv.lof.rate[daly.gene.index.chrx]<-(10^daly$non[daly.gene.index.chrx]+10^daly$css[daly.gene.index.chrx])*(male.transmissions*male.chrx.scaling + female.transmissions*female.chrx.scaling)
-
-daly.gene.indel.missense.rate[daly.gene.index.chrx]<-daly.gene.indel.missense.rate[daly.gene.index.chrx]/auto.transmissions*(male.transmissions*male.chrx.scaling + female.transmissions*female.chrx.scaling)
-
-#daly.gene.indel.missense.rate[daly.gene.index.chrx]<-(10^daly$frameshift[daly.gene.index.chrx])/9*(male.transmissions*male.chrx.scaling + female.transmissions*female.chrx.scaling)
-
-daly.gene.indel.lof.rate[daly.gene.index.chrx]<-daly.gene.indel.lof.rate[daly.gene.index.chrx]/auto.transmissions*(male.transmissions*male.chrx.scaling + female.transmissions*female.chrx.scaling)
-
-#daly.gene.indel.lof.rate[daly.gene.index.chrx]<-(10^daly$frameshift[daly.gene.index.chrx])*(male.transmissions*male.chrx.scaling + female.transmissions*female.chrx.scaling)
-
+# calculate the Daly mutation rates
+rates = get_mutation_rates()
 
 
 # catch cases where there is no rdt or css mutation rate, resulting in an NA for composite rates
@@ -396,7 +295,6 @@ daly.gene.indel.lof.rate[daly.gene.index.chrx]<-daly.gene.indel.lof.rate[daly.ge
 
 
 #set-up vectors to store gene-specific information only for observed genes
-
 observed.cds.length<-rep(0,num.genes)
 observed.chr<-rep(0,num.genes)
 observed.coord<-rep(0,num.genes)
@@ -419,8 +317,7 @@ daly.p.DNM.lof<-rep(0,num.genes)
 
 
 #loop for each observed gene, test for functional variants and lof variants, MUPit mutation rates
-
-for (i in seq(1,num.genes)) {
+for (i in 1:num.genes) {
   
   #catch if info not available for that gene
   
@@ -478,7 +375,7 @@ for (i in seq(1,num.genes)) {
 
 #loop for each observed gene, test for functional variants and lof variants, daly mutation rates
 
-for (i in seq(1,num.genes)) {
+for (i in 1:num.genes) {
   
   #catch if info not available for that gene
   
@@ -526,11 +423,8 @@ for (i in seq(1,num.genes)) {
 num.tests=18500
 
 fdr.lof<-p.adjust(p.DNM.lof, method="BH", n=num.tests)
-
 fdr.func<-p.adjust(p.DNM.func, method="BH", n=num.tests)
-
 daly.fdr.lof<-p.adjust(daly.p.DNM.lof, method="BH", n=num.tests)
-
 daly.fdr.func<-p.adjust(daly.p.DNM.func, method="BH", n=num.tests)
 
 
