@@ -32,13 +32,13 @@ correct_for_x_chrom <- function(rates, males, females) {
     # correct the non-PAR chrX genes for fewer transmissions and lower rate 
     # (dependent on alpha)
     chrX = which(rates$daly$chr == "X")
-    x_scale_factor = autosomal.transmissions * ((male.transmissions * male.chrx.scaling) + (female.transmissions * female.chrx.scaling))
+    x_scale_factor = ((male.transmissions * male.chrx.scaling) + (female.transmissions * female.chrx.scaling))/autosomal.transmissions
     
-    rates$snv.silent.rate[chrX] = rates$snv.silent.rate[chrX] / x_scale_factor
-    rates$snv.missense.rate[chrX] = rates$snv.missense.rate[chrX] / x_scale_factor
-    rates$snv.lof.rate[chrX] = rates$snv.lof.rate[chrX] / x_scale_factor
-    rates$indel.missense.rate[chrX] = rates$indel.missense.rate[chrX] / x_scale_factor
-    rates$indel.lof.rate[chrX] = rates$indel.lof.rate[chrX] / x_scale_factor
+    rates$snv.silent.rate[chrX] = rates$snv.silent.rate[chrX] * x_scale_factor
+    rates$snv.missense.rate[chrX] = rates$snv.missense.rate[chrX] * x_scale_factor
+    rates$snv.lof.rate[chrX] = rates$snv.lof.rate[chrX] * x_scale_factor
+    rates$indel.missense.rate[chrX] = rates$indel.missense.rate[chrX] * x_scale_factor
+    rates$indel.lof.rate[chrX] = rates$indel.lof.rate[chrX] * x_scale_factor
     
     return(rates)
 }
@@ -85,11 +85,11 @@ get_mutation_rates <- function(num.trios.male, num.trios.female) {
     rates$daly = merge(daly, gene.info, by.x=2, by.y=4, all.x=T) 
     
     # get the number of expected mutations, given the number of transmissions
-    rates$snv.silent.rate = (10^daly$syn) * auto.transmissions
-    rates$snv.missense.rate = (10^daly$mis + 10^daly$rdt) * auto.transmissions
-    rates$snv.lof.rate = (10^daly$non + 10^daly$css) * auto.transmissions
-    rates$indel.missense.rate = ((10^daly$frameshift) / 9) * auto.transmissions
-    rates$indel.lof.rate = (10^daly$frameshift) * auto.transmissions
+    rates$snv.silent.rate = (10^rates$daly$syn) * auto.transmissions
+    rates$snv.missense.rate = (10^rates$daly$mis + 10^rates$daly$rdt) * auto.transmissions
+    rates$snv.lof.rate = (10^rates$daly$non + 10^rates$daly$css) * auto.transmissions
+    rates$indel.missense.rate = ((10^rates$daly$frameshift) / 9) * auto.transmissions
+    rates$indel.lof.rate = (10^rates$daly$frameshift) * auto.transmissions
 
     # could scale to take account of longer transcript
     
@@ -97,8 +97,8 @@ get_mutation_rates <- function(num.trios.male, num.trios.female) {
     
     # catch cases where there is no rdt or css mutation rate, resulting in an 
     # NA for composite rates
-    rates$snv.missense.rate[is.na(rates$snv.missense.rate)] = (10^daly$mis[is.na(rates$snv.missense.rate)]) * auto.transmissions
-    rates$snv.lof.rate[is.na(rates$snv.lof.rate)] = (10^daly$non[is.na(rates$snv.lof.rate)]) * auto.transmissions
+    rates$snv.missense.rate[is.na(rates$snv.missense.rate)] = (10^rates$daly$mis[is.na(rates$snv.missense.rate)]) * auto.transmissions
+    rates$snv.lof.rate[is.na(rates$snv.lof.rate)] = (10^rates$daly$non[is.na(rates$snv.lof.rate)]) * auto.transmissions
     
     # and correct for the X-chromosome rates
     rates = correct_for_x_chrom (rates, num.trios.male, num.trios.female)
