@@ -7,7 +7,7 @@
 CODE_DIR = "/nfs/users/nfs_j/jm33/apps/enrichment_analysis"
 DATA_DIR = file.path(CODE_DIR, "data")
 SRC_DIR = file.path(CODE_DIR, "src")
-source(file.path(SRC_DIR, "mutation_rates_daly.R"))
+source(file.path(SRC_DIR, "core", "mutation_rates_daly.R"))
 
 library(plyr)
 

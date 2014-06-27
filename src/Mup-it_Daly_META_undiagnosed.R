@@ -51,7 +51,9 @@ CODE_DIR = "/nfs/users/nfs_j/jm33/apps/enrichment_analysis"
 DATA_DIR = file.path(CODE_DIR, "data")
 SRC_DIR = file.path(CODE_DIR, "src")
 DE_NOVO_DIR = file.path(DATA_DIR, "de_novo_datasets")
-source(file.path(SRC_DIR, "mutation_rates_daly.R"))
+source(file.path(SRC_DIR, "core", "mutation_rates_daly.R"))
+source(file.path(SRC_DIR, "core", "mutation_rates_length.R"))
+source(file.path(SRC_DIR, "core", "open_de_novo_datasets.R"))
 
 CQ.LOF = c("stop_gained", "splice_acceptor_variant", "splice_donor_variant", "frameshift_variant")
 CQ.MISSENSE = c("missense_variant", "initiator_codon_variant", "stop_lost", "inframe_deletion", "inframe_insertion")
@@ -132,134 +134,19 @@ open_datasets <- function(diagnosed) {
     #     data frame containing HGNC, chrom, position, consequence, SNV or INDEL
     #     type, and study ID.
     
-    ########### DDD dataset ###############
-    # read in DNMs, genes, CQ and type from file
-    our.data = read.delim(file.path(DE_NOVO_DIR, "DNG_Variants_20Feb2014_NonRed_Clean_NoTwins_NoClusters.txt"), header=T, colClasses = "character")
-    # remove diagnosed patients, if maximising power
-    our.data = our.data[-which(our.data$DECIPHER_ID %in% diagnosed$id), ]
-    TYPE.index = which(our.data$snp_or_indel == "DENOVO-SNP")
-    our.data$TYPE = "INDEL"
-    our.data$TYPE[TYPE.index] = "SNV"
+    ddd = open_ddd_denovos(diagnosed)
     
     # read in other datasets and calculate numbers of LoF and NS, SNVs and indels
-    ########### ID datasets ###############
-    rauch = read.delim(file.path(DE_NOVO_DIR, "rauch_v2.txt"), header=T, colClasses = "character")
-    deligt = read.delim(file.path(DE_NOVO_DIR, "deligt_v2.txt"), header=T, colClasses = "character")
+    rauch = open_rauch_de_novos()
+    deligt = open_deligt_de_novos()
+    epi4k = open_epi4k_de_novos()
+    autism = open_autism_de_novos()
+    fromer = open_fromer_de_novos ()
+    zaidi = open_zaidi_de_novos ()
     
-    ########### Epi4K dataset ############
-    epi4k = read.delim(file.path(DE_NOVO_DIR, "epi4k_v2.txt"), header=T, colClasses = "character")
-    TYPE.index = which(epi4k$Type == "snv")
-    epi4k$TYPE = "INDEL"
-    epi4k$TYPE[TYPE.index] = "SNV"
-    
-    ########### Autism dataset ###############
-    autism = read.delim(file.path(DE_NOVO_DIR, "autism_v3_PJ.txt"), header=T, colClasses = "character")
-    # select only de novos in probands
-    autism = autism[which(autism$pheno == "Pro"), ]
-    TYPE.index = which(abs(nchar(autism$ref.1) - nchar(autism$var)) == 0)
-    autism$TYPE = "INDEL"
-    autism$TYPE[TYPE.index] = "SNV"
-    
-    ########### Schizophrenia dataset ###############
-    fromer = read.delim(file.path(DE_NOVO_DIR, "fromer_v2.txt"), header=T, colClasses = "character")
-    TYPE.index = which(abs(nchar(fromer$Reference.allele) - nchar(fromer$Alternate.allele)) == 0)
-    fromer$TYPE = "INDEL"
-    fromer$TYPE[TYPE.index] = "SNV"
-    
-    ########### CHD dataset ###############
-    # could only include syndromic DNMs
-    zaidi = read.delim(file.path(DE_NOVO_DIR, "zaidi_VEP.txt"), header=T, colClasses = "character")
-    # remove DNMs in controls
-    zaidi = zaidi[-which(zaidi$Primary_Cardiac_Class == "Control"), ]
-    TYPE.index = which(abs(nchar(zaidi$ref) - nchar(zaidi$alt)) != 0)
-    TYPE.index = sort(unique(c(TYPE.index, which(zaidi$ref == "-"), which(zaidi$alt == "-"))))
-    zaidi$TYPE = "SNV"
-    zaidi$TYPE[TYPE.index] = "INDEL"
-    
-    # get complete lists of genes
-    merged.HGNC = c(our.data$curated_HGNC, deligt$INFO.HGNC, rauch$INFO.HGNC, autism$INFO.HGNC, fromer$INFO.HGNC, epi4k$INFO.HGNC, zaidi$INFO.HGNC)
-    merged.CQ = c(our.data$curated_CQ, deligt$INFO.CQ, rauch$INFO.CQ, autism$INFO.CQ, fromer$INFO.CQ, epi4k$INFO.CQ, zaidi$INFO.CQ)
-    merged.POS = c(our.data$pos, deligt$POS, rauch$POS, autism$pos, fromer$pos, epi4k$pos, zaidi$pos)
-    merged.CHROM = c(our.data$chr, deligt$CHROM, rauch$CHROM, autism$CHROM, fromer$chrom, epi4k$chrom, zaidi$chrom)
-    merged.TYPE = c(our.data$TYPE, deligt$TYPE, rauch$TYPE, autism$TYPE, fromer$TYPE, epi4k$TYPE, zaidi$TYPE)
-    merged.STUDY = c(rep("DDD", nrow(our.data)), rep("deligt", nrow(deligt)), rep("rauch", nrow(rauch)), rep("autism", nrow(autism)), rep("fromer", nrow(fromer)), rep("epi4k", nrow(epi4k)), rep("zaidi", nrow(zaidi)))
-    data = data.frame(merged.HGNC, merged.CQ, merged.POS, merged.CHROM, merged.TYPE, merged.STUDY)
-    names(data) = c("HGNC", "CQ", "POS", "CHROM", "TYPE", "STUDY")
-    
-    # write.table(data, file="/Volumes/DDD_meh/Analysis/Exome/Recurrent_DNM_signif/DNMs_280114/Meta_analysis_other_DNM_studies/Meta_DNMs_4Jeremy_100314.txt",  quote=F, row.names=F, sep="\t")
+    data = rbind(ddd, rauch, deligt, epi4k, autism, fromer, zaidi)
     
     return(data)
-}
-
-get_length_based_rates <- function(num.trios.male, num.trios.female) {
-    # calculate mutation rates based on the gene length
-    # 
-    # Args:
-    #     num.trios.male: number of trios with male offspring in the dataset
-    #     num.trios.female: number of trios with female offspring in the dataset
-    # 
-    # Returns:
-    #     list containing vectors of mutation rates
-    
-    # read-in length of coding sequence of each gene, from Ensembl biomart
-    gene.info = read.delim(file.path(DATA_DIR, "CDS_LENGTH_B37_chr.txt"), header=T)
-    cds.length = gene.info$CDS_LENGTH
-    gene.info$gene = gene.info$ID
-    chrX_index = which(gene.info$chr == "X")
-    
-    auto.transmissions = 2 * (num.trios.male + num.trios.female)
-    female.transmissions = num.trios.male + num.trios.female
-    male.transmissions = num.trios.female
-    
-    # get scaling factors using the alpha from the most recent SFHS (Scottish
-    # Family Health Study) phased de novo data.
-    alpha = 3.4
-    male.chrx.scaling = 2 / (1 + (1 / alpha))
-    female.chrx.scaling = 2 / (1 + alpha)
-    
-    # set mutation rates for snvs and indels
-    snv.mut.rate = 1.5E-8 # higher than genome-wide mutation rate, due to higher GC ...
-    # TODO: check that the following indel mutation rate is correct, since the
-    # TODO: comment claims it should be 10% of the SNV mutation rate, but it
-    # TODO: currently looks  like 30%
-    indel.mut.rate = 0.53E-9 # ~10% of genome-wide SNV mutation rate, no reason to think higher in exome
-    
-    male.snv.mut.rate = snv.mut.rate * male.chrx.scaling
-    female.snv.mut.rate = snv.mut.rate * female.chrx.scaling
-    
-    male.indel.mut.rate = indel.mut.rate * male.chrx.scaling
-    female.indel.mut.rate = indel.mut.rate * female.chrx.scaling
-    
-    # specify proportion of coding mutations of different types
-    snv.prop.lof = 0.0485 # from Daly
-    snv.prop.missense = 0.6597 # from Daly
-    
-    indel.prop.lof = 0.9 # non-3n, from size distribution in neutral sequence
-    indel.prop.missense = 0.1
-    
-    # calculate rates of missense and lof mutations, multiply by 2 for two 
-    # transmissions per child and number of trios
-    cds_rates = list()
-    cds_rates$snv.missense.rate = cds.length * snv.mut.rate * snv.prop.missense * auto.transmissions
-    cds_rates$snv.lof.rate = cds.length * snv.mut.rate * snv.prop.lof * auto.transmissions
-    cds_rates$indel.missense.rate = cds.length * indel.mut.rate * indel.prop.missense * auto.transmissions
-    cds_rates$indel.lof.rate = cds.length * indel.mut.rate * indel.prop.lof * auto.transmissions
-    
-    # correct non-PAR chrX genes for  fewer transmissions and lower rate 
-    # (dependent on alpha) currently doing for all chrX genes, not just non-PAR 
-    # genes
-    x_snv_scaling = (male.transmissions * male.snv.mut.rate + female.transmissions * female.snv.mut.rate)
-    x_indel_scaling = (male.transmissions * male.indel.mut.rate + female.transmissions * female.indel.mut.rate)
-    cds_rates$snv.missense.rate[chrX_index] = cds.length[chrX_index] * snv.prop.missense * x_snv_scaling
-    cds_rates$snv.lof.rate[chrX_index] = cds.length[chrX_index] * snv.prop.lof * x_snv_scaling
-    cds_rates$indel.missense.rate[chrX_index] = cds.length[chrX_index] * indel.prop.missense * x_indel_scaling
-    cds_rates$indel.lof.rate[chrX_index] = cds.length[chrX_index] * indel.prop.lof * x_indel_scaling
-    
-    # checked chrX rate is now slower with plot(gene.snv.missense.rate, cds.length)
-    
-    values = list(cds_rates = cds_rates, gene.info = gene.info)
-    
-    return(values)
 }
 
 get_de_novo_counts <- function(de_novos, lof_cq, missense_cq) {
@@ -287,10 +174,10 @@ get_de_novo_counts <- function(de_novos, lof_cq, missense_cq) {
     
     # and sum the de novo counts in each type/consequence category
     de_novo_counts = data.frame(HGNC = counts$HGNC)
-    de_novo_counts$lof.snvs = rowSums(snvs[, grep(lof_regex, names(snvs))])
-    de_novo_counts$missense.snvs = rowSums(snvs[, grep(missense_regex, names(snvs))])
-    de_novo_counts$lof.indels = rowSums(indels[, grep(lof_regex, names(indels))])
-    de_novo_counts$missense.indels = rowSums(indels[, grep(missense_regex, names(indels))])
+    de_novo_counts$lof.snvs = rowSums(data.frame(snvs[, grep(lof_regex, names(snvs))]))
+    de_novo_counts$missense.snvs = rowSums(data.frame(snvs[, grep(missense_regex, names(snvs))]))
+    de_novo_counts$lof.indels = rowSums(data.frame(indels[, grep(lof_regex, names(indels))]))
+    de_novo_counts$missense.indels = rowSums(data.frame(indels[, grep(missense_regex, names(indels))]))
     
     return(de_novo_counts)
 }
@@ -300,7 +187,8 @@ get_p_values <- function(rates, de_novos, de_novo_counts, gene_data, num.tests) 
     # 
     # Args:
     #     rates: gene mutation rates per consequence type
-    #     de_novos: data frame containing all the observed for all the genes
+    #     de_novos: data frame containing all the observed de novos for all the 
+    #         genes
     #     de_novo_counts: data frame with tally of de novo mutations for each 
     #         of the mutation types.
     #     gene_data: data frame with gene info, sorted as per vectors in rates
@@ -371,6 +259,13 @@ label_genes <- function(enriched, p_values, num.tests) {
     thresh.index = which(p_values < label.thresh)
     num.thresh = length(thresh.index)
     
+    # sometimes we don't have any genes with P values more significant than the 
+    # FDR threshold, simply return, rather than trying to plot (also since when
+    # num.thresh is zero, we get some zero-length errors)
+    if (num.thresh == 0) {
+        return()
+    }
+    
     for (i in 1:num.thresh) {
         text(x=thresh.index[i], -log10(p_values[thresh.index[i]]), labels=enriched$HGNC[thresh.index[i]], pos=3, cex=0.5)
     }
@@ -426,15 +321,16 @@ plot_graphs <- function(enriched, num.tests) {
     dev.off()
 }
 
-main <- function() {
-    diagnosed = get_ddd_diagnosed()
-    num = get_trio_counts(diagnosed)
-    num.trios.male = num$male
-    num.trios.female = num$female
-    num.trios = num.trios.male + num.trios.female
+analyse_gene_enrichment <- function(de_novos, num.trios.male, num.trios.female) {
+    # run the analysis of whether de novo mutations are enriched in genes
+    # 
+    # Args:
+    #     de_novos: data frame containing all the observed de novos for all the 
+    #         genes
+    #     num.trios.male: number of trios with male offspring in the dataset
+    #     num.trios.female: number of trios with female offspring in the dataset
     
-    # open the de novos, and tally them by consequence and variant type
-    de_novos = open_datasets(diagnosed)
+    # tally the de novos by consequence and variant type
     de_novo_counts = get_de_novo_counts(de_novos, CQ.LOF, CQ.MISSENSE)
     
     # get the length-based mutation rates for each gene
@@ -464,6 +360,19 @@ main <- function() {
     # write.table(enriched, file=file.path(DATA_DIR, "Mup-it_Daly_100414_META_undiagnosed.output.txt"), row.names=F, quote=F, sep="\t")
     
     plot_graphs(enriched, num.tests)
+    
+}
+
+main <- function() {
+    diagnosed = get_ddd_diagnosed()
+    num = get_trio_counts(diagnosed)
+    num.trios.male = num$male
+    num.trios.female = num$female
+    
+    # open the de novos, and 
+    de_novos = open_datasets(diagnosed)
+    
+    analyse_gene_enrichment(de_novos, num.trios.male, num.trios.female)
 }
 
 
