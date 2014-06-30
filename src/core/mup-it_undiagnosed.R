@@ -76,79 +76,6 @@ get_ddd_diagnosed <- function() {
     return(diagnosed)
 }
 
-get_trio_counts <- function(diagnosed) {
-    # defines the cohort sizes, used to get the overall population size
-    # 
-    # Args:
-    #     diagnosed: list of sex and ID for probands diagnosed in the DDD study
-    # 
-    # Returns:
-    #     list with total counts of trios with male and female offspring
-    
-    # number of trios studied in our data
-    male.ddd = 582 # trios with male offspring
-    female.ddd = 548 # trios with female offspring
-    
-    # remove diagnosed patients, if maximising power
-    male.ddd = male.ddd - length(which(diagnosed$sex == "Male"))
-    female.ddd = female.ddd - length(which(diagnosed$sex == "Female"))
-    
-    # number of trios studied in deligt data
-    male.deligt = 47
-    female.deligt = 53
-    
-    # number of trios studied in autism data
-    male.autism = 764
-    female.autism = 183
-    
-    # number of trios studied in rauch data
-    male.rauch = 32
-    female.rauch = 19
-    
-    # number of trios studied in fromer data
-    male.fromer = 317
-    female.fromer = 306
-    
-    # number of trios studied in epi4k data
-    male.epi4k = 156
-    female.epi4k = 108
-    
-    # number of trios studied in zaidi data
-    male.zaidi = 220
-    female.zaidi = 142
-    
-    # sum up males and females across studies
-    male = male.ddd + male.deligt + male.autism + male.rauch + male.fromer + male.epi4k + male.zaidi
-    female = female.ddd + female.deligt + female.autism + female.rauch + female.fromer + female.epi4k + female.zaidi
-    
-    return(list(male = male, female = female))
-}
-
-open_datasets <- function(diagnosed) {
-    # combine datasets listing de novo mutations into a single data frame
-    # 
-    # Args:
-    #     diagnosed: list of IDs and sex for probands with diagnoses in the DDD
-    # 
-    # Returns:
-    #     data frame containing HGNC, chrom, position, consequence, SNV or INDEL
-    #     type, and study ID.
-    
-    ddd = open_ddd_denovos(diagnosed)
-    
-    # read in other datasets and calculate numbers of LoF and NS, SNVs and indels
-    rauch = open_rauch_de_novos()
-    deligt = open_deligt_de_novos()
-    epi4k = open_epi4k_de_novos()
-    autism = open_autism_de_novos()
-    fromer = open_fromer_de_novos ()
-    zaidi = open_zaidi_de_novos ()
-    
-    data = rbind(ddd, rauch, deligt, epi4k, autism, fromer, zaidi)
-    
-    return(data)
-}
-
 get_de_novo_counts <- function(de_novos, lof_cq, missense_cq) {
     # tallies the mutation types observed for each gene
     # 
@@ -182,7 +109,7 @@ get_de_novo_counts <- function(de_novos, lof_cq, missense_cq) {
     return(de_novo_counts)
 }
 
-get_p_values <- function(rates, de_novos, de_novo_counts, gene_data, num.tests) {
+get_p_values <- function(rates, de_novos, de_novo_counts, num.tests) {
     # tests whether genes are enriched with de novo mutations
     # 
     # Args:
@@ -191,7 +118,6 @@ get_p_values <- function(rates, de_novos, de_novo_counts, gene_data, num.tests) 
     #         genes
     #     de_novo_counts: data frame with tally of de novo mutations for each 
     #         of the mutation types.
-    #     gene_data: data frame with gene info, sorted as per vectors in rates
     #     num.tests: number of tests performed (used for multiple correction).
     # 
     # Returns:
@@ -208,31 +134,33 @@ get_p_values <- function(rates, de_novos, de_novo_counts, gene_data, num.tests) 
     # variants, using the gene mutation rates
     for (i in 1:nrow(de_novo_counts)) {
         gene = as.character(de_novo_counts$HGNC[i])
-        gene_info = gene_data$gene == gene
-        # catch if info not available for that gene
-        if (any(gene_info)) {
-            gene.index = which(gene_info)
-            
-            # get the mutation rates for the gene
-            observed$snv.missense.rate[i] = rates$snv.missense.rate[gene.index]
-            observed$snv.lof.rate[i] = rates$snv.lof.rate[gene.index]
-            observed$indel.missense.rate[i] = rates$indel.missense.rate[gene.index]
-            observed$indel.lof.rate[i] = rates$indel.lof.rate[gene.index]
-            
-            # figure out the chromosome and nucleotide position of the gene
-            data.index = which(de_novos$HGNC == de_novo_counts$HGNC[i])[1]
-            observed$chr[i] = de_novos$CHROM[data.index]
-            observed$coord[i] = de_novos$POS[data.index]
-            
-            # count the observed de novos in each functional category
-            lof_count = de_novo_counts$lof.snvs[i] + de_novo_counts$lof.indels[i]
-            func_count = de_novo_counts$lof.snvs[i] + de_novo_counts$lof.indels[i] + de_novo_counts$missense.snvs[i] + de_novo_counts$missense.indels[i]
-            
-            # calculate the probability of observing said de novos, given the 
-            # gene mutation rates
-            observed$p.lof[i] = dpois(lof_count, lambda=observed$snv.lof.rate[i] + observed$indel.lof.rate[i])
-            observed$p.func[i] = dpois(func_count, lambda=observed$snv.lof.rate[i] + observed$indel.lof.rate[i] + observed$snv.missense.rate[i] + observed$indel.missense.rate[i])
-        }
+        
+        # continue to next gene if mutation rates not available for the gene
+        if (!(gene %in% rates$HGNC)) { next }
+        
+        gene.index = which(rates$HGNC == gene)
+        
+        # get the mutation rates for the gene
+        observed$snv.missense.rate[i] = rates$snv.missense.rate[gene.index]
+        observed$snv.lof.rate[i] = rates$snv.lof.rate[gene.index]
+        observed$indel.missense.rate[i] = rates$indel.missense.rate[gene.index]
+        observed$indel.lof.rate[i] = rates$indel.lof.rate[gene.index]
+        
+        # figure out the chromosome and nucleotide position of the gene
+        data.index = which(de_novos$HGNC == de_novo_counts$HGNC[i])[1]
+        observed$chr[i] = de_novos$CHROM[data.index]
+        observed$coord[i] = de_novos$POS[data.index]
+        
+        # count the observed de novos in each functional category
+        lof_count = de_novo_counts$lof.snvs[i] + de_novo_counts$lof.indels[i]
+        missense_count = de_novo_counts$missense.snvs[i] + de_novo_counts$missense.indels[i]
+        func_count = lof_count + missense_count
+        
+        # calculate the probability of observing said de novos, given the 
+        # gene mutation rates
+        observed$p.lof[i] = dpois(lof_count, lambda=observed$snv.lof.rate[i] + observed$indel.lof.rate[i])
+        observed$p.func[i] = dpois(func_count, lambda=observed$snv.lof.rate[i] + observed$indel.lof.rate[i] + observed$snv.missense.rate[i] + observed$indel.missense.rate[i])
+        
         if (i %% 100 == 0) {
             print(paste(i, " out of ", nrow(de_novo_counts), " genes", sep = ""))
         }
@@ -340,12 +268,14 @@ analyse_gene_enrichment <- function(de_novos, num.trios.male, num.trios.female) 
     cds.length = length_values$cds.length
     
     # calculate the Daly mutation rates
-    rates = get_mutation_rates(num.trios.male, num.trios.female)
+    daly_values = get_mutation_rates(num.trios.male, num.trios.female)
+    rates = daly_values$rates
+    daly_gene_info = daly_values$gene.info
     
     # calculate p values for each gene using the different mutation rates
     num.tests = 18500
-    p_vals_length = get_p_values(cds_rates, de_novos, de_novo_counts, gene.info, num.tests)
-    p_vals_daly = get_p_values(rates, de_novos, de_novo_counts, rates$daly, num.tests)
+    p_vals_length = get_p_values(cds_rates, de_novos, de_novo_counts, num.tests)
+    p_vals_daly = get_p_values(rates, de_novos, de_novo_counts, num.tests)
     
     # write out results table
     enriched = cbind(de_novo_counts, p_vals_length, p_vals_daly)
@@ -363,7 +293,9 @@ analyse_gene_enrichment <- function(de_novos, num.trios.male, num.trios.female) 
     
 }
 
+
 main <- function() {
+    # here's an example of how to use the functions in this script
     diagnosed = get_ddd_diagnosed()
     num = get_trio_counts(diagnosed)
     num.trios.male = num$male
@@ -374,9 +306,6 @@ main <- function() {
     
     analyse_gene_enrichment(de_novos, num.trios.male, num.trios.female)
 }
-
-
-main()
 
 
 

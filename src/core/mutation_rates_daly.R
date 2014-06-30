@@ -6,14 +6,14 @@
 CODE_DIR = "/nfs/users/nfs_j/jm33/apps/enrichment_analysis"
 DATA_DIR = file.path(CODE_DIR, "data")
 
-correct_for_x_chrom <- function(rates, males, females) {
+correct_for_x_chrom <- function(rates, gene_info, males, females) {
     # correct mutations rates for sex-chromosome transmission rates
     # 
     # Args:
-    #     rates: list of the Dalay dataframe, along with vectors of mutation
+    #     rates: list of the Daly dataframe, along with vectors of mutation
     #         rates for genes under different mutation classes
     #     males: number of trios with male offspring
-    #     males: number of trios with female offspring
+    #     females: number of trios with female offspring
     # 
     # Returns:
     #     list containing mutation rates, where chrX genes have been adjusted
@@ -31,7 +31,7 @@ correct_for_x_chrom <- function(rates, males, females) {
     
     # correct the non-PAR chrX genes for fewer transmissions and lower rate 
     # (dependent on alpha)
-    chrX = which(rates$daly$chr == "X")
+    chrX = which(gene_info$chr == "X")
     x_scale_factor = ((male.transmissions * male.chrx.scaling) + (female.transmissions * female.chrx.scaling))/autosomal.transmissions
     
     rates$snv.silent.rate[chrX] = rates$snv.silent.rate[chrX] * x_scale_factor
@@ -71,7 +71,7 @@ get_mutation_rates <- function(num.trios.male, num.trios.female) {
     #     num.trios.female: number of trios with a female offspring
     # 
     # Returns:
-    #     a list containing mutations rates for genes under different mutation 
+    #     a list containing mutation rates for genes under different mutation 
     #     classes, along with the original Daly mutation rate dataset.
     
     num.trios = num.trios.male + num.trios.female 
@@ -81,15 +81,15 @@ get_mutation_rates <- function(num.trios.male, num.trios.female) {
     daly = read.delim(file.path(DATA_DIR, "fixed_mut_prob_fs_adjdepdiv.txt"), header=T)
     
     # add chromosome annotation
-    rates = list()
-    rates$daly = merge(daly, gene.info, by.x=2, by.y=4, all.x=T) 
+    daly = merge(daly, gene.info, by.x=2, by.y=4, all.x=T) 
     
     # get the number of expected mutations, given the number of transmissions
-    rates$snv.silent.rate = (10^rates$daly$syn) * auto.transmissions
-    rates$snv.missense.rate = (10^rates$daly$mis + 10^rates$daly$rdt) * auto.transmissions
-    rates$snv.lof.rate = (10^rates$daly$non + 10^rates$daly$css) * auto.transmissions
-    rates$indel.missense.rate = ((10^rates$daly$frameshift) / 9) * auto.transmissions
-    rates$indel.lof.rate = (10^rates$daly$frameshift) * auto.transmissions
+    rates = data.frame(HGNC = daly$gene)
+    rates$snv.silent.rate = (10^daly$syn) * auto.transmissions
+    rates$snv.missense.rate = (10^daly$mis + 10^daly$rdt) * auto.transmissions
+    rates$snv.lof.rate = (10^daly$non + 10^daly$css) * auto.transmissions
+    rates$indel.missense.rate = ((10^daly$frameshift) / 9) * auto.transmissions
+    rates$indel.lof.rate = (10^daly$frameshift) * auto.transmissions
 
     # could scale to take account of longer transcript
     
@@ -97,13 +97,14 @@ get_mutation_rates <- function(num.trios.male, num.trios.female) {
     
     # catch cases where there is no rdt or css mutation rate, resulting in an 
     # NA for composite rates
-    rates$snv.missense.rate[is.na(rates$snv.missense.rate)] = (10^rates$daly$mis[is.na(rates$snv.missense.rate)]) * auto.transmissions
-    rates$snv.lof.rate[is.na(rates$snv.lof.rate)] = (10^rates$daly$non[is.na(rates$snv.lof.rate)]) * auto.transmissions
+    rates$snv.missense.rate[is.na(rates$snv.missense.rate)] = (10^daly$mis[is.na(rates$snv.missense.rate)]) * auto.transmissions
+    rates$snv.lof.rate[is.na(rates$snv.lof.rate)] = (10^daly$non[is.na(rates$snv.lof.rate)]) * auto.transmissions
     
     # and correct for the X-chromosome rates
-    rates = correct_for_x_chrom (rates, num.trios.male, num.trios.female)
+    rates = correct_for_x_chrom(rates, daly, num.trios.male, num.trios.female)
     
-    return(rates)
+    values = list(rates = rates, gene.info = daly)
+    
+    return(values)
 }
-
 
