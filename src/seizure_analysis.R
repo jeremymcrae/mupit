@@ -11,9 +11,6 @@ source(file.path(SRC_DIR, "core", "mup-it_undiagnosed.R"))
 DATAFREEZE_DIR = "/nfs/ddd0/Data/datafreeze/1133trios_20131218/"
 PHENOYTYPE_FILENAME = file.path(DATAFREEZE_DIR, "phenotypes.shared.pcs.relatedness.diagnosis.20140415.txt")
 
-CQ.LOF = c("stop_gained", "splice_acceptor_variant", "splice_donor_variant", "frameshift_variant")
-CQ.MISSENSE = c("missense_variant", "initiator_codon_variant", "stop_lost", "inframe_deletion", "inframe_insertion")
-
 get_ddd_probands_with_seizures <- function(phenotype_filename) {
     
     samples = read.table(phenotype_filename, sep = "\t", header = TRUE, colClasses = "character")

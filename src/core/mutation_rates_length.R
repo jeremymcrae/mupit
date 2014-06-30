@@ -76,6 +76,8 @@ correct_length_rate_for_x_chrom <- function(rates, males, females, cds.length, c
     #     list containing mutation rates, where chrX genes have been adjusted
     #     for the sex-specific transmission rates.
     
+    # TODO: why is male.transmissions euqal to the number of females? Why is it
+    # TODO: not equal to the number of males?
     female.transmissions = males + females
     male.transmissions = females
     
