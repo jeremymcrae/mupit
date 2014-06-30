@@ -10,7 +10,18 @@ DE_NOVO_DIR = file.path(DATA_DIR, "de_novo_datasets")
 
 
 open_ddd_denovos <- function(diagnosed, sample_ids=NA) {
-    # read in DNMs, genes, CQ and type from file
+    # get de novo data for DDD study.
+    # 
+    # Args:
+    #     diagnosed:
+    #     sample_ids: vector of sample IDs, if we want to restrict to a specific
+    #         set of probands, such as when we are analysing a phenotype-specific
+    #         subset of the DDD.
+    # 
+    # Returns:
+    #     data frame of de novos, including gene symbol, functional consequence
+    #     (VEP format), chromosome, nucleotide position and SNV or INDEL type
+    
     de_novos = read.delim(file.path(DE_NOVO_DIR, "DNG_Variants_20Feb2014_NonRed_Clean_NoTwins_NoClusters.txt"), header=T, colClasses = "character")
     
     # remove diagnosed patients, if maximising power
@@ -37,6 +48,16 @@ open_ddd_denovos <- function(diagnosed, sample_ids=NA) {
 }
 
 open_rauch_de_novos <- function() {
+    # get de novo data for Rauch et al. intellectual disability exome study
+    # 
+    # De novo mutation data sourced from supplementary tables 2 and 3 from
+    # Rauch et al. (2012) Lancet 380:1674–1682 
+    # doi: 10.1016/S0140-6736(12)61480-9
+    # 
+    # Returns:
+    #     data frame of de novos, including gene symbol, functional consequence
+    #     (VEP format), chromosome, nucleotide position and SNV or INDEL type
+    
     de_novos = read.delim(file.path(DE_NOVO_DIR, "rauch_v2.txt"), header=T, colClasses = "character")
     
     # standardise the columns, and column names
@@ -48,6 +69,16 @@ open_rauch_de_novos <- function() {
 }
 
 open_deligt_de_novos <- function() {
+    # get de novo data for De Ligt et al. intellectual disability exome study
+    # 
+    # De novo mutation data sourced from supplementary table 3 from
+    # De Ligt et al. (2012) N Engl J Med (2012) 367:1921-1929
+    # doi: 10.1056/NEJMoa1206524
+    # 
+    # Returns:
+    #     data frame of de novos, including gene symbol, functional consequence
+    #     (VEP format), chromosome, nucleotide position and SNV or INDEL type
+    
     de_novos = read.delim(file.path(DE_NOVO_DIR, "deligt_v2.txt"), header=T, colClasses = "character")
     
     # standardise the columns, and column names
@@ -59,7 +90,16 @@ open_deligt_de_novos <- function() {
 }
 
 open_epi4k_de_novos <- function() {
-    ########### Epi4K dataset ############
+    # get de novo data for the Epi4K epilepsy exome study
+    # 
+    # De novo mutation data sourced from supplementary table 2 from
+    # Allen et al. (2013) Nature 501:217–221 
+    # doi: 10.1038/nature12439
+    # 
+    # Returns:
+    #     data frame of de novos, including gene symbol, functional consequence
+    #     (VEP format), chromosome, nucleotide position and SNV or INDEL type
+    
     de_novos = read.delim(file.path(DE_NOVO_DIR, "epi4k_v2.txt"), header=T, colClasses = "character")
     
     # standardise the SNV or INDEL flag
@@ -76,7 +116,28 @@ open_epi4k_de_novos <- function() {
 }
 
 open_autism_de_novos <- function() {
-    ########### Autism dataset ###############
+    # get de novo data from autism exome studies
+    # 
+    # I think this data was obtained from studies published using the Simon's
+    # Simplex Collection data (http://sfari.org/resources/simons-simplex-collection)
+    # 
+    # Supplementary table 2 (where the excel sheets for the probands and 
+    # siblings have been combined) from:
+    # Sanders et al. (2012) Nature 485:237-241 
+    # doi: 10.1038/nature10945
+    # 
+    # Supplementary table 3 from:
+    # O'Roak et al. (2012) Nature 485:246-250
+    # doi: 10.1038/nature10989
+    # 
+    # Supplementary table 1 (where the non-coding SNVs have been excluded) from:
+    # Iossifov et al. (2012) Neuron 74:285-299
+    # doi: 10.1016/j.neuron.2012.04.009
+    # 
+    # Returns:
+    #     data frame of de novos, including gene symbol, functional consequence
+    #     (VEP format), chromosome, nucleotide position and SNV or INDEL type
+    
     de_novos = read.delim(file.path(DE_NOVO_DIR, "autism_v3_PJ.txt"), header=T, colClasses = "character")
     
     # select only de novos in probands
@@ -96,7 +157,16 @@ open_autism_de_novos <- function() {
 }
 
 open_fromer_de_novos <- function() {
-    ########### Schizophrenia dataset ###############
+    # get de novo data from Fromer et al. schizophrenia exome study
+    # 
+    # De novo mutation data sourced from Supplementary table 1:
+    # Fromer et al. (2014) Nature 506:179–184
+    # doi: 10.1038/nature12929
+    # 
+    # Returns:
+    #     data frame of de novos, including gene symbol, functional consequence
+    #     (VEP format), chromosome, nucleotide position and SNV or INDEL type
+    
     de_novos = read.delim(file.path(DE_NOVO_DIR, "fromer_v2.txt"), header=T, colClasses = "character")
     
     # standardise the SNV or INDEL flag
@@ -113,7 +183,16 @@ open_fromer_de_novos <- function() {
 }
 
 open_zaidi_de_novos <- function() {
-    ########### CHD dataset ###############
+    # get de novo data from Zaidi et al. congenital heart disease exome study
+    # 
+    # De novo mutation data sourced from Supplementary table 4:
+    # Zaidi et al. (2013) Nature 498:220–223
+    # doi: 10.1038/nature12141
+    # 
+    # Returns:
+    #     data frame of de novos, including gene symbol, functional consequence
+    #     (VEP format), chromosome, nucleotide position and SNV or INDEL type
+    
     # could only include syndromic DNMs
     de_novos = read.delim(file.path(DE_NOVO_DIR, "zaidi_VEP.txt"), header=T, colClasses = "character")
     
