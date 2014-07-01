@@ -161,7 +161,7 @@ get_p_values <- function(rates, de_novos, counts, num.tests) {
         # calculate the probability of observing said de novos, given the 
         # gene mutation rates
         observed$p.lof[i] = dpois(lof_count, lambda=lof_rate)
-        observed$p.func[i] = dpois(func_count, lambda=missense_rate)
+        observed$p.func[i] = dpois(func_count, lambda=func_rate)
         
         if (i %% 100 == 0) {
             print(paste(i, " out of ", nrow(counts), " genes", sep = ""))
