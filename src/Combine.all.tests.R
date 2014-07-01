@@ -4,10 +4,10 @@ CODE_DIR = "/nfs/users/nfs_j/jm33/apps/enrichment_analysis"
 DATA_DIR = file.path(CODE_DIR, "data")
 
 # load all the data files in
-ddd.all = read.delim("/Volumes/DDD_meh/Analysis/Exome/For_1133_trio_ms/DDD_all/Mup-it_Daly_020514_DDD.output.combined.txt", header=T)
-ddd.undiagnosed = read.delim("/Volumes/DDD_meh/Analysis/Exome/For_1133_trio_ms/DDD_undiagnosed/Mup-it_Daly_020514_DDD_undiagnosed.output.combined.txt", header=T)
-meta.all = read.delim("/Volumes/DDD_meh/Analysis/Exome/For_1133_trio_ms/Meta_DD_all/Mup-it_Daly_020514_META.output.combined.txt", header=T)
-meta.undiagnosed = read.delim(file.path(DATA_DIR, "Mup-it_Daly_020514_META_undiagnosed.output.combined.txt"), header=T)
+ddd.all = read.delim("/Volumes/DDD_meh/Analysis/Exome/For_1133_trio_ms/DDD_all/Mup-it_Daly_020514_DDD.output.combined.txt", header=TRUE)
+ddd.undiagnosed = read.delim("/Volumes/DDD_meh/Analysis/Exome/For_1133_trio_ms/DDD_undiagnosed/Mup-it_Daly_020514_DDD_undiagnosed.output.combined.txt", header=TRUE)
+meta.all = read.delim("/Volumes/DDD_meh/Analysis/Exome/For_1133_trio_ms/Meta_DD_all/Mup-it_Daly_020514_META.output.combined.txt", header=TRUE)
+meta.undiagnosed = read.delim(file.path(DATA_DIR, "Mup-it_Daly_020514_META_undiagnosed.output.combined.txt"), header=TRUE)
 
 # need names that are more informative as same across files, add prefix
 names(ddd.all) = paste("ddd.all",names(ddd.all), sep=".")
@@ -16,17 +16,17 @@ names(meta.all) = paste("meta.all",names(meta.all), sep=".")
 names(meta.undiagnosed) = paste("meta.undiagnosed",names(meta.undiagnosed), sep=".")
 
 # merge together files, focusing on genes with DNMs in DDD
-merged = merge(ddd.all, ddd.undiagnosed, by.x=1, by.y=1, all.x=T)
-merged = merge(merged, meta.all, by.x=1, by.y=1, all.x=T)
-merged = merge(merged, meta.undiagnosed, by.x=1, by.y=1, all.x=T)
+merged = merge(ddd.all, ddd.undiagnosed, by.x=1, by.y=1, all.x=TRUE)
+merged = merge(merged, meta.all, by.x=1, by.y=1, all.x=TRUE)
+merged = merge(merged, meta.undiagnosed, by.x=1, by.y=1, all.x=TRUE)
 
 # calculate minimum p value across LoF and func+clustering tests for each dataset
-min.ddd.all.p = apply(cbind(merged$ddd.all.daly.p.DNM.lof, merged$ddd.all.combined.p.dist), 1, min, na.rm=T)
-min.ddd.undiagnosed.p = apply(cbind(merged$ddd.undiagnosed.daly.p.DNM.lof,  merged$ddd.undiagnosed.combined.p.dist), 1, min, na.rm=T)
-min.meta.all.p = apply(cbind(merged$meta.all.daly.p.DNM.lof, merged$meta.all.combined.p.dist), 1, min, na.rm=T)
-min.meta.undiagnosed.p = apply(cbind(merged$meta.undiagnosed.daly.p.DNM.lof,  merged$meta.undiagnosed.combined.p.dist), 1, min, na.rm=T)
-min.all.p = apply(cbind(min.ddd.all.p, min.meta.all.p), 1, min, na.rm=T)
-min.undiagnosed.p = apply(cbind(min.ddd.undiagnosed.p, min.meta.undiagnosed.p), 1, min, na.rm=T)
+min.ddd.all.p = apply(cbind(merged$ddd.all.daly.p.DNM.lof, merged$ddd.all.combined.p.dist), 1, min, na.rm=TRUE)
+min.ddd.undiagnosed.p = apply(cbind(merged$ddd.undiagnosed.daly.p.DNM.lof,  merged$ddd.undiagnosed.combined.p.dist), 1, min, na.rm=TRUE)
+min.meta.all.p = apply(cbind(merged$meta.all.daly.p.DNM.lof, merged$meta.all.combined.p.dist), 1, min, na.rm=TRUE)
+min.meta.undiagnosed.p = apply(cbind(merged$meta.undiagnosed.daly.p.DNM.lof,  merged$meta.undiagnosed.combined.p.dist), 1, min, na.rm=TRUE)
+min.all.p = apply(cbind(min.ddd.all.p, min.meta.all.p), 1, min, na.rm=TRUE)
+min.undiagnosed.p = apply(cbind(min.ddd.undiagnosed.p, min.meta.undiagnosed.p), 1, min, na.rm=TRUE)
 
 # write out full table
 merged = cbind(merged, min.ddd.all.p, min.ddd.undiagnosed.p, min.meta.all.p, min.meta.undiagnosed.p, min.all.p, min.undiagnosed.p)

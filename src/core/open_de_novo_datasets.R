@@ -22,7 +22,7 @@ open_ddd_denovos <- function(diagnosed, sample_ids=NA) {
     #     data frame of de novos, including gene symbol, functional consequence
     #     (VEP format), chromosome, nucleotide position and SNV or INDEL type
     
-    de_novos = read.delim(file.path(DE_NOVO_DIR, "DNG_Variants_20Feb2014_NonRed_Clean_NoTwins_NoClusters.txt"), header=T, colClasses = "character")
+    de_novos = read.delim(file.path(DE_NOVO_DIR, "DNG_Variants_20Feb2014_NonRed_Clean_NoTwins_NoClusters.txt"), header=TRUE, colClasses = "character")
     
     # remove diagnosed patients, if maximising power
     de_novos = de_novos[-which(de_novos$DECIPHER_ID %in% diagnosed$id), ]
@@ -58,7 +58,7 @@ open_rauch_de_novos <- function() {
     #     data frame of de novos, including gene symbol, functional consequence
     #     (VEP format), chromosome, nucleotide position and SNV or INDEL type
     
-    de_novos = read.delim(file.path(DE_NOVO_DIR, "rauch_v2.txt"), header=T, colClasses = "character")
+    de_novos = read.delim(file.path(DE_NOVO_DIR, "rauch_v2.txt"), header=TRUE, colClasses = "character")
     
     # standardise the columns, and column names
     de_novos = subset(de_novos, select = c("INFO.HGNC", "INFO.CQ", "POS", "CHROM", "TYPE"))
@@ -79,7 +79,7 @@ open_deligt_de_novos <- function() {
     #     data frame of de novos, including gene symbol, functional consequence
     #     (VEP format), chromosome, nucleotide position and SNV or INDEL type
     
-    de_novos = read.delim(file.path(DE_NOVO_DIR, "deligt_v2.txt"), header=T, colClasses = "character")
+    de_novos = read.delim(file.path(DE_NOVO_DIR, "deligt_v2.txt"), header=TRUE, colClasses = "character")
     
     # standardise the columns, and column names
     de_novos = subset(de_novos, select = c("INFO.HGNC", "INFO.CQ", "POS", "CHROM", "TYPE"))
@@ -100,7 +100,7 @@ open_epi4k_de_novos <- function() {
     #     data frame of de novos, including gene symbol, functional consequence
     #     (VEP format), chromosome, nucleotide position and SNV or INDEL type
     
-    de_novos = read.delim(file.path(DE_NOVO_DIR, "epi4k_v2.txt"), header=T, colClasses = "character")
+    de_novos = read.delim(file.path(DE_NOVO_DIR, "epi4k_v2.txt"), header=TRUE, colClasses = "character")
     
     # standardise the SNV or INDEL flag
     TYPE.index = which(de_novos$Type == "snv")
@@ -138,7 +138,7 @@ open_autism_de_novos <- function() {
     #     data frame of de novos, including gene symbol, functional consequence
     #     (VEP format), chromosome, nucleotide position and SNV or INDEL type
     
-    de_novos = read.delim(file.path(DE_NOVO_DIR, "autism_v3_PJ.txt"), header=T, colClasses = "character")
+    de_novos = read.delim(file.path(DE_NOVO_DIR, "autism_v3_PJ.txt"), header=TRUE, colClasses = "character")
     
     # select only de novos in probands
     de_novos = de_novos[which(de_novos$pheno == "Pro"), ]
@@ -167,7 +167,7 @@ open_fromer_de_novos <- function() {
     #     data frame of de novos, including gene symbol, functional consequence
     #     (VEP format), chromosome, nucleotide position and SNV or INDEL type
     
-    de_novos = read.delim(file.path(DE_NOVO_DIR, "fromer_v2.txt"), header=T, colClasses = "character")
+    de_novos = read.delim(file.path(DE_NOVO_DIR, "fromer_v2.txt"), header=TRUE, colClasses = "character")
     
     # standardise the SNV or INDEL flag
     TYPE.index = which(abs(nchar(de_novos$Reference.allele) - nchar(de_novos$Alternate.allele)) == 0)
@@ -194,7 +194,7 @@ open_zaidi_de_novos <- function() {
     #     (VEP format), chromosome, nucleotide position and SNV or INDEL type
     
     # could only include syndromic DNMs
-    de_novos = read.delim(file.path(DE_NOVO_DIR, "zaidi_VEP.txt"), header=T, colClasses = "character")
+    de_novos = read.delim(file.path(DE_NOVO_DIR, "zaidi_VEP.txt"), header=TRUE, colClasses = "character")
     
     # remove DNMs in controls
     de_novos = de_novos[-which(de_novos$Primary_Cardiac_Class == "Control"), ]

@@ -66,7 +66,7 @@ get_ddd_diagnosed <- function() {
     #     probands
     
     # read in samples that have been diagnosed, so as to remove from our data
-    diagnoses = read.delim(file.path(DATA_DIR, "Diagnoses_1133.txt"), header=T)
+    diagnoses = read.delim(file.path(DATA_DIR, "Diagnoses_1133.txt"), header=TRUE)
     diagnosed.index = which(rowSums(diagnoses[, c(4:14)]) > 0)
     
     diagnosed = list()
@@ -109,15 +109,15 @@ get_de_novo_counts <- function(de_novos, lof_cq, missense_cq) {
     return(de_novo_counts)
 }
 
-get_p_values <- function(rates, de_novos, de_novo_counts, num.tests) {
+get_p_values <- function(rates, de_novos, counts, num.tests) {
     # tests whether genes are enriched with de novo mutations
     # 
     # Args:
     #     rates: gene mutation rates per consequence type
     #     de_novos: data frame containing all the observed de novos for all the 
     #         genes
-    #     de_novo_counts: data frame with tally of de novo mutations for each 
-    #         of the mutation types.
+    #     counts: data frame with tally of de novo mutations for each of the
+    #         mutation types.
     #     num.tests: number of tests performed (used for multiple correction).
     # 
     # Returns:
@@ -125,15 +125,15 @@ get_p_values <- function(rates, de_novos, de_novo_counts, num.tests) {
     #     for enrichment.
     
     # set-up vectors to store gene-specific information only for observed genes
-    observed = data.frame(matrix(NA, nrow = nrow(de_novo_counts), ncol = 8))
+    observed = data.frame(matrix(NA, nrow = nrow(counts), ncol = 8))
     names(observed) = c("chr", "coord", "snv.missense.rate", 
         "snv.lof.rate", "indel.missense.rate", "indel.lof.rate", "p.func", 
         "p.lof")
 
     # loop for each observed gene, test for functional variants and lof 
     # variants, using the gene mutation rates
-    for (i in 1:nrow(de_novo_counts)) {
-        gene = as.character(de_novo_counts$HGNC[i])
+    for (i in 1:nrow(counts)) {
+        gene = as.character(counts$HGNC[i])
         
         # continue to next gene if mutation rates not available for the gene
         if (!(gene %in% rates$HGNC)) { next }
@@ -141,28 +141,30 @@ get_p_values <- function(rates, de_novos, de_novo_counts, num.tests) {
         gene.index = which(rates$HGNC == gene)
         
         # get the mutation rates for the gene
-        observed$snv.missense.rate[i] = rates$snv.missense.rate[gene.index]
-        observed$snv.lof.rate[i] = rates$snv.lof.rate[gene.index]
-        observed$indel.missense.rate[i] = rates$indel.missense.rate[gene.index]
-        observed$indel.lof.rate[i] = rates$indel.lof.rate[gene.index]
+        observed[i, c("snv.missense.rate", "snv.lof.rate", "indel.missense.rate", "indel.lof.rate")] = rates[gene.index, c("snv.missense.rate", "snv.lof.rate", "indel.missense.rate", "indel.lof.rate")]
         
         # figure out the chromosome and nucleotide position of the gene
-        data.index = which(de_novos$HGNC == de_novo_counts$HGNC[i])[1]
+        data.index = which(de_novos$HGNC == gene)[1]
         observed$chr[i] = de_novos$CHROM[data.index]
         observed$coord[i] = de_novos$POS[data.index]
         
         # count the observed de novos in each functional category
-        lof_count = de_novo_counts$lof.snvs[i] + de_novo_counts$lof.indels[i]
-        missense_count = de_novo_counts$missense.snvs[i] + de_novo_counts$missense.indels[i]
+        lof_count = sum(counts[i, c("lof.snvs", "lof.indels")])
+        missense_count = sum(counts[i, c("missense.snvs", "missense.indels")])
         func_count = lof_count + missense_count
+        
+        # get the mutation rates for each funcational category
+        lof_rate = sum(observed[i, c("snv.lof.rate", "indel.lof.rate")])
+        missense_rate = sum(observed[i, c("snv.missense.rate", "indel.missense.rate")]) 
+        func_rate = lof_rate + missense_rate
         
         # calculate the probability of observing said de novos, given the 
         # gene mutation rates
-        observed$p.lof[i] = dpois(lof_count, lambda=observed$snv.lof.rate[i] + observed$indel.lof.rate[i])
-        observed$p.func[i] = dpois(func_count, lambda=observed$snv.lof.rate[i] + observed$indel.lof.rate[i] + observed$snv.missense.rate[i] + observed$indel.missense.rate[i])
+        observed$p.lof[i] = dpois(lof_count, lambda=lof_rate)
+        observed$p.func[i] = dpois(func_count, lambda=missense_rate)
         
         if (i %% 100 == 0) {
-            print(paste(i, " out of ", nrow(de_novo_counts), " genes", sep = ""))
+            print(paste(i, " out of ", nrow(counts), " genes", sep = ""))
         }
     }
     
@@ -218,7 +220,7 @@ plot_graphs <- function(enriched, num.tests) {
         # set up the plot, starting with the length based P values
         plot(-log10(length_p_vals), col=color_index, pch=19, cex=0.75, 
             ylab="-log10(p)", xaxt="n", main=title, xlab="genome position",  
-            ylim=c(0, max(-log10(length_p_vals), na.rm=T) + 1))
+            ylim=c(0, max(-log10(length_p_vals), na.rm=TRUE) + 1))
         
         # plot line showing where Bonferroni correction would be
         abline(h = -log10(0.05 / num.tests), col="red", lty=2)
@@ -261,21 +263,14 @@ analyse_gene_enrichment <- function(de_novos, num.trios.male, num.trios.female) 
     # tally the de novos by consequence and variant type
     de_novo_counts = get_de_novo_counts(de_novos, CQ.LOF, CQ.MISSENSE)
     
-    # get the length-based mutation rates for each gene
-    length_values = get_length_based_rates(num.trios.male, num.trios.female)
-    cds_rates = length_values$cds_rates
-    gene.info = length_values$gene.info
-    cds.length = length_values$cds.length
-    
-    # calculate the Daly mutation rates
-    daly_values = get_mutation_rates(num.trios.male, num.trios.female)
-    rates = daly_values$rates
-    daly_gene_info = daly_values$gene.info
+    # get the length-based, and Daly-based mutation rates for each gene
+    cds_rates = get_length_based_rates(num.trios.male, num.trios.female)
+    daly_rates = get_mutation_rates(num.trios.male, num.trios.female)
     
     # calculate p values for each gene using the different mutation rates
     num.tests = 18500
     p_vals_length = get_p_values(cds_rates, de_novos, de_novo_counts, num.tests)
-    p_vals_daly = get_p_values(rates, de_novos, de_novo_counts, num.tests)
+    p_vals_daly = get_p_values(daly_rates, de_novos, de_novo_counts, num.tests)
     
     # write out results table
     enriched = cbind(de_novo_counts, p_vals_length, p_vals_daly)
@@ -290,7 +285,6 @@ analyse_gene_enrichment <- function(de_novos, num.trios.male, num.trios.female) 
     # write.table(enriched, file=file.path(DATA_DIR, "Mup-it_Daly_100414_META_undiagnosed.output.txt"), row.names=F, quote=F, sep="\t")
     
     plot_graphs(enriched, num.tests)
-    
 }
 
 

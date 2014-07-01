@@ -19,7 +19,7 @@ get_length_based_rates <- function(num.trios.male, num.trios.female) {
     #     list containing vectors of mutation rates
     
     # read-in length of coding sequence of each gene, from Ensembl biomart
-    gene.info = read.delim(file.path(DATA_DIR, "CDS_LENGTH_B37_chr.txt"), header=T)
+    gene.info = read.delim(file.path(DATA_DIR, "CDS_LENGTH_B37_chr.txt"), header=TRUE)
     cds.length = gene.info$CDS_LENGTH
     gene.info$gene = gene.info$ID
     chrX = which(gene.info$chr == "X")
@@ -51,9 +51,7 @@ get_length_based_rates <- function(num.trios.male, num.trios.female) {
     
     rates = correct_length_rate_for_x_chrom(rates, num.trios.male, num.trios.female, cds.length, chrX, snv_rate, indel_rate, props)
     
-    values = list(cds_rates = rates, gene.info = gene.info)
-    
-    return(values)
+    return(rates)
 }
 
 correct_length_rate_for_x_chrom <- function(rates, males, females, cds.length, chrX, snv_rate, indel_rate, props) {

@@ -54,7 +54,7 @@ get_ddg2p_index <- function(rates_data) {
     #     a list of index position vectors
     
     # read in DDG2P, for only Confirmed and Probable genes
-    ddg2p = read.delim(file.path(DATA_DIR, "DDG2P_Confirmed_Probable_20131107.txt"), header=T)
+    ddg2p = read.delim(file.path(DATA_DIR, "DDG2P_Confirmed_Probable_20131107.txt"), header=TRUE)
     
     # define the inheritance modes for autosomal recessive and non-autosomal 
     # recessive

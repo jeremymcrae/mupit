@@ -11,13 +11,13 @@ fishersMethod <- function(x) {
 
 
 # read in p values from clustering analysis, only for genes with >1 mutation
-spacing = read.delim(file.path(DATA_DIR, "de_novo_distance_simulations.increased_set_all.geometric_mean.txt"), header=T)
+spacing = read.delim(file.path(DATA_DIR, "de_novo_distance_simulations.increased_set_all.geometric_mean.txt"), header=TRUE)
 
 # read in p values from mupit/daly analyses
-probs = read.delim(file.path(DATA_DIR, "Mup-it_Daly_020514_META_undiagnosed.output.txt"), header=T)
+probs = read.delim(file.path(DATA_DIR, "Mup-it_Daly_020514_META_undiagnosed.output.txt"), header=TRUE)
 
 # merge the datasets
-merged = merge(probs, spacing, by.x=1, by.y=1, all.x=T)
+merged = merge(probs, spacing, by.x=1, by.y=1, all.x=TRUE)
 
 # calculate a combined p-value for each gene
 p_values = merged[, c("func_dist_probability", "daly.p.DNM.func")]

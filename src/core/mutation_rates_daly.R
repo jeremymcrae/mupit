@@ -79,8 +79,8 @@ get_mutation_rates <- function(num.trios.male, num.trios.female) {
     num.trios = num.trios.male + num.trios.female 
     auto.transmissions = 2 * num.trios
     
-    gene.info = read.delim(file.path(DATA_DIR, "CDS_LENGTH_B37_chr.txt"), header=T)
-    daly = read.delim(file.path(DATA_DIR, "fixed_mut_prob_fs_adjdepdiv.txt"), header=T)
+    gene.info = read.delim(file.path(DATA_DIR, "CDS_LENGTH_B37_chr.txt"), header=TRUE)
+    daly = read.delim(file.path(DATA_DIR, "fixed_mut_prob_fs_adjdepdiv.txt"), header=TRUE)
     
     # add chromosome annotation
     daly = merge(daly, gene.info, by.x=2, by.y=4, all.x=T) 
@@ -105,8 +105,6 @@ get_mutation_rates <- function(num.trios.male, num.trios.female) {
     # and correct for the X-chromosome rates
     rates = correct_for_x_chrom(rates, daly, num.trios.male, num.trios.female)
     
-    values = list(rates = rates, gene.info = daly)
-    
-    return(values)
+    return(rates)
 }
 
