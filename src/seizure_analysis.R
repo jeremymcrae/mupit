@@ -12,15 +12,21 @@ DATAFREEZE_DIR = "/nfs/ddd0/Data/datafreeze/1133trios_20131218/"
 PHENOYTYPE_FILENAME = file.path(DATAFREEZE_DIR, "phenotypes.shared.pcs.relatedness.diagnosis.20140415.txt")
 
 get_ddd_probands_with_seizures <- function(phenotype_filename) {
+    # find which DDD probands have seizures, and return their IDs and sexes
+    # 
+    # Args:
+    #     phenotype_filename: path to file containing phenotype information,
+    #         including whether they have seizures
+    # 
+    # Returns:
+    #     a data frame containing DDD sample IDs, their decipher IDs, and their
+    #     sex
     
     samples = read.table(phenotype_filename, sep = "\t", header = TRUE, colClasses = "character")
     samples = samples[samples$seizures == 1, ]
     
-    decipher_id = samples$decipher_id
-    sample_id = samples$DDD_ID
-    sex = samples$Sex
-    
-    probands = list(sample_id = sample_id, sex = sex, decipher_id = decipher_id)
+    probands = data.frame(sample_id = samples$DDD_ID, decipher_id = 
+        samples$decipher_id, sex = samples$Sex)
     
     return(probands)
 }

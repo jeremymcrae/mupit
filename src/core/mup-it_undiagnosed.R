@@ -153,7 +153,7 @@ get_p_values <- function(rates, de_novos, counts, num.tests) {
         missense_count = sum(counts[i, c("missense.snvs", "missense.indels")])
         func_count = lof_count + missense_count
         
-        # get the mutation rates for each funcational category
+        # get the mutation rates for each functional category
         lof_rate = sum(observed[i, c("snv.lof.rate", "indel.lof.rate")])
         missense_rate = sum(observed[i, c("snv.missense.rate", "indel.missense.rate")]) 
         func_rate = lof_rate + missense_rate
@@ -185,6 +185,13 @@ label_genes <- function(enriched, p_values, num.tests) {
     
     fdr = p.adjust(p_values, method="BH", n=num.tests)
     fdr.thresh = 0.05
+    
+    # somethimes none of the genes have P values below the FDR threshold, return
+    # from the function, rather than trying to continue
+    if (!any(fdr < fdr.thresh)) {
+        return()
+    }
+     
     label.thresh = max(p_values[which(fdr < fdr.thresh)])
     thresh.index = which(p_values < label.thresh)
     num.thresh = length(thresh.index)
