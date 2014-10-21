@@ -6,17 +6,15 @@
 
 CODE_DIR = "/nfs/users/nfs_j/jm33/apps/enrichment_analysis"
 DATA_DIR = file.path(CODE_DIR, "data")
-SRC_DIR = file.path(CODE_DIR, "src")
 
+#' calculate mutation rates based on the gene length
+#' 
+#' @param num.trios.male number of trios with male offspring in the dataset
+#' @param num.trios.female number of trios with female offspring in the dataset
+#' @export
+#' 
+#' @return list containing vectors of mutation rates
 get_length_based_rates <- function(num.trios.male, num.trios.female) {
-    # calculate mutation rates based on the gene length
-    # 
-    # Args:
-    #     num.trios.male: number of trios with male offspring in the dataset
-    #     num.trios.female: number of trios with female offspring in the dataset
-    # 
-    # Returns:
-    #     list containing vectors of mutation rates
     
     # read-in length of coding sequence of each gene, from Ensembl biomart
     gene.info = read.delim(file.path(DATA_DIR, "CDS_LENGTH_B37_chr.txt"), header=TRUE)
@@ -54,25 +52,24 @@ get_length_based_rates <- function(num.trios.male, num.trios.female) {
     return(rates)
 }
 
+#' correct mutations rates for sex-chromosome transmission rates
+#' 
+#' @param rates dataframe of mutation rates for different mutation categories
+#' @param males number of trios with male offspring
+#' @param females number of trios with female offspring
+#' @param cds.length vector of cds lengths for genes, in same order as rates 
+#'         data frame
+#' @param chrX index of row numbers for rates data frame, where the gene is on 
+#'         the X chromosome
+#' @param snv_rate mutation rate for SNVs
+#' @param indel_rate mutation rate for indels
+#' @param props list of proportions of mutations as LOF SNVs, missense SNVs, 
+#'         LOF indels and missense indels
+#' @export
+#' 
+#' @return list containing mutation rates, where chrX genes have been adjusted
+#'     for the sex-specific transmission rates.
 correct_length_rate_for_x_chrom <- function(rates, males, females, cds.length, chrX, snv_rate, indel_rate, props) {
-    # correct mutations rates for sex-chromosome transmission rates
-    # 
-    # Args:
-    #     rates: dataframe of mutation rates for different mutation categories
-    #     males: number of trios with male offspring
-    #     females: number of trios with female offspring
-    #     cds.length: vector of cds lengths for genes, in same order as rates 
-    #         data frame
-    #     chrX: index of row numbers for rates data frame, where the gene is on 
-    #         the X chromosome
-    #     snv_rate: mutation rate for SNVs
-    #     indel_rate: mutation rate for indels
-    #     props: list of proportions of mutations as LOF SNVs, missense SNVs, 
-    #         LOF indels and missense indels
-    # 
-    # Returns:
-    #     list containing mutation rates, where chrX genes have been adjusted
-    #     for the sex-specific transmission rates.
     
     # TODO: why is male.transmissions euqal to the number of females? Why is it
     # TODO: not equal to the number of males?

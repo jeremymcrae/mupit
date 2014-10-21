@@ -6,7 +6,7 @@
 CODE_DIR = "/nfs/users/nfs_j/jm33/apps/enrichment_analysis"
 DATA_DIR = file.path(CODE_DIR, "data")
 
-correct_for_x_chrom <- function(rates, gene_info, males, females) {
+correct_for_x_chrom <- function(rates, males, females) {
     # correct mutations rates for sex-chromosome transmission rates
     # 
     # Args:
@@ -33,7 +33,7 @@ correct_for_x_chrom <- function(rates, gene_info, males, females) {
     
     # correct the non-PAR chrX genes for fewer transmissions and lower rate 
     # (dependent on alpha)
-    chrX = which(gene_info$chr == "X")
+    chrX = which(rates$chrom == "X")
     x_scale_factor = ((male.transmissions * male.chrx.scaling) + (female.transmissions * female.chrx.scaling))/autosomal.transmissions
     
     rates$snv.silent.rate[chrX] = rates$snv.silent.rate[chrX] * x_scale_factor
@@ -86,7 +86,7 @@ get_mutation_rates <- function(num.trios.male, num.trios.female) {
     daly = merge(daly, gene.info, by.x=2, by.y=4, all.x=T) 
     
     # get the number of expected mutations, given the number of transmissions
-    rates = data.frame(HGNC = daly$gene)
+    rates = data.frame(chrom = daly$chr, HGNC = daly$gene)
     rates$snv.silent.rate = (10^daly$syn) * auto.transmissions
     rates$snv.missense.rate = (10^daly$mis + 10^daly$rdt) * auto.transmissions
     rates$snv.lof.rate = (10^daly$non + 10^daly$css) * auto.transmissions
@@ -103,7 +103,7 @@ get_mutation_rates <- function(num.trios.male, num.trios.female) {
     rates$snv.lof.rate[is.na(rates$snv.lof.rate)] = (10^daly$non[is.na(rates$snv.lof.rate)]) * auto.transmissions
     
     # and correct for the X-chromosome rates
-    rates = correct_for_x_chrom(rates, daly, num.trios.male, num.trios.female)
+    rates = correct_for_x_chrom(rates, num.trios.male, num.trios.female)
     
     return(rates)
 }

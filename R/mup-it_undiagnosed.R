@@ -45,28 +45,17 @@
 library(Cairo)
 library(reshape)
 
-######### SETTINGS ################
 
-CODE_DIR = "/nfs/users/nfs_j/jm33/apps/enrichment_analysis"
-DATA_DIR = file.path(CODE_DIR, "data")
-SRC_DIR = file.path(CODE_DIR, "src")
-DE_NOVO_DIR = file.path(DATA_DIR, "de_novo_datasets")
-source(file.path(SRC_DIR, "core", "mutation_rates_daly.R"))
-source(file.path(SRC_DIR, "core", "mutation_rates_length.R"))
-source(file.path(SRC_DIR, "core", "open_de_novo_datasets.R"))
-
-CQ.LOF = c("stop_gained", "splice_acceptor_variant", "splice_donor_variant", "frameshift_variant")
-CQ.MISSENSE = c("missense_variant", "initiator_codon_variant", "stop_lost", "inframe_deletion", "inframe_insertion")
-
-get_ddd_diagnosed <- function() {
-    # find diagnosed probands in the DDD study, to exclude them from our data
-    # 
-    # Returns:
-    #     A list containing vectors with DECIPHER IDs, and sex of the diagnosed
-    #     probands
+#' find diagnosed probands in the DDD study, to exclude them from our data
+#' 
+#' @param folder_path path to folder containing file defining diagnosed probands
+#' 
+#' @return A list containing vectors with DECIPHER IDs, and sex of the diagnosed
+#'     probands
+get_ddd_diagnosed <- function(folder_path) {
     
     # read in samples that have been diagnosed, so as to remove from our data
-    diagnoses = read.delim(file.path(DATA_DIR, "Diagnoses_1133.txt"), header=TRUE)
+    diagnoses = read.delim(file.path(folder_path, "Diagnoses_1133.txt"), header=TRUE)
     diagnosed.index = which(rowSums(diagnoses[, c(4:14)]) > 0)
     
     diagnosed = list()
@@ -76,19 +65,22 @@ get_ddd_diagnosed <- function() {
     return(diagnosed)
 }
 
-get_de_novo_counts <- function(de_novos, lof_cq, missense_cq) {
-    # tallies the mutation types observed for each gene
-    # 
-    # Args:
-    #     de_novos: data frame listing all the de novo mutations, with columns
-    #         for HGNC symbol, consequence type (VEP style predictions), and a
-    #         column indicating SNV, or indel.
-    #     lof_cq: vector of types for loss-of-function consequences
-    #     missense_cq: vector of types for missense consequences
-    # 
-    # Returns:
-    #     data frame with tally of de novo mutations for each of the mutation 
-    #     types
+#' tallies the mutation types observed for each gene
+#' 
+#' @param de_novos data frame listing all the de novo mutations, with columns
+#'         for HGNC symbol, consequence type (VEP style predictions), and a
+#'         column indicating SNV, or indel.
+#' @export
+#' 
+#' @return data frame with tally of de novo mutations for each of the mutation 
+#'     types
+get_de_novo_counts <- function(de_novos) {
+    
+    # define the VEP consequence types for loss of function and missense variants
+    lof_cq = c("stop_gained", "splice_acceptor_variant", "splice_donor_variant",
+        "frameshift_variant")
+    missense_cq = c("missense_variant", "initiator_codon_variant", "stop_lost",
+        "inframe_deletion", "inframe_insertion")
     
     lof_regex = paste(lof_cq, collapse = "|")
     missense_regex = paste(missense_cq, collapse = "|")
@@ -109,20 +101,19 @@ get_de_novo_counts <- function(de_novos, lof_cq, missense_cq) {
     return(de_novo_counts)
 }
 
+#' tests whether genes are enriched with de novo mutations
+#' 
+#' @param rates gene mutation rates per consequence type
+#' @param de_novos data frame containing all the observed de novos for all the 
+#'            genes
+#' @param counts data frame with tally of de novo mutations for each of the
+#'            mutation types.
+#' @param num.tests number of tests performed (used for multiple correction).
+#' @export
+#' 
+#' @return data frame with gene info, mutation rates and P values from testing
+#'     for enrichment.
 get_p_values <- function(rates, de_novos, counts, num.tests) {
-    # tests whether genes are enriched with de novo mutations
-    # 
-    # Args:
-    #     rates: gene mutation rates per consequence type
-    #     de_novos: data frame containing all the observed de novos for all the 
-    #         genes
-    #     counts: data frame with tally of de novo mutations for each of the
-    #         mutation types.
-    #     num.tests: number of tests performed (used for multiple correction).
-    # 
-    # Returns:
-    #     data frame with gene info, mutation rates and P values from testing
-    #     for enrichment.
     
     # set-up vectors to store gene-specific information only for observed genes
     observed = data.frame(matrix(NA, nrow = nrow(counts), ncol = 8))
@@ -175,14 +166,13 @@ get_p_values <- function(rates, de_novos, counts, num.tests) {
     return(observed)
 }
 
-label_genes <- function(enriched, p_values, num.tests) {
-    # make plot labels for genes with fdr > threshold
-    # 
-    # Args:
-    #     enriched: data frame containing HGNC symbols
-    #     p_values: vector of p-values, sorted as per enriched data frame
-    #     num.tests: number of tests performed (used for multiple correction).
-    
+#' make plot labels for genes with fdr > threshold
+#' 
+#' @param enriched data frame containing HGNC symbols
+#' @param p_values vector of p-values, sorted as per enriched data frame
+#' @param num.tests number of tests performed (used for multiple correction).
+#' @export
+label_genes <- function(enriched, p_values, num.tests) {    
     fdr = p.adjust(p_values, method="BH", n=num.tests)
     fdr.thresh = 0.05
     
@@ -208,18 +198,18 @@ label_genes <- function(enriched, p_values, num.tests) {
     }
 }
 
+#' make Manhattan plots for LOF and Func variants separately
+#' 
+#' @param enriched data frame containing columns for chr, coord (position), and
+#'         p values from testing for enrichment with loss-of-function and 
+#'         functional consequence variants. Both of these have been tested 
+#'         with two sets of mutation rate data, one derived from length 
+#'         based rates, and the other from mutation rates provided by Mark 
+#'         Daly.
+#' @param num.tests number of tests performed (used by Bonferroni and FDR 
+#'         correction).
+#' @export
 plot_graphs <- function(enriched, num.tests) {
-    # make Manhattan plots for LOF and Func variants separately
-    # 
-    # Args:
-    #     enriched: data frame containing columns for chr, coord (position), and
-    #         p values from testing for enrichment with loss-of-function and 
-    #         functional consequence variants. Both of these have been tested 
-    #         with two sets of mutation rate data, one derived from length 
-    #         based rates, and the other from mutation rates provided by Mark 
-    #         Daly.
-    #     num.tests: number of tests performed (used by Bonferroni and FDR 
-    #         correction).
     
     plot_values <- function(length_p_vals, daly_p_vals, title, color_index) {
         # plot the results from de novos
@@ -234,7 +224,7 @@ plot_graphs <- function(enriched, num.tests) {
         
         # add the results from using the alternative mutation rates
         points(-log10(daly_p_vals), col=color_index, pch=1, cex=0.75)
-        legend("topleft", legend=c("Length-based rates", "Daly group rates"), 
+        legend("topright", legend=c("Length-based rates", "Daly group rates"), 
             pch=c(19, 1), col="darkblue", cex=0.75)
         # label genes which are significant following FDR correction
         label_genes(enriched, length_p_vals, num.tests)
@@ -258,17 +248,20 @@ plot_graphs <- function(enriched, num.tests) {
     dev.off()
 }
 
+#' run the analysis of whether de novo mutations are enriched in genes
+#' 
+#' @param de_novos data frame containing all the observed de novos for all the 
+#'         genes
+#' @param num.trios.male number of trios with male offspring in the dataset
+#' @param num.trios.female number of trios with female offspring in the dataset
+#' @export
+#' 
+#' @return data frame containing results from testiong for enrichment of de
+#'     in each gene with de novos in it.
 analyse_gene_enrichment <- function(de_novos, num.trios.male, num.trios.female) {
-    # run the analysis of whether de novo mutations are enriched in genes
-    # 
-    # Args:
-    #     de_novos: data frame containing all the observed de novos for all the 
-    #         genes
-    #     num.trios.male: number of trios with male offspring in the dataset
-    #     num.trios.female: number of trios with female offspring in the dataset
     
     # tally the de novos by consequence and variant type
-    de_novo_counts = get_de_novo_counts(de_novos, CQ.LOF, CQ.MISSENSE)
+    de_novo_counts = get_de_novo_counts(de_novos)
     
     # get the length-based, and Daly-based mutation rates for each gene
     cds_rates = get_length_based_rates(num.trios.male, num.trios.female)
@@ -289,15 +282,16 @@ analyse_gene_enrichment <- function(de_novos, num.trios.male, num.trios.female) 
         "daly.indel.missense.rate", "daly.indel.lof.rate", "daly.p.func",
         "daly.p.lof", "daly.fdr.lof", "daly.fdr.func")
     
-    # write.table(enriched, file=file.path(DATA_DIR, "Mup-it_Daly_100414_META_undiagnosed.output.txt"), row.names=F, quote=F, sep="\t")
-    
     plot_graphs(enriched, num.tests)
+    
+    return(enriched)
 }
 
 
 main <- function() {
     # here's an example of how to use the functions in this script
-    diagnosed = get_ddd_diagnosed()
+    DATA_DIR = "/nfs/users/nfs_j/jm33/apps/enrichment_analysis/data"
+    diagnosed = get_ddd_diagnosed(DATA_DIR)
     num = get_trio_counts(diagnosed)
     num.trios.male = num$male
     num.trios.female = num$female
@@ -305,7 +299,7 @@ main <- function() {
     # open the de novos, and 
     de_novos = open_datasets(diagnosed)
     
-    analyse_gene_enrichment(de_novos, num.trios.male, num.trios.female)
+    enriched = analyse_gene_enrichment(de_novos, num.trios.male, num.trios.female)
 }
 
 

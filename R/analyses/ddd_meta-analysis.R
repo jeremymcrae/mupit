@@ -1,23 +1,17 @@
 # script to analyse enrichment of de novos in genes in probands with seizures
 # in the DDD
 
-CODE_DIR = "/nfs/users/nfs_j/jm33/apps/enrichment_analysis"
-DATA_DIR = file.path(CODE_DIR, "data")
-SRC_DIR = file.path(CODE_DIR, "src")
-DE_NOVO_DIR = file.path(DATA_DIR, "de_novo_datasets")
-source(file.path(SRC_DIR, "core", "mup-it_undiagnosed.R"))
+library(mupit)
 
 DATAFREEZE_DIR = "/nfs/ddd0/Data/datafreeze/1133trios_20131218/"
 PHENOYTYPE_FILENAME = file.path(DATAFREEZE_DIR, "phenotypes.shared.pcs.relatedness.diagnosis.20140415.txt")
 
+#' defines the cohort sizes, used to get the overall population size
+#' 
+#' @param diagnosed list of sex and ID for probands diagnosed in the DDD study
+#' 
+#' @return list with total counts of trios with male and female offspring
 get_trio_counts <- function(diagnosed) {
-    # defines the cohort sizes, used to get the overall population size
-    # 
-    # Args:
-    #     diagnosed: list of sex and ID for probands diagnosed in the DDD study
-    # 
-    # Returns:
-    #     list with total counts of trios with male and female offspring
     
     # number of trios studied in our data
     male.ddd = 582 # trios with male offspring
@@ -58,15 +52,13 @@ get_trio_counts <- function(diagnosed) {
     return(list(male = male, female = female))
 }
 
+#' combine datasets listing de novo mutations into a single data frame
+#' 
+#' @param diagnosed list of IDs and sex for probands with diagnoses in the DDD
+#' 
+#' @return data frame containing HGNC, chrom, position, consequence, SNV or 
+#'    INDEL type, and study ID.
 open_datasets <- function(diagnosed) {
-    # combine datasets listing de novo mutations into a single data frame
-    # 
-    # Args:
-    #     diagnosed: list of IDs and sex for probands with diagnoses in the DDD
-    # 
-    # Returns:
-    #     data frame containing HGNC, chrom, position, consequence, SNV or INDEL
-    #     type, and study ID.
     
     ddd = open_ddd_denovos(diagnosed)
     
