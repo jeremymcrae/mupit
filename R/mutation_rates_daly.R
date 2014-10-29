@@ -6,18 +6,16 @@
 CODE_DIR = "/nfs/users/nfs_j/jm33/apps/enrichment_analysis"
 DATA_DIR = file.path(CODE_DIR, "data")
 
+#' correct mutations rates for sex-chromosome transmission rates
+#' 
+#' @param rates list of the Daly dataframe, along with vectors of mutation
+#'         rates for genes under different mutation classes
+#' @param males number of trios with male offspring
+#' @param females number of trios with female offspring
+#' 
+#' @return list containing mutation rates, where chrX genes have been adjusted
+#'     for the sex-specific transmission rates.
 correct_for_x_chrom <- function(rates, males, females) {
-    # correct mutations rates for sex-chromosome transmission rates
-    # 
-    # Args:
-    #     rates: list of the Daly dataframe, along with vectors of mutation
-    #         rates for genes under different mutation classes
-    #     males: number of trios with male offspring
-    #     females: number of trios with female offspring
-    # 
-    # Returns:
-    #     list containing mutation rates, where chrX genes have been adjusted
-    #     for the sex-specific transmission rates.
     
     # TODO: why is male.transmissions euqal to the number of females? Why is it
     # TODO: not equal to the number of males?
@@ -45,14 +43,12 @@ correct_for_x_chrom <- function(rates, males, females) {
     return(rates)
 }
 
+#' adapt indel rates for lower rate estimate from validated de novos
+#' 
+#' @param rates data frame of mutation rates.
+#' 
+#' @return the rates data frame, with adjusted indel rates.
 adjust_indel_rates <- function(rates) {
-    # adapt indel rates for lower rate estimate from validated de novos
-    # 
-    # Args:
-    #     rates: data frame of mutation rates.
-    # 
-    # Returns:
-    #     the rates data frame, with adjusted indel rates.
     
     # I think the following numbers were derived from the Daly dataset
     valid.nonsense = 102
@@ -65,16 +61,14 @@ adjust_indel_rates <- function(rates) {
     return(rates)
 }
 
+#' gets mutation rates from the Daly dataset
+#' 
+#' @param num.trios.male number of trios with a male offspring
+#' @param num.trios.female number of trios with a female offspring
+#' 
+#' @return a list containing mutation rates for genes under different mutation 
+#'     classes, along with the original Daly mutation rate dataset.
 get_mutation_rates <- function(num.trios.male, num.trios.female) {
-    # gets mutation rates from the Daly dataset
-    # 
-    # Args:
-    #     num.trios.male: number of trios with a male offspring
-    #     num.trios.female: number of trios with a female offspring
-    # 
-    # Returns:
-    #     a list containing mutation rates for genes under different mutation 
-    #     classes, along with the original Daly mutation rate dataset.
     
     num.trios = num.trios.male + num.trios.female 
     auto.transmissions = 2 * num.trios
@@ -86,7 +80,7 @@ get_mutation_rates <- function(num.trios.male, num.trios.female) {
     daly = merge(daly, gene.info, by.x=2, by.y=4, all.x=T) 
     
     # get the number of expected mutations, given the number of transmissions
-    rates = data.frame(chrom = daly$chr, HGNC = daly$gene)
+    rates = data.frame(chrom = daly$chr, hgnc = daly$gene)
     rates$snv.silent.rate = (10^daly$syn) * auto.transmissions
     rates$snv.missense.rate = (10^daly$mis + 10^daly$rdt) * auto.transmissions
     rates$snv.lof.rate = (10^daly$non + 10^daly$css) * auto.transmissions

@@ -4,22 +4,16 @@
 # can adapt to get number expected with 3, 4, 5, 6, ... mutations to work out 
 # PPV of each number
 
-CODE_DIR = "/nfs/users/nfs_j/jm33/apps/enrichment_analysis"
-DATA_DIR = file.path(CODE_DIR, "data")
-SRC_DIR = file.path(CODE_DIR, "src")
-source(file.path(SRC_DIR, "core", "mutation_rates_daly.R"))
-
+library(mupit)
 library(plyr)
 
+#' simulate the counts of recurrent mutations using the mutation rates
+#' 
+#' @param mutation_rates rates of mutation for each of the genes in the genome
+#' 
+#' @return matrix with the tallies of how many genes had one de novo, two de 
+#'     novos, three de novos etc at each simulation
 simulate_recurrent_mutations <- function(mutation_rates, num.sims) {
-    # simulate the counts of recurrent mutations using the mutation rates
-    # 
-    # Args:
-    #     mutation_rates: rates of mutation for each of the genes in the genome
-    # 
-    # Returns:
-    #     matrix with the tallies of how many genes had one de novo, two de 
-    #     novos, three de novos etc at each simulation
     
     # get the cumulative distribution of mutation rates for the genes
     summed.rates = cumsum(mutation_rates)
@@ -78,7 +72,7 @@ main <- function(){
     abline(v=num.recurr.genes, col="red")
     
     # write out table for plotting boxplot of the same data
-    write.table(recurrent, file=file.path(DATA_DIR, "Num_recurr_sim_1106.txt"), quote=F, row.names=F, sep="\t")
+    write.table(recurrent, file="Num_recurr_sim_1106.txt", quote=F, row.names=F, sep="\t")
 }
 
 main()

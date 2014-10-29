@@ -60,23 +60,18 @@ get_trio_counts <- function(diagnosed) {
 #'    INDEL type, and study ID.
 open_datasets <- function(diagnosed) {
     
-    ddd = open_ddd_denovos(diagnosed)
+    ddd = open_ddd_de_novos(diagnosed)
     
-    # read in other datasets and calculate numbers of LoF and NS, SNVs and indels
-    rauch = open_rauch_de_novos()
-    deligt = open_deligt_de_novos()
-    epi4k = open_epi4k_de_novos()
-    autism = open_autism_de_novos()
-    fromer = open_fromer_de_novos ()
-    zaidi = open_zaidi_de_novos ()
-    
-    data = rbind(ddd, rauch, deligt, epi4k, autism, fromer, zaidi)
+    # combine de novo datasets
+    data = rbind(ddd, rauch_de_novos, deligt_de_novos, epi4k_de_novos, autism_de_novos, fromer_de_novos, zaidi_de_novos)
     
     return(data)
 }
 
 main <- function() {
-    diagnosed = get_ddd_diagnosed()
+    # here's an example of how to use the functions in this script
+    DATA_DIR = "/nfs/users/nfs_j/jm33/apps/enrichment_analysis/data"
+    diagnosed = get_ddd_diagnosed(DATA_DIR)
     num = get_trio_counts(diagnosed)
     num.trios.male = num$male
     num.trios.female = num$female
@@ -84,7 +79,7 @@ main <- function() {
     # open the de novos, and 
     de_novos = open_datasets(diagnosed)
     
-    analyse_gene_enrichment(de_novos, num.trios.male, num.trios.female)
+    enriched = analyse_gene_enrichment(de_novos, num.trios.male, num.trios.female)
 }
 
 

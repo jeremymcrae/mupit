@@ -3,17 +3,16 @@
 
 library(mupit)
 
+#' get the observed mutation counts in each of the gene sets 
+#' 
+#' Currently the counts are hard coded, it might be a good idea to convert
+#' this to loading them dynamically, so that it can be more easily adapted to
+#' different datasets
+#' 
+#' @return list of lists defining the mutation counts in each gene set, under 
+#'     each mutation category.
 get_observed_values <- function() {
-    # get the observed mutation counts in each of the gene sets 
-    # 
-    # Currently the counts are hard coded, it might be a good idea to convert
-    # this to loading them dynamically, so that it can be more easily adapted to
-    # different datasets
-    # 
-    # Returns:
-    #     list of lists defining the mutation counts in each gene set, under 
-    #     each mutation category.
-    
+   
     # define the counts for autosomal recessive genes in the DDG2P
     ddg2p.ar = list()
     ddg2p.ar$lof = 6
@@ -41,17 +40,15 @@ get_observed_values <- function() {
     return(list(ddg2p.ar = ddg2p.ar, ddg2p.non.ar = ddg2p.non.ar, nonddg2p = nonddg2p))
 }
 
+#' gets index positions for gene subsets of the rates datasets
+#' 
+#' @param rates_data the Daly mutation rates data frame
+#' 
+#' @return a list of index position vectors
 get_ddg2p_index <- function(rates_data) {
-    # gets index positions for gene subsets of the rates datasets
-    # 
-    # Args:
-    #     rates_data: the Daly mutation rates data frame
-    # 
-    # Returns:
-    #     a list of index position vectors
     
     # read in DDG2P, for only Confirmed and Probable genes
-    ddg2p = read.delim(file.path(DATA_DIR, "DDG2P_Confirmed_Probable_20131107.txt"), header=TRUE)
+    ddg2p = read.delim(file.path("data-raw", "DDG2P_Confirmed_Probable_20131107.txt"), header=TRUE)
     
     # define the inheritance modes for autosomal recessive and non-autosomal 
     # recessive
@@ -77,20 +74,18 @@ get_ddg2p_index <- function(rates_data) {
     return(indexes)
 }
 
+#' calculate the expected number of mutations for each gene
+#' 
+#' @param rates list containing vectors of mutation rates for each gene under 
+#'         different mutation categories.
+#' @param index vector of positions indicating the subset of genes to use (for
+#'         example to indicate the DDG2P genes, or the autosomal recessive 
+#'         set).
+#' @param inverse: whether to use the inverse of the index positions.
+#' 
+#' @return list of expected numbers of mutations for different mutation 
+#'     categories.
 calculate_expected_numbers <- function(rates, index, inverse=FALSE) {
-    # calculate the expected number of mutations for each gene
-    # 
-    # Args:
-    #     rates: list containing vectors of mutation rates for each gene under 
-    #         different mutation categories.
-    #     index: vector of positions indicating the subset of genes to use (for
-    #         example to indicate the DDG2P genes, or the autosomal recessive 
-    #         set).
-    #     inverse: whether to use the inverse of the index positions.
-    # 
-    # Returns:
-    #     list of expected numbers of mutations for different mutation 
-    #     categories.
     
     # if we want the inverse, swap the index positions to refer to the 
     # opposite positions
@@ -109,21 +104,19 @@ calculate_expected_numbers <- function(rates, index, inverse=FALSE) {
     return(expected)
 }
 
+#' find the chance of the observed mutation count, given the expected values
+#' 
+#' Uses a Poisson model to estimate the chance of finding as many mutations
+#' as were observed, given the expected number of mutations (determined from
+#' the mutation rates).
+#' 
+#' @param observed list of counts of observed mutations, for different mutation
+#'         categories
+#' @param expected list of counts of expected mutations, for different mutation
+#'         categories
+#' 
+#' @return list of P values for each of the mutation categories.
 calculate_p_from_observed <- function(observed, expected) {
-    # find the chance of the observed mutation count, given the expected values
-    # 
-    # Uses a Poisson model to estimate the chance of finding as many mutations
-    # as were observed, given the expected number of mutations (determined from
-    # the mutation rates).
-    # 
-    # Args:
-    #     observed: list of counts of observed mutations, for different mutation
-    #         categories
-    #     expected: list of counts of expected mutations, for different mutation
-    #         categories
-    # 
-    # Returns:
-    #     list of P values for each of the mutation categories.
     
     p_values = list()
     # NOTE: I'm not sure why the observed count is decremented by one.

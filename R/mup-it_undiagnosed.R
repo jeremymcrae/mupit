@@ -42,10 +42,6 @@
 # note: current test input file is numbers of mutations, not number of families,
 # some families have >1 mutation in the same gene
 
-library(Cairo)
-library(reshape)
-
-
 #' find diagnosed probands in the DDD study, to exclude them from our data
 #' 
 #' @param folder_path path to folder containing file defining diagnosed probands
@@ -87,12 +83,12 @@ get_de_novo_counts <- function(de_novos) {
     all_regex = paste(c(lof_cq, missense_cq), collapse = "|")
     
     # count the number of de novos for each type/consequence combination
-    counts = cast(de_novos, HGNC ~ TYPE + CQ, value = "STUDY", length)
+    counts = reshape::cast(de_novos, hgnc ~ type + consequence, value = "STUDY", length)
     indels = counts[, grep("INDEL", names(counts))]
     snvs = counts[, grep("SNV", names(counts))]
     
     # and sum the de novo counts in each type/consequence category
-    de_novo_counts = data.frame(HGNC = counts$HGNC)
+    de_novo_counts = data.frame(hgnc = counts$hgnc)
     de_novo_counts$lof.snvs = rowSums(data.frame(snvs[, grep(lof_regex, names(snvs))]))
     de_novo_counts$missense.snvs = rowSums(data.frame(snvs[, grep(missense_regex, names(snvs))]))
     de_novo_counts$lof.indels = rowSums(data.frame(indels[, grep(lof_regex, names(indels))]))
@@ -124,20 +120,20 @@ get_p_values <- function(rates, de_novos, counts, num.tests) {
     # loop for each observed gene, test for functional variants and lof 
     # variants, using the gene mutation rates
     for (i in 1:nrow(counts)) {
-        gene = as.character(counts$HGNC[i])
+        gene = as.character(counts$hgnc[i])
         
         # continue to next gene if mutation rates not available for the gene
-        if (!(gene %in% rates$HGNC)) { next }
+        if (!(gene %in% rates$hgnc)) { next }
         
-        gene.index = which(rates$HGNC == gene)
+        gene.index = which(rates$hgnc == gene)
         
         # get the mutation rates for the gene
         observed[i, c("snv.missense.rate", "snv.lof.rate", "indel.missense.rate", "indel.lof.rate")] = rates[gene.index, c("snv.missense.rate", "snv.lof.rate", "indel.missense.rate", "indel.lof.rate")]
         
         # figure out the chromosome and nucleotide position of the gene
-        data.index = which(de_novos$HGNC == gene)[1]
-        observed$chr[i] = de_novos$CHROM[data.index]
-        observed$coord[i] = de_novos$POS[data.index]
+        data.index = which(de_novos$hgnc == gene)[1]
+        observed$chr[i] = de_novos$chrom[data.index]
+        observed$coord[i] = de_novos$position[data.index]
         
         # count the observed de novos in each functional category
         lof_count = sum(counts[i, c("lof.snvs", "lof.indels")])
@@ -166,88 +162,6 @@ get_p_values <- function(rates, de_novos, counts, num.tests) {
     return(observed)
 }
 
-#' make plot labels for genes with fdr > threshold
-#' 
-#' @param enriched data frame containing HGNC symbols
-#' @param p_values vector of p-values, sorted as per enriched data frame
-#' @param num.tests number of tests performed (used for multiple correction).
-#' @export
-label_genes <- function(enriched, p_values, num.tests) {    
-    fdr = p.adjust(p_values, method="BH", n=num.tests)
-    fdr.thresh = 0.05
-    
-    # somethimes none of the genes have P values below the FDR threshold, return
-    # from the function, rather than trying to continue
-    if (!any(fdr < fdr.thresh)) {
-        return()
-    }
-     
-    label.thresh = max(p_values[which(fdr < fdr.thresh)])
-    thresh.index = which(p_values < label.thresh)
-    num.thresh = length(thresh.index)
-    
-    # sometimes we don't have any genes with P values more significant than the 
-    # FDR threshold, simply return, rather than trying to plot (also since when
-    # num.thresh is zero, we get some zero-length errors)
-    if (num.thresh == 0) {
-        return()
-    }
-    
-    for (i in 1:num.thresh) {
-        text(x=thresh.index[i], -log10(p_values[thresh.index[i]]), labels=enriched$HGNC[thresh.index[i]], pos=3, cex=0.5)
-    }
-}
-
-#' make Manhattan plots for LOF and Func variants separately
-#' 
-#' @param enriched data frame containing columns for chr, coord (position), and
-#'         p values from testing for enrichment with loss-of-function and 
-#'         functional consequence variants. Both of these have been tested 
-#'         with two sets of mutation rate data, one derived from length 
-#'         based rates, and the other from mutation rates provided by Mark 
-#'         Daly.
-#' @param num.tests number of tests performed (used by Bonferroni and FDR 
-#'         correction).
-#' @export
-plot_graphs <- function(enriched, num.tests) {
-    
-    plot_values <- function(length_p_vals, daly_p_vals, title, color_index) {
-        # plot the results from de novos
-        
-        # set up the plot, starting with the length based P values
-        plot(-log10(length_p_vals), col=color_index, pch=19, cex=0.75, 
-            ylab="-log10(p)", xaxt="n", main=title, xlab="genome position",  
-            ylim=c(0, max(-log10(length_p_vals), na.rm=TRUE) + 1))
-        
-        # plot line showing where Bonferroni correction would be
-        abline(h = -log10(0.05 / num.tests), col="red", lty=2)
-        
-        # add the results from using the alternative mutation rates
-        points(-log10(daly_p_vals), col=color_index, pch=1, cex=0.75)
-        legend("topright", legend=c("Length-based rates", "Daly group rates"), 
-            pch=c(19, 1), col="darkblue", cex=0.75)
-        # label genes which are significant following FDR correction
-        label_genes(enriched, length_p_vals, num.tests)
-    }
-    
-    Cairo(file="temp.pdf", type="pdf", width=20, height=20, units = "cm")
-    
-    enriched = na.omit(enriched)
-    
-    # set up alternating colors for successive chromosomes
-    enriched$chr[enriched$chr == "X"] = "23"
-    enriched = enriched[order(as.numeric(as.character(enriched$chr)), as.numeric(as.character(enriched$coord))), ]
-    color_index = rep("lightblue3", nrow(enriched))
-    odd.chr = c("1", "3", "5", "7", "9", "11", "13", "15", "17", "19", "21", "23")
-    color_index[enriched$chr %in% odd.chr] = "darkblue"
-    
-    # plot the results from loss-of-function de novos
-    plot_values(enriched$p.lof, enriched$daly.p.lof, "Loss-of-Function DNMs", color_index)
-    plot_values(enriched$p.func, enriched$daly.p.func, "Functional DNMs", color_index)
-    
-    dev.off()
-}
-
 #' run the analysis of whether de novo mutations are enriched in genes
 #' 
 #' @param de_novos data frame containing all the observed de novos for all the 
@@ -274,7 +188,7 @@ analyse_gene_enrichment <- function(de_novos, num.trios.male, num.trios.female) 
     
     # write out results table
     enriched = cbind(de_novo_counts, p_vals_length, p_vals_daly)
-    names(enriched) = c("HGNC", "LOF.snvs", "NS.snvs", "LOF.indels",
+    names(enriched) = c("hgnc", "LOF.snvs", "NS.snvs", "LOF.indels",
         "NS.indels", "chr", "coord", "snv.missense.rate",
         "snv.lof.rate", "indel.missense.rate", "indel.lof.rate", "p.func",
         "p.lof", "fdr.lof", "fdr.func", "chr", "coord",
@@ -282,24 +196,9 @@ analyse_gene_enrichment <- function(de_novos, num.trios.male, num.trios.female) 
         "daly.indel.missense.rate", "daly.indel.lof.rate", "daly.p.func",
         "daly.p.lof", "daly.fdr.lof", "daly.fdr.func")
     
-    plot_graphs(enriched, num.tests)
+    plot_enrichment_graphs(enriched, num.tests)
     
     return(enriched)
-}
-
-
-main <- function() {
-    # here's an example of how to use the functions in this script
-    DATA_DIR = "/nfs/users/nfs_j/jm33/apps/enrichment_analysis/data"
-    diagnosed = get_ddd_diagnosed(DATA_DIR)
-    num = get_trio_counts(diagnosed)
-    num.trios.male = num$male
-    num.trios.female = num$female
-    
-    # open the de novos, and 
-    de_novos = open_datasets(diagnosed)
-    
-    enriched = analyse_gene_enrichment(de_novos, num.trios.male, num.trios.female)
 }
 
 

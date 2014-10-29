@@ -35,12 +35,10 @@ open_datasets <- function(diagnosed) {
     seizure_probands = get_ddd_probands_with_seizures(PHENOYTYPE_FILENAME) 
     sample_ids = seizure_probands$sample_id
     
-    ddd = open_ddd_denovos(diagnosed, sample_ids)
+    ddd = open_ddd_de_novos(diagnosed, sample_ids)
     
     # read in other datasets and calculate numbers of LoF and NS, SNVs and indels
-    epi4k = open_epi4k_de_novos()
-    
-    data = rbind(ddd, epi4k)
+    data = rbind(ddd, epi4k_de_novos)
     
     return(data)
 }

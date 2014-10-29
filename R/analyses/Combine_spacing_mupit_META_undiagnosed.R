@@ -2,7 +2,6 @@
 
 CODE_DIR = "/nfs/users/nfs_j/jm33/apps/enrichment_analysis"
 DATA_DIR = file.path(CODE_DIR, "data")
-SRC_DIR = file.path(CODE_DIR, "src")
 
 fishersMethod <- function(x) {
     # function to combine p values

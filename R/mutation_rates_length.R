@@ -41,7 +41,7 @@ get_length_based_rates <- function(num.trios.male, num.trios.female) {
     
     # calculate rates of missense and lof mutations, multiply by 2 for two 
     # transmissions per child and number of trios
-    rates = data.frame(HGNC = gene.info$gene)
+    rates = data.frame(hgnc = gene.info$gene)
     rates$snv.missense.rate = cds.length * snv_rate * props$snv.missense * auto.transmissions
     rates$snv.lof.rate = cds.length * snv_rate * props$snv.lof * auto.transmissions
     rates$indel.missense.rate = cds.length * indel_rate * props$indel.missense * auto.transmissions
