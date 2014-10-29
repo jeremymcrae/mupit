@@ -26,19 +26,15 @@ get_de_novo_counts <- function(de_novos) {
     
     lof_regex = paste(lof_cq, collapse = "|")
     missense_regex = paste(missense_cq, collapse = "|")
-    all_regex = paste(c(lof_cq, missense_cq), collapse = "|")
+    
+    # group the lof and missence consequence strings, and drop all the 
+    # non-functional de novos
+    de_novos$consequence[grepl(lof_regex, de_novos$consequence)] = "lof"
+    de_novos$consequence[grepl(missense_regex, de_novos$consequence)] = "missense"
+    de_novos = de_novos[grepl("missense|lof", de_novos$consequence), ]
     
     # count the number of de novos for each type/consequence combination
-    counts = reshape::cast(de_novos, hgnc ~ type + consequence, value = "study", length)
-    indels = counts[, grep("INDEL", names(counts))]
-    snvs = counts[, grep("SNV", names(counts))]
-    
-    # and sum the de novo counts in each type/consequence category
-    de_novo_counts = data.frame(hgnc = counts$hgnc)
-    de_novo_counts$lof.snvs = rowSums(data.frame(snvs[, grep(lof_regex, names(snvs))]))
-    de_novo_counts$missense.snvs = rowSums(data.frame(snvs[, grep(missense_regex, names(snvs))]))
-    de_novo_counts$lof.indels = rowSums(data.frame(indels[, grep(lof_regex, names(indels))]))
-    de_novo_counts$missense.indels = rowSums(data.frame(indels[, grep(missense_regex, names(indels))]))
+    de_novo_counts = reshape::cast(de_novos, hgnc ~ consequence + type, value = "study", length)
     
     # include the positions of the de novos at the minimum position for each gene
     de_novos$min_pos = "min_pos"
@@ -67,8 +63,8 @@ get_p_values <- function(rates, counts, num.tests) {
     
     # for each gene, sum the de novo counts across SNVs and indels for the
     # different functional categories: loss of function, missense and functional
-    lof_count = observed$lof.snvs + observed$lof.indels
-    missense_count = observed$missense.snvs + observed$missense.indels
+    lof_count = observed$lof_SNV + observed$lof_INDEL
+    missense_count = observed$missense_SNV + observed$missense_INDEL
     func_count = lof_count + missense_count
     
     # for each gene, sum the mutation rates across SNVs and indels for the
@@ -115,11 +111,11 @@ analyse_gene_enrichment <- function(de_novos, num.trios.male, num.trios.female) 
     
     # write out results table
     enriched = merge(p_vals_length, p_vals_daly, by = c("hgnc", "chrom", 
-        "min_pos", "lof.snvs", "missense.snvs", "lof.indels", "missense.indels"))
+        "min_pos", "lof_INDEL", "lof_SNV", "missense_INDEL", "missense_SNV"))
     
     # fix the column names
-    names(enriched) = c("hgnc", "chrom", "min_pos", "lof.snvs", 
-        "missense.snvs", "lof.indels", "missense.indels", 
+    names(enriched) = c("hgnc", "chrom", "min_pos", "lof_INDEL", 
+        "lof_SNV", "missense_INDEL", "missense_SNV", 
         "snv.missense.rate.length", "snv.lof.rate.length", 
         "indel.missense.rate.length", "indel.lof.rate.length", "p.lof.length", 
         "p.func.length", "fdr.lof.length", "fdr.func.length", 
