@@ -3,9 +3,6 @@
 # Loads mutations rates from the Daly dataset, and adjusts for sex-chromosome 
 # transmissions.
 
-CODE_DIR = "/nfs/users/nfs_j/jm33/apps/enrichment_analysis"
-DATA_DIR = file.path(CODE_DIR, "data")
-
 #' correct mutations rates for sex-chromosome transmission rates
 #' 
 #' @param rates list of the Daly dataframe, along with vectors of mutation
@@ -73,14 +70,13 @@ get_mutation_rates <- function(num.trios.male, num.trios.female) {
     num.trios = num.trios.male + num.trios.female 
     auto.transmissions = 2 * num.trios
     
-    gene.info = read.delim(file.path(DATA_DIR, "CDS_LENGTH_B37_chr.txt"), header=TRUE)
-    daly = read.delim(file.path(DATA_DIR, "fixed_mut_prob_fs_adjdepdiv.txt"), header=TRUE)
+    daly = read.delim(file.path("data-raw", "fixed_mut_prob_fs_adjdepdiv.txt"), header=TRUE)
     
     # add chromosome annotation
-    daly = merge(daly, gene.info, by.x=2, by.y=4, all.x=T) 
+    daly = merge(daly, gene_info, by.x="gene", by.y="hgnc", all.x=T) 
     
     # get the number of expected mutations, given the number of transmissions
-    rates = data.frame(chrom = daly$chr, hgnc = daly$gene)
+    rates = data.frame(chrom = daly$chrom, hgnc = daly$gene)
     rates$snv.silent.rate = (10^daly$syn) * auto.transmissions
     rates$snv.missense.rate = (10^daly$mis + 10^daly$rdt) * auto.transmissions
     rates$snv.lof.rate = (10^daly$non + 10^daly$css) * auto.transmissions

@@ -4,14 +4,15 @@
 
 #' find diagnosed probands in the DDD study, to exclude them from our data
 #' 
-#' @param folder_path path to folder containing file defining diagnosed probands
+#' @param path path to file defining diagnosed probands
 #' 
+#' @export
 #' @return A list containing vectors with DECIPHER IDs, and sex of the diagnosed
 #'     probands
-get_ddd_diagnosed <- function(folder_path) {
+get_ddd_diagnosed <- function(path) {
     
     # read in samples that have been diagnosed, so as to remove from our data
-    diagnoses = read.delim(file.path(folder_path, "Diagnoses_1133.txt"), header=TRUE)
+    diagnoses = read.delim(path, header=TRUE)
     diagnosed.index = which(rowSums(diagnoses[, c(4:14)]) > 0)
     
     diagnosed = list()
@@ -54,7 +55,7 @@ open_ddd_de_novos <- function(diagnosed, sample_ids=NULL) {
     # standardise the columns, and column names
     de_novos = subset(de_novos, select = c("curated_HGNC", "curated_CQ", "pos", "chr", "TYPE"))
     names(de_novos) = c("hgnc", "consequence", "position", "chrom", "type")
-    de_novos$STUDY = "DDD"
+    de_novos$study = "DDD"
     
     return(de_novos)
 }

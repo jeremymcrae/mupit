@@ -86,3 +86,13 @@
 #' @format A data frame with five variables: \code{hgnc}, \code{consequence},
 #'   \code{position}, \code{chrom}, \code{type} and \code{study}
 "zaidi_de_novos"
+
+#' Gene information.
+#' 
+#' Table of all genes in the genome with HGNC symbol, chromosome and coding
+#' sequence (CDS) length in base-pairs.
+#' 
+#' @source url(http://www.ensembl.org/biomart)
+#' @format A data frame with three variables: \code{hgnc}, \code{chrom},
+#'     and \code{cds_length}
+"gene_info"

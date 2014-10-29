@@ -4,9 +4,6 @@
 # mutation rates, as provided by Mark Daly
 
 
-CODE_DIR = "/nfs/users/nfs_j/jm33/apps/enrichment_analysis"
-DATA_DIR = file.path(CODE_DIR, "data")
-
 #' calculate mutation rates based on the gene length
 #' 
 #' @param num.trios.male number of trios with male offspring in the dataset
@@ -16,11 +13,8 @@ DATA_DIR = file.path(CODE_DIR, "data")
 #' @return list containing vectors of mutation rates
 get_length_based_rates <- function(num.trios.male, num.trios.female) {
     
-    # read-in length of coding sequence of each gene, from Ensembl biomart
-    gene.info = read.delim(file.path(DATA_DIR, "CDS_LENGTH_B37_chr.txt"), header=TRUE)
-    cds.length = gene.info$CDS_LENGTH
-    gene.info$gene = gene.info$ID
-    chrX = which(gene.info$chr == "X")
+    cds.length = gene_info$cds_length
+    chrX = which(gene_info$chrom == "X")
     
     auto.transmissions = 2 * (num.trios.male + num.trios.female)
     
@@ -41,7 +35,7 @@ get_length_based_rates <- function(num.trios.male, num.trios.female) {
     
     # calculate rates of missense and lof mutations, multiply by 2 for two 
     # transmissions per child and number of trios
-    rates = data.frame(hgnc = gene.info$gene)
+    rates = data.frame(hgnc = gene_info$hgnc)
     rates$snv.missense.rate = cds.length * snv_rate * props$snv.missense * auto.transmissions
     rates$snv.lof.rate = cds.length * snv_rate * props$snv.lof * auto.transmissions
     rates$indel.missense.rate = cds.length * indel_rate * props$indel.missense * auto.transmissions
@@ -71,7 +65,7 @@ get_length_based_rates <- function(num.trios.male, num.trios.female) {
 #'     for the sex-specific transmission rates.
 correct_length_rate_for_x_chrom <- function(rates, males, females, cds.length, chrX, snv_rate, indel_rate, props) {
     
-    # TODO: why is male.transmissions euqal to the number of females? Why is it
+    # TODO: why is male.transmissions equal to the number of females? Why is it
     # TODO: not equal to the number of males?
     female.transmissions = males + females
     male.transmissions = females
