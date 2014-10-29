@@ -1,6 +1,26 @@
 # function to open de novo data from the DDD study
 # 
 
+
+#' find diagnosed probands in the DDD study, to exclude them from our data
+#' 
+#' @param folder_path path to folder containing file defining diagnosed probands
+#' 
+#' @return A list containing vectors with DECIPHER IDs, and sex of the diagnosed
+#'     probands
+get_ddd_diagnosed <- function(folder_path) {
+    
+    # read in samples that have been diagnosed, so as to remove from our data
+    diagnoses = read.delim(file.path(folder_path, "Diagnoses_1133.txt"), header=TRUE)
+    diagnosed.index = which(rowSums(diagnoses[, c(4:14)]) > 0)
+    
+    diagnosed = list()
+    diagnosed$id = diagnoses$decipher_id[diagnosed.index]
+    diagnosed$sex = diagnoses$Sex[diagnosed.index]
+    
+    return(diagnosed)
+}
+
 #' get de novo data for DDD study.
 #' 
 #' @param diagnosed dataframe of samples in DDD with a diagnosis, who should be
