@@ -3,9 +3,6 @@
 
 library(mupit)
 
-DATAFREEZE_DIR = "/nfs/ddd0/Data/datafreeze/1133trios_20131218/"
-PHENOYTYPE_FILENAME = file.path(DATAFREEZE_DIR, "phenotypes.shared.pcs.relatedness.diagnosis.20140415.txt")
-
 #' defines the cohort sizes, used to get the overall population size
 #' 
 #' @param diagnosed list of sex and ID for probands diagnosed in the DDD study
@@ -80,6 +77,7 @@ main <- function() {
     de_novos = open_datasets(diagnosed)
     
     enriched = analyse_gene_enrichment(de_novos, num.trios.male, num.trios.female)
+    head(enriched[order(enriched$p.func.daly), ])
 }
 
 

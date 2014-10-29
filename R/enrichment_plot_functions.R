@@ -28,7 +28,7 @@ label_genes <- function(enriched, p_values, num.tests) {
     }
     
     for (i in 1:num.thresh) {
-        text(x=thresh.index[i], -log10(p_values[thresh.index[i]]), labels=enriched$HGNC[thresh.index[i]], pos=3, cex=0.5)
+        text(x=thresh.index[i], -log10(p_values[thresh.index[i]]), labels=enriched$hgnc[thresh.index[i]], pos=3, cex=0.5)
     }
 }
 
@@ -82,15 +82,16 @@ plot_enrichment_graphs <- function(enriched, num.tests) {
     enriched = na.omit(enriched)
     
     # set up alternating colors for successive chromosomes
-    enriched$chr[enriched$chr == "X"] = "23"
-    enriched = enriched[order(as.numeric(as.character(enriched$chr)), as.numeric(as.character(enriched$coord))), ]
+    enriched$chrom = as.character(enriched$chrom)
+    enriched$chrom[enriched$chrom == "X"] = "23"
+    enriched = enriched[order(as.numeric(as.character(enriched$chrom)), as.numeric(as.character(enriched$min_pos))), ]
     color_index = rep("lightblue3", nrow(enriched))
     odd.chr = c("1", "3", "5", "7", "9", "11", "13", "15", "17", "19", "21", "23")
-    color_index[enriched$chr %in% odd.chr] = "darkblue"
+    color_index[enriched$chrom %in% odd.chr] = "darkblue"
     
     # plot the results from loss-of-function de novos
-    plot_values(num.tests, enriched, enriched$p.lof, enriched$daly.p.lof, "Loss-of-Function DNMs", color_index)
-    plot_values(num.tests, enriched, enriched$p.func, enriched$daly.p.func, "Functional DNMs", color_index)
+    plot_values(num.tests, enriched, enriched$p.lof.length, enriched$p.lof.daly, "Loss-of-Function DNMs", color_index)
+    plot_values(num.tests, enriched, enriched$p.func.length, enriched$p.func.daly, "Functional DNMs", color_index)
     
     dev.off()
 }

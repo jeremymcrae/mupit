@@ -40,14 +40,20 @@ get_de_novo_counts <- function(de_novos) {
     de_novo_counts$lof.indels = rowSums(data.frame(indels[, grep(lof_regex, names(indels))]))
     de_novo_counts$missense.indels = rowSums(data.frame(indels[, grep(missense_regex, names(indels))]))
     
+    # include the positions of the de novos at the minimum position for each gene
+    de_novos$min_pos = "min_pos"
+    de_novos$temp = "chrom"
+    pos = reshape::cast(de_novos, hgnc ~ min_pos, value = "position", min)
+    chrom = reshape::cast(de_novos, hgnc ~ temp, value = "chrom", min)
+    de_novo_counts = merge(pos, de_novo_counts, by = "hgnc")
+    de_novo_counts = merge(chrom, de_novo_counts, by = "hgnc")
+    
     return(de_novo_counts)
 }
 
 #' tests whether genes are enriched with de novo mutations
 #' 
 #' @param rates gene mutation rates per consequence type
-#' @param de_novos data frame containing all the observed de novos for all the 
-#'            genes
 #' @param counts data frame with tally of de novo mutations for each of the
 #'            mutation types.
 #' @param num.tests number of tests performed (used for multiple correction).
@@ -55,51 +61,26 @@ get_de_novo_counts <- function(de_novos) {
 #' 
 #' @return data frame with gene info, mutation rates and P values from testing
 #'     for enrichment.
-get_p_values <- function(rates, de_novos, counts, num.tests) {
+get_p_values <- function(rates, counts, num.tests) {
     
-    # set-up vectors to store gene-specific information only for observed genes
-    observed = data.frame(matrix(NA, nrow = nrow(counts), ncol = 8))
-    names(observed) = c("chr", "coord", "snv.missense.rate", 
-        "snv.lof.rate", "indel.missense.rate", "indel.lof.rate", "p.func", 
-        "p.lof")
-
-    # loop for each observed gene, test for functional variants and lof 
-    # variants, using the gene mutation rates
-    for (i in 1:nrow(counts)) {
-        gene = as.character(counts$hgnc[i])
-        
-        # continue to next gene if mutation rates not available for the gene
-        if (!(gene %in% rates$hgnc)) { next }
-        
-        gene.index = which(rates$hgnc == gene)
-        
-        # get the mutation rates for the gene
-        observed[i, c("snv.missense.rate", "snv.lof.rate", "indel.missense.rate", "indel.lof.rate")] = rates[gene.index, c("snv.missense.rate", "snv.lof.rate", "indel.missense.rate", "indel.lof.rate")]
-        
-        # figure out the chromosome and nucleotide position of the gene
-        data.index = which(de_novos$hgnc == gene)[1]
-        observed$chr[i] = de_novos$chrom[data.index]
-        observed$coord[i] = de_novos$position[data.index]
-        
-        # count the observed de novos in each functional category
-        lof_count = sum(counts[i, c("lof.snvs", "lof.indels")])
-        missense_count = sum(counts[i, c("missense.snvs", "missense.indels")])
-        func_count = lof_count + missense_count
-        
-        # get the mutation rates for each functional category
-        lof_rate = sum(observed[i, c("snv.lof.rate", "indel.lof.rate")])
-        missense_rate = sum(observed[i, c("snv.missense.rate", "indel.missense.rate")]) 
-        func_rate = lof_rate + missense_rate
-        
-        # calculate the probability of observing said de novos, given the 
-        # gene mutation rates
-        observed$p.lof[i] = dpois(lof_count, lambda=lof_rate)
-        observed$p.func[i] = dpois(func_count, lambda=func_rate)
-        
-        if (i %% 100 == 0) {
-            print(paste(i, " out of ", nrow(counts), " genes", sep = ""))
-        }
-    }
+    observed = merge(counts, rates, by = c("hgnc", "chrom"), all.x=TRUE)
+    
+    # for each gene, sum the de novo counts across SNVs and indels for the
+    # different functional categories: loss of function, missense and functional
+    lof_count = observed$lof.snvs + observed$lof.indels
+    missense_count = observed$missense.snvs + observed$missense.indels
+    func_count = lof_count + missense_count
+    
+    # for each gene, sum the mutation rates across SNVs and indels for the
+    # different functional categories
+    lof_rate = observed$snv.lof.rate + observed$indel.lof.rate
+    missense_rate = observed$snv.missense.rate + observed$indel.missense.rate
+    func_rate = lof_rate + missense_rate
+    
+    # calculate the probably of getting the observed number of de novos, given
+    # the mutation rate
+    observed$p.lof = dpois(lof_count, lambda=lof_rate)
+    observed$p.func = dpois(func_count, lambda=func_rate)
     
     # correct the P values for multiple testing by false discovery rate
     observed$fdr.lof = p.adjust(observed$p.lof, method="BH", n=num.tests)
@@ -129,18 +110,22 @@ analyse_gene_enrichment <- function(de_novos, num.trios.male, num.trios.female) 
     
     # calculate p values for each gene using the different mutation rates
     num.tests = 18500
-    p_vals_length = get_p_values(cds_rates, de_novos, de_novo_counts, num.tests)
-    p_vals_daly = get_p_values(daly_rates, de_novos, de_novo_counts, num.tests)
+    p_vals_length = get_p_values(cds_rates, de_novo_counts, num.tests)
+    p_vals_daly = get_p_values(daly_rates, de_novo_counts, num.tests)
     
     # write out results table
-    enriched = cbind(de_novo_counts, p_vals_length, p_vals_daly)
-    names(enriched) = c("hgnc", "LOF.snvs", "NS.snvs", "LOF.indels",
-        "NS.indels", "chr", "coord", "snv.missense.rate",
-        "snv.lof.rate", "indel.missense.rate", "indel.lof.rate", "p.func",
-        "p.lof", "fdr.lof", "fdr.func", "chr", "coord",
-        "daly.snv.missense.rate", "daly.snv.lof.rate",
-        "daly.indel.missense.rate", "daly.indel.lof.rate", "daly.p.func",
-        "daly.p.lof", "daly.fdr.lof", "daly.fdr.func")
+    enriched = merge(p_vals_length, p_vals_daly, by = c("hgnc", "chrom", 
+        "min_pos", "lof.snvs", "missense.snvs", "lof.indels", "missense.indels"))
+    
+    # fix the column names
+    names(enriched) = c("hgnc", "chrom", "min_pos", "lof.snvs", 
+        "missense.snvs", "lof.indels", "missense.indels", 
+        "snv.missense.rate.length", "snv.lof.rate.length", 
+        "indel.missense.rate.length", "indel.lof.rate.length", "p.lof.length", 
+        "p.func.length", "fdr.lof.length", "fdr.func.length", 
+        "snv.silent.rate.daly", "snv.missense.rate.daly", "snv.lof.rate.daly", 
+        "indel.missense.rate.daly", "indel.lof.rate.daly", "p.lof.daly", 
+        "p.func.daly", "fdr.lof.daly", "fdr.func.daly")
     
     plot_enrichment_graphs(enriched, num.tests)
     

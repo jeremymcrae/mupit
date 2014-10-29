@@ -9,6 +9,7 @@
 #'         rates for genes under different mutation classes
 #' @param males number of trios with male offspring
 #' @param females number of trios with female offspring
+#' @export
 #' 
 #' @return list containing mutation rates, where chrX genes have been adjusted
 #'     for the sex-specific transmission rates.
@@ -43,6 +44,7 @@ correct_for_x_chrom <- function(rates, males, females) {
 #' adapt indel rates for lower rate estimate from validated de novos
 #' 
 #' @param rates data frame of mutation rates.
+#' @export
 #' 
 #' @return the rates data frame, with adjusted indel rates.
 adjust_indel_rates <- function(rates) {
@@ -62,6 +64,7 @@ adjust_indel_rates <- function(rates) {
 #' 
 #' @param num.trios.male number of trios with a male offspring
 #' @param num.trios.female number of trios with a female offspring
+#' @export
 #' 
 #' @return a list containing mutation rates for genes under different mutation 
 #'     classes, along with the original Daly mutation rate dataset.
@@ -76,7 +79,7 @@ get_mutation_rates <- function(num.trios.male, num.trios.female) {
     daly = merge(daly, gene_info, by.x="gene", by.y="hgnc", all.x=T) 
     
     # get the number of expected mutations, given the number of transmissions
-    rates = data.frame(chrom = daly$chrom, hgnc = daly$gene)
+    rates = data.frame(hgnc = daly$gene, chrom = daly$chrom)
     rates$snv.silent.rate = (10^daly$syn) * auto.transmissions
     rates$snv.missense.rate = (10^daly$mis + 10^daly$rdt) * auto.transmissions
     rates$snv.lof.rate = (10^daly$non + 10^daly$css) * auto.transmissions

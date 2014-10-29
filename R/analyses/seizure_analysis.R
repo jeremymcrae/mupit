@@ -85,7 +85,7 @@ main <- function() {
     
     enriched = analyse_gene_enrichment(de_novos, num.trios.male, num.trios.female)
     
-    head(enriched[order(enriched$daly.p.func), ])
+    head(enriched[order(enriched$p.func.daly), ])
 }
 
 
