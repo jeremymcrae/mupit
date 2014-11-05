@@ -11,6 +11,8 @@ License: file LICENSE
 LazyData: true
 Imports:
     Cairo (>= 1.5.6),
-    reshape (>= 0.8.5)
+    reshape (>= 0.8.5),
+    rjson (>= 0.2.13),
+    gdata
 Suggests:
     testthat

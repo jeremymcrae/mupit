@@ -1,6 +1,38 @@
 # function to open de novo data from the DDD study
 # 
 
+start_time = Sys.time()
+
+#' find the most severe VEP consequence for a variant
+#' 
+#' @param variant data frame or list for a variant, containing chrom, 
+#'     start_pos, end_pos, and allele code for a single variant
+#' 
+#' @export
+#' @return a character string containing the most severe consequence, as per VEP
+#'     annotation formats. 
+get_most_severe_vep_consequence <- function(variant, genome_build="grch37", verbose=FALSE) {
+    
+    # only tolerate the grch37 and grch38 genome builds, since they are the only
+    # genome builds supported by the Ensembl REST API
+    allowed_builds = c("grch37", "grch38")
+    stopifnot( tolower(genome_build) %in% allowed_builds )
+    
+    if (verbose) {
+        print(paste(variant$chrom, variant$start_pos))
+    }
+    
+    base_url = "rest.ensembl.org/vep/human/region/"
+    if (genome_build == "grch37") {
+        base_url = paste("grch37", base_url, sep = ".")
+    }
+    
+    url = paste("http://", base_url, variant$chrom, ":", variant$start_pos, ":", variant$end_pos, "/", variant$allele, "?content-type=application/json", sep = "")
+    
+    json = rjson::fromJSON(file=url)
+    
+    return(json[[1]]$most_severe_consequence)
+}
 
 #' find diagnosed probands in the DDD study, to exclude them from our data
 #' 
