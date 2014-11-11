@@ -53,6 +53,9 @@
 #' Iossifov et al. (2012) Neuron 74:285-299
 #' doi: 10.1016/j.neuron.2012.04.009
 #' 
+#' NOTE: THESE VARIANTS SHOULD BE MERGED WITH (AND DUPLICATES REMOVED) THE 
+#' NOTE: IOSSIFOV DE NOVOS.
+#' 
 #' @source url(http://www.nature.com/nature/journal/v485/n7397/extref/nature10945-s3.xls)
 #' @source url(http://www.nature.com/nature/journal/v485/n7397/extref/nature10989-s2.xls)
 #' @source url(http://www.ncbi.nlm.nih.gov/pmc/articles/PMC3619976/bin/NIHMS374246-supplement-01.pdf)
@@ -60,7 +63,6 @@
 #' @format A data frame with five variables: \code{hgnc}, \code{consequence},
 #'   \code{position}, \code{chrom}, \code{type} and \code{study}
 "autism_de_novos"
-
 
 #' Fromer de novos.
 #' 
@@ -73,6 +75,20 @@
 #' @format A data frame with five variables: \code{hgnc}, \code{consequence},
 #'   \code{position}, \code{chrom}, \code{type} and \code{study}
 "fromer_de_novos"
+
+#' Iossifov de novos.
+#' 
+#' De novo mutation data sourced from Supplementary table 2:
+#' Iossifov et al. (2014) Nature 498:220-223
+#' doi: 10.1038/nature13908
+#' 
+#' NOTE: THESE VARIANTS SHOULD BE MERGED WITH (AND DUPLICATES REMOVED) THE 
+#' NOTE: AUTISM DE NOVOS.
+#' 
+#' @source url(http://www.nature.com/nature/journal/vaop/ncurrent/full/nature13908.html)
+#' @format A data frame with five variables: \code{hgnc}, \code{consequence},
+#'   \code{position}, \code{chrom}, \code{type} and \code{study}
+"iossifov_de_novos"
 
 #' Zaidi de novos.
 #' 

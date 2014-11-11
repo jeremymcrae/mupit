@@ -35,12 +35,15 @@ get_trio_counts <- function(diagnosed) {
     female.fromer = 306
     
     # number of trios studied in epi4k data
-    male.epi4k = 156
-    female.epi4k = 108
+    male.epi4k = 200
+    female.epi4k = 142
     
     # number of trios studied in zaidi data
     male.zaidi = 220
     female.zaidi = 142
+    
+    male.iossifov = "X"
+    female.iossifov = "X"
     
     # sum up males and females across studies
     male = male.ddd + male.deligt + male.autism + male.rauch + male.fromer + male.epi4k + male.zaidi

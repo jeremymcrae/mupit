@@ -13,7 +13,7 @@ library(plyr)
 #' 
 #' @return matrix with the tallies of how many genes had one de novo, two de 
 #'     novos, three de novos etc at each simulation
-simulate_recurrent_mutations <- function(mutation_rates, num.sims) {
+simulate_recurrent_mutations <- function(mutation_rates, num.sims, num.DNM.func, max.obs) {
     
     # get the cumulative distribution of mutation rates for the genes
     summed.rates = cumsum(mutation_rates)
@@ -23,8 +23,7 @@ simulate_recurrent_mutations <- function(mutation_rates, num.sims) {
     scaled.summed.rates = as.double(summed.rates/max(summed.rates))
     
     # randomly simulate de novos in genes, to count recurrently mutated genes
-    max.obs = 15 # max times a gene might be expected to be mutated
-    store = matrix(nrow=num.sims, ncol=max.obs)
+    simulated = matrix(nrow=num.sims, ncol=max.obs)
     for (i in 1:num.sims) {
         # get 
         x = runif(num.DNM.func)
@@ -34,10 +33,10 @@ simulate_recurrent_mutations <- function(mutation_rates, num.sims) {
         # tally the number of genes by how many mutations they have, then store
         # these values from the current simulation
         recurrent_count = table(table(genes_selected))
-        store[i, as.numeric(names(recurrent_count))] = recurrent_count
+        simulated[i, as.numeric(names(recurrent_count))] = recurrent_count
     }
     
-    return(store)
+    return(simulated)
 }
 
 main <- function(){
@@ -50,6 +49,7 @@ main <- function(){
     num.DNM.func = 1106
     num.recurr.genes = 96
     num.sims = 10000 # number of simulations to perform
+    max.obs = 15 # max times a gene might be expected to be mutated
     
     # calculate numbers of transmissions for autosomes and chrX
     num.trios.male = 582 # trios with male offspring
@@ -59,8 +59,8 @@ main <- function(){
     gene.func.rate = rates$snv.missense.rate + rates$snv.lof.rate + 
         rates$indel.missense.rate + rates$indel.lof.rate
     
-    store = simulate_recurrent_mutations(gene.func.rate, num.sims)
-    recurrent = rowSums(store[, 2:max.obs], na.rm = TRUE)
+    store = simulate_recurrent_mutations(gene.func.rate, num.sims, num.DNM.func, max.obs)
+    recurrent = rowSums(store[, 2:max.obs], na.rm=TRUE)
     
     if(any(!is.na(store[, max.obs]))) {
         stop("warning maximum observations reached, extend max obs")

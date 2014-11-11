@@ -1,5 +1,7 @@
 # Script to generate processed datasets for the mupit package
 
+library(mupit)
+
 #' get de novo data for Rauch et al. intellectual disability exome study
 #' 
 #' De novo mutation data sourced from supplementary tables 2 and 3 from
@@ -46,19 +48,38 @@ prepare_deligt_de_novos <- function() {
 #' Allen et al. (2013) Nature 501:217-221 
 #' doi: 10.1038/nature12439
 #' 
+#' TODO: swap out this data for that used in the more recent EPI4K publication:
+#' TODO: American Journal of Human Genetics (2014) 95:360-370
+#' TODO: doi: 10.1016/j.ajhg.2014.08.013
+#' 
 #' @return data frame of de novos, including gene symbol, functional consequence
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
 prepare_epi4k_de_novos <- function() {
     
-    epi4k_de_novos = read.delim(file.path("data-raw", "de_novo_datasets", "epi4k_v2.txt"), header=TRUE, colClasses = "character")
+    epi4k_de_novos = gdata::read.xls("http://www.sciencedirect.com/science/MiamiMultiMediaURL/1-s2.0-S0002929714003838/1-s2.0-S0002929714003838-mmc2.xlsx/276895/FULL/S0002929714003838/bf21945d72e3297fc44969dc0296f4f1/mmc2.xlsx", stringsAsFactors=FALSE)
     
-    # standardise the SNV or INDEL flag
-    TYPE.index = which(epi4k_de_novos$Type == "snv")
-    epi4k_de_novos$TYPE = "INDEL"
-    epi4k_de_novos$TYPE[TYPE.index] = "SNV"
+    # the excel table contains three final tail rows which do not contain
+    # tabular data, so we remove these
+    epi4k_de_novos = epi4k_de_novos[1:(nrow(epi4k_de_novos) - 3), ]
     
-    # standardise the columns, and column names
-    epi4k_de_novos = subset(epi4k_de_novos, select = c("INFO.HGNC", "INFO.CQ", "pos", "chrom", "TYPE"))
+    epi4k_de_novos = prepare_coordinates_with_allele(epi4k_de_novos, 
+        "hg19.coordinates..chr.position.", "Ref.Alt.alleles")
+    
+    # get the HGNC symbol
+    # NOTE: the variant with the most severe consequence might not necessarily  
+    # NOTE: be within the listed gene. I haven't accounted for this yet.
+    epi4k_de_novos$consequence = apply(epi4k_de_novos, 1, get_most_severe_vep_consequence, verbose=TRUE)
+    
+    # get the hgnc symbol, and clean any anomalies
+    epi4k_de_novos$hgnc = epi4k_de_novos$Gene
+    epi4k_de_novos$hgnc = gsub(" \\(MLL4\\)", "", epi4k_de_novos$hgnc)
+    epi4k_de_novos$hgnc = gsub(" \\^", "", epi4k_de_novos$hgnc)
+    
+    # set the SNV/INDEL type
+    epi4k_de_novos$type = "INDEL"
+    epi4k_de_novos$type[epi4k_de_novos$start_pos == epi4k_de_novos$end_pos] = "SNV"
+    
+    epi4k_de_novos = subset(epi4k_de_novos, select = c("hgnc", "consequence", "start_pos", "chrom", "type"))
     names(epi4k_de_novos) = c("hgnc", "consequence", "position", "chrom", "type")
     epi4k_de_novos$study = "epi4k"
     
@@ -93,7 +114,7 @@ prepare_autism_de_novos <- function() {
     autism_de_novos = autism_de_novos[which(autism_de_novos$pheno == "Pro"), ]
     
     # standardise the SNV or INDEL flag
-    TYPE.index = which(abs(nchar(autism_de_novos$ref.1) - nchar(autism_de_novos$var)) == 0)
+    TYPE.index = which(nchar(autism_de_novos$ref.1) != nchar(autism_de_novos$var))
     autism_de_novos$TYPE = "INDEL"
     autism_de_novos$TYPE[TYPE.index] = "SNV"
     
@@ -175,37 +196,31 @@ prepare_iossifov_de_novos <-function() {
     # obtain the dataframe of de novo variants
     download.file("http://www.nature.com/nature/journal/vaop/ncurrent/extref/nature13908-s2.zip", path)
     unzip(path, files="nature13908-s2/Supplementary Table 2.xlsx", exdir=tmpdir)
-    variants = gdata::read.xls(file.path(tmpdir, "nature13908-s2", "Supplementary Table 2.xlsx"), stringsAsFactors=FALSE)
+    iossifov_de_novos = gdata::read.xls(file.path(tmpdir, "nature13908-s2", "Supplementary Table 2.xlsx"), stringsAsFactors=FALSE)
     
-    # get the start pos and chromosome
-    variants$temp = strsplit(variants$location, ":")
-    variants$chrom = sapply(variants$temp, "[[", 1)
-    variants$start_pos = sapply(variants$temp, "[[", 2)
-    
-    # extract the end pos, and allele code
-    variants$temp = strsplit(variants$vcfVariant, ":")
-    variants$end_pos = sapply(variants$temp, "[[", 2)
-    variants$allele = sapply(variants$temp, "[[", 4)
+    iossifov_de_novos = prepare_coordinates(iossifov_de_novos, "location", "vcfVariant")
     
     # get the HGNC symbol
     # NOTE: the variant with the most severe consequence might not necessarily  
     # NOTE: be within the listed gene. I haven't accounted for this yet.
-    variants$hgnc = variants$effectGene
-    variants$consequence = apply(variants, 1, get_most_severe_vep_consequence, verbose=TRUE)
+    iossifov_de_novos$hgnc = iossifov_de_novos$effectGene
+    iossifov_de_novos$consequence = apply(iossifov_de_novos, 1, get_most_severe_vep_consequence, verbose=TRUE)
     
     # set the SNV/INDEL type
-    variants$type = "INDEL"
-    variants$type[variants$start_pos == variants$end_pos] = "SNV"
+    iossifov_de_novos$type = "INDEL"
+    iossifov_de_novos$type[iossifov_de_novos$start_pos == iossifov_de_novos$end_pos] = "SNV"
     
     unlink(path)
     
-    variants = variants[variants$IossifovWE2012 != "yes", ]
+    # remove the de novos identified in the Iossifov publication, since they are
+    # also present in the autism_de_novos dataset in this package.
+    iossifov_de_novos = iossifov_de_novos[iossifov_de_novos$IossifovWE2012 != "yes", ]
     
-    variants = subset(variants, select = c("hgnc", "consequence", "start_pos", "chrom", "type"))
-    names(variants) = c("hgnc", "consequence", "position", "chrom", "type")
-    variants$study = "iossifov"
+    iossifov_de_novos = subset(iossifov_de_novos, select = c("hgnc", "consequence", "start_pos", "chrom", "type"))
+    names(iossifov_de_novos) = c("hgnc", "consequence", "position", "chrom", "type")
+    iossifov_de_novos$study = "iossifov"
     
-    save(variants, file="data/iossifov_de_novos.rda")
+    save(iossifov_de_novos, file="data/iossifov_de_novos.rda")
 }
 
 prepare_rauch_de_novos()
@@ -214,3 +229,4 @@ prepare_epi4k_de_novos()
 prepare_autism_de_novos()
 prepare_fromer_de_novos()
 prepare_zaidi_de_novos()
+prepare_iossifov_de_novos()
