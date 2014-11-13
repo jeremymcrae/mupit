@@ -86,6 +86,178 @@ prepare_epi4k_de_novos <- function() {
     save(epi4k_de_novos, file="data/epi4k_de_novos.rda")
 }
 
+#' get de novo data from the Sanders et al autism exome study
+#' 
+#' Supplementary table 2 (where the excel sheets for the probands and 
+#' siblings have been combined) from:
+#' Sanders et al. (2012) Nature 485:237-241 
+#' doi: 10.1038/nature10945
+#' 
+#' @return data frame of de novos, with standardised genome coordinates and VEP
+#      consequences for each variant
+prepare_sanders_de_novos <- function() {
+    url = "http://www.nature.com/nature/journal/v485/n7397/extref/nature10945-s3.xls"
+    sanders_probands = gdata::read.xls(url, sheet="Probands", stringsAsFactors=FALSE)
+    sanders_siblings = gdata::read.xls(url, sheet="Siblings", stringsAsFactors=FALSE)
+    variants = rbind(sanders_probands, sanders_siblings)
+    
+    variants$chrom = gsub("chr", "", variants$Chr.1)
+    variants$start_pos = gsub(" ", "", variants$Pos..hg19.)
+    variants$ref_allele = variants$Ref
+    variants$alt_allele = variants$Alt
+    
+    variants$temp = NA
+    
+    indels = grep(":", variants$alt_allele)
+    
+    variants$ref_allele[indels] = sapply(strsplit(variants$alt_allele[indels], ":"), "[[", 2)
+    variants$alt_allele[indels] = "-"
+    
+    variants$end_pos = variants$start_pos
+    variants$end_pos[indels] = as.numeric(variants$end_pos[indels]) + nchar(variants$ref_allele[indels])
+    
+    variants = fix_het_alleles(variants)
+    
+    variants$consequence = NA
+    for (row_num in 1:nrow(variants)) {
+        variants$consequence[row_num] = get_most_severe_vep_consequence(variants[row_num, ], verbose=TRUE)
+    }
+    variants$hgnc = variants$Gene
+    
+    return(variants)
+}
+
+#' get de novo data from the O'Roak et al autism exome study
+#' 
+#' Supplementary table 3 from:
+#' O'Roak et al. (2012) Nature 485:246-250
+#' doi: 10.1038/nature10989
+#' 
+#' @return data frame of de novos, with standardised genome coordinates and VEP
+#      consequences for each variant
+prepare_oroak_de_novos <- function() {
+    url = "http://www.nature.com/nature/journal/v485/n7397/extref/nature10989-s2.xls"
+    variants = gdata::read.xls(url, sheet="Supplementary Table 3", stringsAsFactors=FALSE)
+    
+    # the excel table contains two final tail rows which do not contain
+    # tabular data, so we remove these
+    variants = variants[1:(nrow(variants) - 2), ]
+    
+    # standardise the chrom, position and allele column names
+    variants$chrom = variants$Chromosome
+    variants$start_pos = variants$Position..hg19.
+    variants$ref_allele = variants$Ref
+    variants$alt_allele = variants$Allele
+    
+    # sort out the "complex" allele events
+    variants$alt_allele[61] = "S"
+    variants$alt_allele[78] = "1D, -G"
+    variants$alt_allele[116] = "1I, +C"
+    variants$alt_allele[133] = "R"
+    variants$alt_allele[185] = "1D, -G"
+    
+    # fix the alleles and positions for insertions and deletions
+    deletions = grep("D, -", variants$alt_allele)
+    insertions = grep("I, +", variants$alt_allele)
+    
+    variants$ref_allele[deletions] = sapply(strsplit(variants$alt_allele[deletions], "D, -"), "[[", 2)
+    variants$alt_allele[deletions] = "-"
+    variants$ref_allele[insertions] = "N"
+    variants$alt_allele[insertions] = paste("A", sapply(strsplit(variants$alt_allele[insertions], "I, \\+"), "[[", 2), sep="")
+    
+    # get the end coordinate, including those for the insertions and deletions
+    variants$end_pos = variants$start_pos
+    variants$end_pos[deletions] = as.numeric(variants$end_pos[deletions]) + nchar(variants$ref_allele[deletions]) - 1
+    
+    variants = fix_het_alleles(variants)
+    variants$consequence = apply(variants, 1, get_most_severe_vep_consequence, verbose=TRUE)
+    variants$hgnc = variants$Gene_SeaSeq
+    
+    return(variants)
+}
+
+#' get de novo data from the 2012 Iossifov et al autism exome study in Neuron
+#' 
+#' Supplementary table 1 (where the non-coding SNVs have been excluded) from:
+#' Iossifov et al. (2012) Neuron 74:285-299
+#' doi: 10.1016/j.neuron.2012.04.009
+#' 
+#' @return data frame of de novos, with standardised genome coordinates and VEP
+#      consequences for each variant
+prepare_iossifov_neuron_de_novos <- function() {
+    url = "http://www.sciencedirect.com/science/MiamiMultiMediaURL/1-s2.0-S0896627312003406/1-s2.0-S0896627312003406-mmc2.xlsx/272195/FULL/S0896627312003406/26c5ba3b72a2410ef43fec52a40f35e6/mmc2.xlsx"
+    variants = gdata::read.xls(url, sheet="SNV.v4.1-normlized", stringsAsFactors=FALSE)
+    
+    # trim out the low quality de novos (as defined by a flag in the table)
+    variants = variants[variants$SNVFilter == 1, ]
+    
+    # get the coordinates and VEP consequence
+    variants = prepare_coordinates_with_allele(variants, "location", "variant")
+    variants$consequence = apply(variants, 1, get_most_severe_vep_consequence, verbose=TRUE)
+    
+    # get hgnc symbols for the few genes that have missing values
+    no_gene = variants$effectGenes == ""
+    variants$effectGenes[no_gene] = apply(variants[no_gene, ], 1, get_gene_id_for_variant)
+    
+    # extract the hgnc symbol from a gene:consequence string
+    variants$hgnc = sapply(strsplit(variants$effectGenes, ":"), "[[", 1)
+    
+    # exclude de novos not located within the coding sequence of a gene
+    noncoding_consequences = c("non_coding_transcript_exon_variant",
+        "3_prime_UTR_variant", "intron_variant", "downstream_gene_variant",
+        "5_prime_UTR_variant", "upstream_gene_variant")
+    variants = variants[!(variants$consequence %in% noncoding_consequences), ]
+    
+    return(variants)
+}
+
+#' get de novo data from the 2014 Iossifov et al. autism exome study in Nature
+#' 
+#' De novo mutation data sourced from Supplementary table 2:
+#' Iossifov et al. (2013) Nature 498:220-223
+#' doi: 10.1038/nature13908
+#' 
+#' @return data frame of de novos, including gene symbol, functional consequence
+#'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
+prepare_iossifov_nature_de_novos <-function() {
+    tmpdir = tempdir()
+    path = tempfile(tmpdir=tmpdir)
+    
+    # obtain the dataframe of de novo variants
+    download.file("http://www.nature.com/nature/journal/vaop/ncurrent/extref/nature13908-s2.zip", path)
+    unzip(path, files="nature13908-s2/Supplementary Table 2.xlsx", exdir=tmpdir)
+    variants = gdata::read.xls(file.path(tmpdir, "nature13908-s2", "Supplementary Table 2.xlsx"), stringsAsFactors=FALSE)
+    
+    variants = prepare_coordinates(variants, "location", "vcfVariant")
+    
+    # NOTE: the variant with the most severe consequence might not necessarily  
+    # NOTE: be within the listed gene. I haven't accounted for this yet.
+    variants$consequence = apply(variants, 1, get_most_severe_vep_consequence, verbose=TRUE)
+    
+    # get the HGNC symbol
+    no_gene = variants$effectGene == ""
+    variants$effectGene[no_gene] = apply(variants[no_gene, ], 1, get_gene_id_for_variant)
+    variants$hgnc = variants$effectGene
+    
+    # set the SNV/INDEL type
+    variants$type = "INDEL"
+    variants$type[variants$start_pos == variants$end_pos] = "SNV"
+    
+    unlink(path)
+    
+    # remove the de novos identified in the Iossifov publication, since they are
+    # also present in the autism_de_novos dataset in this package.
+    # variants = variants[variants$IossifovWE2012 != "yes", ]
+    
+    return(variants)
+    
+    # variants = subset(variants, select = c("hgnc", "consequence", "start_pos", "chrom", "type"))
+    # names(variants) = c("hgnc", "consequence", "position", "chrom", "type")
+    # variants$study = "iossifov"
+    
+    # save(iossifov_de_novos, file="data/iossifov_de_novos.rda")
+}
+
 #' get de novo data from autism exome studies
 #' 
 #' I think this data was obtained from studies published using the Simon's
@@ -107,6 +279,11 @@ prepare_epi4k_de_novos <- function() {
 #' @return data frame of de novos, including gene symbol, functional consequence
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
 prepare_autism_de_novos <- function() {
+    
+    sanders = prepare_sanders_de_novos()
+    oroak = prepare_oroak_de_novos()
+    iossifov_neuron = prepare_iossifov_neuron_de_novos()
+    iossifov_nature = prepare_iossifov_nature_de_novos()
     
     autism_de_novos = read.delim(file.path("data-raw", "de_novo_datasets", "autism_v3_PJ.txt"), header=TRUE, colClasses = "character")
     
@@ -179,48 +356,6 @@ prepare_zaidi_de_novos <- function() {
     zaidi_de_novos$study = "zaidi"
     
     save(zaidi_de_novos, file="data/zaidi_de_novos.rda")
-}
-
-#' get de novo data from Iossifov et al. congenital heart disease exome study
-#' 
-#' De novo mutation data sourced from Supplementary table 2:
-#' Iossifov et al. (2013) Nature 498:220-223
-#' doi: 10.1038/nature13908
-#' 
-#' @return data frame of de novos, including gene symbol, functional consequence
-#'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
-prepare_iossifov_de_novos <-function() {
-    tmpdir = tempdir()
-    path = tempfile(tmpdir=tmpdir)
-    
-    # obtain the dataframe of de novo variants
-    download.file("http://www.nature.com/nature/journal/vaop/ncurrent/extref/nature13908-s2.zip", path)
-    unzip(path, files="nature13908-s2/Supplementary Table 2.xlsx", exdir=tmpdir)
-    iossifov_de_novos = gdata::read.xls(file.path(tmpdir, "nature13908-s2", "Supplementary Table 2.xlsx"), stringsAsFactors=FALSE)
-    
-    iossifov_de_novos = prepare_coordinates(iossifov_de_novos, "location", "vcfVariant")
-    
-    # get the HGNC symbol
-    # NOTE: the variant with the most severe consequence might not necessarily  
-    # NOTE: be within the listed gene. I haven't accounted for this yet.
-    iossifov_de_novos$hgnc = iossifov_de_novos$effectGene
-    iossifov_de_novos$consequence = apply(iossifov_de_novos, 1, get_most_severe_vep_consequence, verbose=TRUE)
-    
-    # set the SNV/INDEL type
-    iossifov_de_novos$type = "INDEL"
-    iossifov_de_novos$type[iossifov_de_novos$start_pos == iossifov_de_novos$end_pos] = "SNV"
-    
-    unlink(path)
-    
-    # remove the de novos identified in the Iossifov publication, since they are
-    # also present in the autism_de_novos dataset in this package.
-    iossifov_de_novos = iossifov_de_novos[iossifov_de_novos$IossifovWE2012 != "yes", ]
-    
-    iossifov_de_novos = subset(iossifov_de_novos, select = c("hgnc", "consequence", "start_pos", "chrom", "type"))
-    names(iossifov_de_novos) = c("hgnc", "consequence", "position", "chrom", "type")
-    iossifov_de_novos$study = "iossifov"
-    
-    save(iossifov_de_novos, file="data/iossifov_de_novos.rda")
 }
 
 prepare_rauch_de_novos()
