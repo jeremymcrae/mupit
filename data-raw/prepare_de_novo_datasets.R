@@ -2,6 +2,12 @@
 
 library(mupit)
 
+# exclude de novos not located within the coding sequence of a gene
+NONCODING_CONSEQUENCES = c("non_coding_transcript_exon_variant",
+    "3_prime_UTR_variant", "intron_variant", "downstream_gene_variant",
+    "5_prime_UTR_variant", "upstream_gene_variant", "intergenic_variant", 
+    "regulatory_region_variant")
+
 #' get de novo data for Rauch et al. intellectual disability exome study
 #' 
 #' De novo mutation data sourced from supplementary tables 2 and 3 from
@@ -11,15 +17,54 @@ library(mupit)
 #' @return data frame of de novos, including gene symbol, functional consequence
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
 prepare_rauch_de_novos <- function() {
-   
-    rauch_de_novos = read.delim(file.path("data-raw", "de_novo_datasets", "rauch_v2.txt"), header=TRUE, colClasses = "character")
     
-    # standardise the columns, and column names
-    rauch_de_novos = subset(rauch_de_novos, select = c("INFO.HGNC", "INFO.CQ", "POS", "CHROM", "TYPE"))
-    names(rauch_de_novos) = c("hgnc", "consequence", "position", "chrom", "type")
-    rauch_de_novos$study = "rauch"
+    url = "http://www.sciencedirect.com/science/MiamiMultiMediaURL/1-s2.0-S0140673612614809/1-s2.0-S0140673612614809-mmc1.pdf/271074/FULL/S0140673612614809/55b26043f4a279334b3a5ec00b9faf4b/mmc1.pdf"
     
-    save(rauch_de_novos, file="data/rauch_de_novos.rda")
+    # obtain the supplementary material
+    path = tempfile()
+    download.file(url, path)
+    
+    # extract the supplementary tables from the pdf
+    test = tm::readPDF(control=list(text = "-layout"))(elem = list(uri = path), language = "en", id = "id1")
+    unlink(path)
+    
+    # get the lines corresponding to each table
+    table_s2_text = test$content[769:847]
+    table_s3_text = test$content[879:890]
+    
+    # clean up table S2
+    table_s2_text = gsub("^[ \t]+", "", table_s2_text) # trim leading whitespace
+    split_strings = strsplit(table_s2_text, "[ \t]+")
+    split_strings = iconv(unlist(split_strings), "latin1", "ASCII", sub="")
+    table_s2 = as.data.frame(matrix(split_strings, ncol=12, byrow=TRUE))
+    names(table_s2) = c("person_id", "hgnc", "type", "hgvs_genomic")
+    
+    # clean up table S3
+    table_s3_text = gsub("^[ \t]+", "", table_s3_text) # trim leading whitespace
+    split_strings = strsplit(table_s3_text, "[ \t]+")
+    split_strings[7][[1]] = c(split_strings[[7]], "") # one row lacks an entry
+    split_strings = iconv(unlist(split_strings), "latin1", "ASCII", sub="")
+    table_s3 = as.data.frame(matrix(split_strings, ncol=9, byrow=TRUE))
+    names(table_s3) = c("person_id", "hgnc", "hgvs_genomic")
+    table_s3$type = "synonymous"
+    
+    # standardise and merge the two tables
+    table_s2 = subset(table_s2, select=c(person_id, hgnc, type, hgvs_genomic))
+    table_s3 = subset(table_s3, select=c(person_id, hgnc, type, hgvs_genomic))
+    variants = rbind(table_s2, table_s3)
+    
+    variants = prepare_coordinates_with_hgvs_genomic(variants, "hgvs_genomic")
+    variants$consequence = apply(variants, 1, get_most_severe_vep_consequence, verbose=TRUE)
+    
+    variants$study_code = "rauch_lancet_2012"
+    variants$publication_doi = "10.1016/S0140-6736(12)61480-9"
+    variants$study_phenotype = "intellectual_disability"
+    
+    variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
+        ref_allele, alt_allele, hgnc, consequence, study_code, publication_doi, 
+        study_phenotype))
+    
+    return(variants)
 }
 
 #' get de novo data for De Ligt et al. intellectual disability exome study
@@ -32,14 +77,78 @@ prepare_rauch_de_novos <- function() {
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
 prepare_deligt_de_novos <- function() {
     
-    deligt_de_novos = read.delim(file.path("data-raw", "de_novo_datasets", "deligt_v2.txt"), header=TRUE, colClasses = "character")
+    url = "http://www.nejm.org/doi/suppl/10.1056/NEJMoa1206524/suppl_file/nejmoa126524_appendix.pdf"
     
-    # standardise the columns, and column names
-    deligt_de_novos = subset(deligt_de_novos, select = c("INFO.HGNC", "INFO.CQ", "POS", "CHROM", "TYPE"))
-    names(deligt_de_novos) = c("hgnc", "consequence", "position", "chrom", "type")
-    deligt_de_novos$study = "deligt"
+    temp = "temp.html"
+    cookie = "cookie.txt"
+    system("wget --cookies=on --keep-session-cookies --save-cookies=", cookie, " ", url, " -O", temp, sep="")
     
-    save(deligt_de_novos, file="data/deligt_de_novos.rda")
+    # obtain the supplementary material
+    # path = tempfile()
+    path = "corrupted_pdf.pdf"
+    system(paste("wget --referer=", url, " --cookies=on --load-cookies=", cookie, " --keep-session-cookies --save-cookies=", cookie, " ", url, " -O ", path, sep=""))
+    # download.file(url, path, extra=c("--cookies=on", "--load-cookies=cookie.txt", "--keep-session-cookies", "--save-cookies=cookie.txt"))
+    
+    # repair the pdf with ghostscript
+    # repaired = tempfile()
+    repaired = "repaired.pdf"
+    system(paste("gs -o ", repaired, " -sDEVICE=pdfwrite -dPDFSETTINGS=/prepress ", path, sep=""))
+    
+    test = tm::readPDF(control=list(text = "-layout"))(elem = list(uri=repaired), language = "en", id = "id1")
+    
+    # delet the pdf and temporary files
+    unlink(temp)
+    unlink(cookie)
+    unlink(path)
+    unlink(repaired)
+    
+    # get the lines corresponding to each table
+    table_s3_text = test$content[1709:1795]
+    
+    # clean up table S2
+    table_s3_text = gsub("^[ \t]+", "", table_s3_text) # trim leading whitespace
+    split_strings = strsplit(table_s3_text, "[ \t]+")
+    
+    # fix the lines that come after the page breaks
+    split_strings[[28]][1] = "31"
+    split_strings[[61]] = split_strings[[61]][2:length(split_strings[[61]])]
+    
+    # drop the lines that are part of the page breaks
+    split_strings[75] = NULL
+    split_strings[62] = NULL
+    split_strings[60] = NULL
+    split_strings[59] = NULL
+    split_strings[58] = NULL
+    split_strings[27] = NULL
+    split_strings[26] = NULL
+    split_strings[25] = NULL
+    
+    # cull it down to the first few entries in each line
+    variants = data.frame(t(sapply(split_strings, "[", 1:6)))
+    names(variants) = c("person_id", "hgnc", "hgvs_genomic", "transcript", "hgvs_cdna", "hgvs_protein")
+    
+    # fix the hgvs genomic string
+    variants$hgvs_genomic = gsub("\\(GRCh37\\)g", ":g", variants$hgvs_genomic)
+    variants$hgvs_genomic = gsub("\\(GRCh37\\)", "", variants$hgvs_genomic)
+    variants$hgvs_genomic = gsub("\\(GRCH37\\)", "", variants$hgvs_genomic)
+    variants$hgvs_genomic = gsub("Chr", "chr", variants$hgvs_genomic)
+    variants$hgvs_genomic = gsub("-", "_", variants$hgvs_genomic)
+    
+    # convert a position with NCBI36 genome assembly coordinates
+    variants$hgvs_genomic[27] = "chr19:g.53958839G>C"
+    
+    variants = prepare_coordinates_with_hgvs_genomic(variants, "hgvs_genomic")
+    variants$consequence = apply(variants, 1, get_most_severe_vep_consequence, verbose=TRUE)
+    
+    variants$study_code = "deligt_nejm_2012"
+    variants$publication_doi = "10.1056/NEJMoa1206524"
+    variants$study_phenotype = "intellectual_disability"
+    
+    variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
+        ref_allele, alt_allele, hgnc, consequence, study_code, publication_doi, 
+        study_phenotype))
+    
+    return(variants)
 }
 
 #' get de novo data for the Epi4K epilepsy exome study
@@ -56,34 +165,35 @@ prepare_deligt_de_novos <- function() {
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
 prepare_epi4k_de_novos <- function() {
     
-    epi4k_de_novos = gdata::read.xls("http://www.sciencedirect.com/science/MiamiMultiMediaURL/1-s2.0-S0002929714003838/1-s2.0-S0002929714003838-mmc2.xlsx/276895/FULL/S0002929714003838/bf21945d72e3297fc44969dc0296f4f1/mmc2.xlsx", stringsAsFactors=FALSE)
+    variants = gdata::read.xls("http://www.sciencedirect.com/science/MiamiMultiMediaURL/1-s2.0-S0002929714003838/1-s2.0-S0002929714003838-mmc2.xlsx/276895/FULL/S0002929714003838/bf21945d72e3297fc44969dc0296f4f1/mmc2.xlsx", stringsAsFactors=FALSE)
     
     # the excel table contains three final tail rows which do not contain
     # tabular data, so we remove these
-    epi4k_de_novos = epi4k_de_novos[1:(nrow(epi4k_de_novos) - 3), ]
+    variants = variants[1:(nrow(variants) - 3), ]
     
-    epi4k_de_novos = prepare_coordinates_with_allele(epi4k_de_novos, 
+    variants = prepare_coordinates_with_allele(variants, 
         "hg19.coordinates..chr.position.", "Ref.Alt.alleles")
     
     # get the HGNC symbol
     # NOTE: the variant with the most severe consequence might not necessarily  
     # NOTE: be within the listed gene. I haven't accounted for this yet.
-    epi4k_de_novos$consequence = apply(epi4k_de_novos, 1, get_most_severe_vep_consequence, verbose=TRUE)
+    variants$consequence = apply(variants, 1, get_most_severe_vep_consequence, verbose=TRUE)
     
     # get the hgnc symbol, and clean any anomalies
-    epi4k_de_novos$hgnc = epi4k_de_novos$Gene
-    epi4k_de_novos$hgnc = gsub(" \\(MLL4\\)", "", epi4k_de_novos$hgnc)
-    epi4k_de_novos$hgnc = gsub(" \\^", "", epi4k_de_novos$hgnc)
+    variants$hgnc = variants$Gene
+    variants$hgnc = gsub(" \\(MLL4\\)", "", variants$hgnc)
+    variants$hgnc = gsub(" \\^", "", variants$hgnc)
     
-    # set the SNV/INDEL type
-    epi4k_de_novos$type = "INDEL"
-    epi4k_de_novos$type[epi4k_de_novos$start_pos == epi4k_de_novos$end_pos] = "SNV"
+    variants$person_id = variants$Child.ID
+    variants$study_code = "epi4k_ajhg_2014"
+    variants$publication_doi = "10.1016/j.ajhg.2014.08.013"
+    variants$study_phenotype = "epilepsy"
     
-    epi4k_de_novos = subset(epi4k_de_novos, select = c("hgnc", "consequence", "start_pos", "chrom", "type"))
-    names(epi4k_de_novos) = c("hgnc", "consequence", "position", "chrom", "type")
-    epi4k_de_novos$study = "epi4k"
+    variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
+        ref_allele, alt_allele, hgnc, consequence, study_code, publication_doi, 
+        study_phenotype))
     
-    save(epi4k_de_novos, file="data/epi4k_de_novos.rda")
+    return(variants)
 }
 
 #' get de novo data from the Sanders et al autism exome study
@@ -123,6 +233,14 @@ prepare_sanders_de_novos <- function() {
         variants$consequence[row_num] = get_most_severe_vep_consequence(variants[row_num, ], verbose=TRUE)
     }
     variants$hgnc = variants$Gene
+    variants$person_id = variants$Child_ID
+    variants$study_code = "sanders_nature_2012"
+    variants$publication_doi = "10.1038/nature10945"
+    variants$study_phenotype = "autism"
+    
+    variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
+        ref_allele, alt_allele, hgnc, consequence, study_code, publication_doi, 
+        study_phenotype))
     
     return(variants)
 }
@@ -172,13 +290,22 @@ prepare_oroak_de_novos <- function() {
     variants = fix_het_alleles(variants)
     variants$consequence = apply(variants, 1, get_most_severe_vep_consequence, verbose=TRUE)
     variants$hgnc = variants$Gene_SeaSeq
+    oroak$person_id = oroak$Person
+    oroak$study_code = "oroak_nature_2012"
+    oroak$publication_doi = "10.1038/nature10989"
+    oroak$study_phenotype = "autism"
+    
+    variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
+        ref_allele, alt_allele, hgnc, consequence, study_code, publication_doi, 
+        study_phenotype))
     
     return(variants)
 }
 
 #' get de novo data from the 2012 Iossifov et al autism exome study in Neuron
 #' 
-#' Supplementary table 1 (where the non-coding SNVs have been excluded) from:
+#' Supplementary table 1 (where the non-coding SNVs have been excluded) and
+#' supplementary table 2 from:
 #' Iossifov et al. (2012) Neuron 74:285-299
 #' doi: 10.1016/j.neuron.2012.04.009
 #' 
@@ -186,10 +313,19 @@ prepare_oroak_de_novos <- function() {
 #      consequences for each variant
 prepare_iossifov_neuron_de_novos <- function() {
     url = "http://www.sciencedirect.com/science/MiamiMultiMediaURL/1-s2.0-S0896627312003406/1-s2.0-S0896627312003406-mmc2.xlsx/272195/FULL/S0896627312003406/26c5ba3b72a2410ef43fec52a40f35e6/mmc2.xlsx"
-    variants = gdata::read.xls(url, sheet="SNV.v4.1-normlized", stringsAsFactors=FALSE)
+    snvs = gdata::read.xls(url, sheet="SNV.v4.1-normlized", stringsAsFactors=FALSE)
+    
+    url = "http://www.sciencedirect.com/science/MiamiMultiMediaURL/1-s2.0-S0896627312003406/1-s2.0-S0896627312003406-mmc4.xlsx/272195/FULL/S0896627312003406/6caa42b35609c2ed5910b5381ddd5335/mmc4.xlsx"
+    indels = gdata::read.xls(url, sheet="ID.v4.1-normlized", stringsAsFactors=FALSE)
     
     # trim out the low quality de novos (as defined by a flag in the table)
-    variants = variants[variants$SNVFilter == 1, ]
+    snvs = snvs[snvs$SNVFilter == 1, ]
+    indels = indels[indels$IndelFilter == 1, ]
+    
+    # merge the SNV and indel de novo calls
+    snvs = subset(snvs, select = c("quadId", "location", "variant", "effectGenes", "effectType"))
+    indels = subset(indels, select = c("quadId", "location", "variant", "effectGenes", "effectType"))
+    variants = rbind(snvs, indels)
     
     # get the coordinates and VEP consequence
     variants = prepare_coordinates_with_allele(variants, "location", "variant")
@@ -203,10 +339,16 @@ prepare_iossifov_neuron_de_novos <- function() {
     variants$hgnc = sapply(strsplit(variants$effectGenes, ":"), "[[", 1)
     
     # exclude de novos not located within the coding sequence of a gene
-    noncoding_consequences = c("non_coding_transcript_exon_variant",
-        "3_prime_UTR_variant", "intron_variant", "downstream_gene_variant",
-        "5_prime_UTR_variant", "upstream_gene_variant")
-    variants = variants[!(variants$consequence %in% noncoding_consequences), ]
+    variants = variants[!(variants$consequence %in% NONCODING_CONSEQUENCES), ]
+    
+    variants$person_id = variants$quadId
+    variants$study_code = "iossifov_neuron_2012"
+    variants$publication_doi = "10.1016/j.neuron.2012.04.009"
+    variants$study_phenotype = "autism"
+    
+    variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
+        ref_allele, alt_allele, hgnc, consequence, study_code, publication_doi, 
+        study_phenotype))
     
     return(variants)
 }
@@ -214,17 +356,17 @@ prepare_iossifov_neuron_de_novos <- function() {
 #' get de novo data from the 2014 Iossifov et al. autism exome study in Nature
 #' 
 #' De novo mutation data sourced from Supplementary table 2:
-#' Iossifov et al. (2013) Nature 498:220-223
+#' Iossifov et al. (2014) Nature 498:216-221
 #' doi: 10.1038/nature13908
 #' 
 #' @return data frame of de novos, including gene symbol, functional consequence
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
-prepare_iossifov_nature_de_novos <-function() {
+prepare_iossifov_nature_de_novos <- function() {
     tmpdir = tempdir()
     path = tempfile(tmpdir=tmpdir)
     
     # obtain the dataframe of de novo variants
-    download.file("http://www.nature.com/nature/journal/vaop/ncurrent/extref/nature13908-s2.zip", path)
+    download.file("http://www.nature.com/nature/journal/v515/n7526/extref/nature13908-s2.zip", path)
     unzip(path, files="nature13908-s2/Supplementary Table 2.xlsx", exdir=tmpdir)
     variants = gdata::read.xls(file.path(tmpdir, "nature13908-s2", "Supplementary Table 2.xlsx"), stringsAsFactors=FALSE)
     
@@ -233,29 +375,60 @@ prepare_iossifov_nature_de_novos <-function() {
     # NOTE: the variant with the most severe consequence might not necessarily  
     # NOTE: be within the listed gene. I haven't accounted for this yet.
     variants$consequence = apply(variants, 1, get_most_severe_vep_consequence, verbose=TRUE)
+    variants = variants[!(variants$consequence %in% NONCODING_CONSEQUENCES), ]
     
     # get the HGNC symbol
     no_gene = variants$effectGene == ""
-    variants$effectGene[no_gene] = apply(variants[no_gene, ], 1, get_gene_id_for_variant)
+    variants$effectGene[no_gene] = apply(variants[no_gene, ], 1, get_gene_id_for_variant, verbose=TRUE)
     variants$hgnc = variants$effectGene
+    variants$person_id = variants$familyId
+    variants$study_code = "iossifov_nature_2014"
+    variants$publication_doi = "10.1038/nature13908"
+    variants$study_phenotype = "autism"
     
-    # set the SNV/INDEL type
-    variants$type = "INDEL"
-    variants$type[variants$start_pos == variants$end_pos] = "SNV"
+    variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
+        ref_allele, alt_allele, hgnc, consequence, study_code, publication_doi, 
+        study_phenotype))
     
     unlink(path)
     
-    # remove the de novos identified in the Iossifov publication, since they are
-    # also present in the autism_de_novos dataset in this package.
-    # variants = variants[variants$IossifovWE2012 != "yes", ]
+    return(variants)
+}
+
+#' get de novo data from the 2014 De Rubeis et al. autism exome study in Nature
+#' 
+#' De novo mutation data sourced from Supplementary table 3:
+#' De Rubeis et al. (2013) Nature 515:209-215
+#' doi: 10.1038/nature13772
+#' 
+#' @return data frame of de novos, including gene symbol, functional consequence
+#'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
+prepare_de_rubeis_de_novos <- function() {
+    url = "http://www.nature.com/nature/journal/v515/n7526/extref/nature13772-s4.xlsx"
+    
+    variants = gdata::read.xls(url, sheet="De Novo", stringsAsFactors=FALSE)
+    
+    # rename columns to match the other de novo datasets, and strip whitespace
+    variants$start_pos = gsub("[ \t]", "", variants$Pos)
+    variants$chrom = gsub("[ \t]", "", variants$Chr)
+    variants$person_id = gsub("[ \t]", "", variants$Child_ID)
+    variants$ref_allele = gsub("[ \t]", "", variants$Ref)
+    variants$alt_allele = gsub("[ \t]", "", variants$Alt)
+    
+    # get the end position
+    variants$end_pos = as.character(as.numeric(variants$start_pos) + nchar(variants$ref_allele))
+    variants$consequence = apply(variants, 1, get_most_severe_vep_consequence, verbose=TRUE)
+    
+    
+    variants$study_code = "iossifov_nature_2014"
+    variants$publication_doi = "10.1038/nature13908"
+    variants$study_phenotype = "autism"
+    
+    variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
+        ref_allele, alt_allele, hgnc, consequence, study_code, publication_doi, 
+        study_phenotype))
     
     return(variants)
-    
-    # variants = subset(variants, select = c("hgnc", "consequence", "start_pos", "chrom", "type"))
-    # names(variants) = c("hgnc", "consequence", "position", "chrom", "type")
-    # variants$study = "iossifov"
-    
-    # save(iossifov_de_novos, file="data/iossifov_de_novos.rda")
 }
 
 #' get de novo data from autism exome studies
@@ -272,7 +445,8 @@ prepare_iossifov_nature_de_novos <-function() {
 #' O'Roak et al. (2012) Nature 485:246-250
 #' doi: 10.1038/nature10989
 #' 
-#' Supplementary table 1 (where the non-coding SNVs have been excluded) from:
+#' Supplementary table 1 (where the non-coding SNVs have been excluded) and
+#' supplementary table 2 from:
 #' Iossifov et al. (2012) Neuron 74:285-299
 #' doi: 10.1016/j.neuron.2012.04.009
 #' 
@@ -284,21 +458,37 @@ prepare_autism_de_novos <- function() {
     oroak = prepare_oroak_de_novos()
     iossifov_neuron = prepare_iossifov_neuron_de_novos()
     iossifov_nature = prepare_iossifov_nature_de_novos()
+    derubeis_nature = prepare_de_rubeis_de_novos()
     
-    autism_de_novos = read.delim(file.path("data-raw", "de_novo_datasets", "autism_v3_PJ.txt"), header=TRUE, colClasses = "character")
+    # exclude de novos identified in previous studies
+    key_1 = paste(iossifov_neuron$person_id, iossifov_neuron$start_pos)
+    key_2 = paste(iossifov_nature$person_id, iossifov_nature$start_pos)
+    iossifov_nature = iossifov_nature[key_2 %in% key_1, ]
     
-    # select only de novos in probands
-    autism_de_novos = autism_de_novos[which(autism_de_novos$pheno == "Pro"), ]
+    # TODO: exclude derubeis_nature variants from previous studies
     
-    # standardise the SNV or INDEL flag
-    TYPE.index = which(nchar(autism_de_novos$ref.1) != nchar(autism_de_novos$var))
-    autism_de_novos$TYPE = "INDEL"
-    autism_de_novos$TYPE[TYPE.index] = "SNV"
+    autism_de_novos = rbind(sanders, oroak, iossifov_neuron, iossifov_nature,
+        derubeis_nature)
     
-    # standardise the columns, and column names
-    autism_de_novos = subset(autism_de_novos, select = c("INFO.HGNC", "INFO.CQ", "pos", "CHROM", "TYPE"))
-    names(autism_de_novos) = c("hgnc", "consequence", "position", "chrom", "type")
-    autism_de_novos$study = "autism"
+    return(autism_de_novos)
+    
+    # autism_de_novos = read.delim(file.path("data-raw", "de_novo_datasets", "autism_v3_PJ.txt"), header=TRUE, colClasses = "character")
+    
+    # # select only de novos in probands
+    # autism_de_novos = autism_de_novos[which(autism_de_novos$pheno == "Pro"), ]
+    
+    # # standardise the SNV or INDEL flag
+    # TYPE.index = which(nchar(autism_de_novos$ref.1) != nchar(autism_de_novos$var))
+    # autism_de_novos$TYPE = "INDEL"
+    # autism_de_novos$TYPE[TYPE.index] = "SNV"
+    
+    # # standardise the columns, and column names
+    # autism_de_novos = subset(autism_de_novos, select = c("INFO.HGNC", "INFO.CQ", "pos", "CHROM", "TYPE"))
+    # names(autism_de_novos) = c("hgnc", "consequence", "position", "chrom", "type")
+    
+    # # TODO: what I actually want is: 
+    # # person_id, chrom, start_pos, end_pos, ref_allele, alt_allele, hgnc_symbol, consequence, variant_type, study_code, publication_doi, and study_phenotype
+    # autism_de_novos$study = "autism"
     
     save(autism_de_novos, file="data/autism_de_novos.rda")
 }
@@ -313,19 +503,36 @@ prepare_autism_de_novos <- function() {
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
 prepare_fromer_de_novos <- function() {
     
-    fromer_de_novos = read.delim(file.path("data-raw", "de_novo_datasets", "fromer_v2.txt"), header=TRUE, colClasses = "character")
+    url = "http://www.nature.com/nature/journal/v506/n7487/extref/nature12929-s2.xlsx"
+    variants = gdata::read.xls(url, stringsAsFactors=FALSE)
     
-    # standardise the SNV or INDEL flag
-    TYPE.index = which(abs(nchar(fromer_de_novos$Reference.allele) - nchar(fromer_de_novos$Alternate.allele)) == 0)
-    fromer_de_novos$TYPE = "INDEL"
-    fromer_de_novos$TYPE[TYPE.index] = "SNV"
+    variants$temp = strsplit(variants$Locus, ":")
+    variants$chrom = sapply(variants$temp, "[", 1)
+    variants$chrom = gsub("chr", "", variants$chrom)
+    variants$start_pos = sapply(variants$temp, "[", 2)
+    variants$end_pos = variants$start_pos
     
-    # standardise the columns, and column names
-    fromer_de_novos = subset(fromer_de_novos, select = c("INFO.HGNC", "INFO.CQ", "pos", "chrom", "TYPE"))
-    names(fromer_de_novos) = c("hgnc", "consequence", "position", "chrom", "type")
-    fromer_de_novos$study = "fromer"
+    # fix indel ranges
+    indels = grepl("\\.\\.", variants$start_pos)
+    variants$start_pos[indels] = sapply(strsplit(variants$start_pos[indels], "\\.\\."), "[", 1)
+    variants$end_pos[indels] = sapply(strsplit(variants$end_pos[indels], "\\.\\."), "[", 2)
     
-    save(fromer_de_novos, file="data/fromer_de_novos.rda")
+    variants$ref_allele = variants$Reference.allele
+    variants$alt_allele = variants$Alternate.allele
+    
+    variants$consequence = apply(variants, 1, get_most_severe_vep_consequence, verbose=TRUE)
+    
+    variants$hgnc = variants$Genes
+    variants$person_id = variants$Proband.ID
+    variants$study_code = "fromer_nature_2014"
+    variants$publication_doi = "10.1038/nature12929"
+    variants$study_phenotype = "schizophrenia"
+    
+    variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
+        ref_allele, alt_allele, hgnc, consequence, study_code, publication_doi, 
+        study_phenotype))
+    
+    return(variants)
 }
 
 #' get de novo data from Zaidi et al. congenital heart disease exome study
@@ -338,24 +545,73 @@ prepare_fromer_de_novos <- function() {
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
 prepare_zaidi_de_novos <- function() {
     
-    # could only include syndromic DNMs
-    zaidi_de_novos = read.delim(file.path("data-raw", "de_novo_datasets", "zaidi_VEP.txt"), header=TRUE, colClasses = "character")
+    url = "http://www.nature.com/nature/journal/v498/n7453/extref/nature12141-s1.pdf"
     
-    # remove DNMs in controls
-    zaidi_de_novos = zaidi_de_novos[-which(zaidi_de_novos$Primary_Cardiac_Class == "Control"), ]
+    # obtain the supplementary material
+    path = tempfile()
+    download.file(url, path)
     
-    # standardise the SNV or INDEL flag
-    TYPE.index = which(abs(nchar(zaidi_de_novos$ref) - nchar(zaidi_de_novos$alt)) != 0)
-    TYPE.index = sort(unique(c(TYPE.index, which(zaidi_de_novos$ref == "-"), which(zaidi_de_novos$alt == "-"))))
-    zaidi_de_novos$TYPE = "SNV"
-    zaidi_de_novos$TYPE[TYPE.index] = "INDEL"
+    # extract the supplementary tables from the pdf
+    test = tm::readPDF(control=list(text = "-layout"))(elem = list(uri = path), language = "en", id = "id1")
+    unlink(path)
     
-    # standardise the columns, and column names
-    zaidi_de_novos = subset(zaidi_de_novos, select = c("INFO.HGNC", "INFO.CQ", "pos", "chrom", "TYPE"))
-    names(zaidi_de_novos) = c("hgnc", "consequence", "position", "chrom", "type")
-    zaidi_de_novos$study = "zaidi"
+    table_s4 = test$content[314:912]
+    table_s4 = table_s4[table_s4 != ""]
     
-    save(zaidi_de_novos, file="data/zaidi_de_novos.rda")
+    # clean up table S2
+    table_s4 = gsub("^[ \t]+", "", table_s4) # trim leading whitespace
+    table_s4 = gsub(" bp beyond exon ", "_bp_beyond_exon_", table_s4)
+    table_s4 = gsub(" bp up of exon ", "_bp_up_of_exon_", table_s4)
+    split_strings = strsplit(table_s4, "[ \t]+")
+    
+    # drop the lines that are part of the page breaks
+    split_strings[556] = NULL
+    split_strings[537] = NULL
+    split_strings[536] = NULL
+    split_strings[514] = NULL
+    split_strings[443] = NULL
+    split_strings[428] = NULL
+    split_strings[427] = NULL
+    split_strings[407] = NULL
+    split_strings[391] = NULL
+    split_strings[369] = NULL
+    split_strings[351] = NULL
+    split_strings[337] = NULL
+    split_strings[334] = NULL
+    split_strings[319] = NULL
+    split_strings[318] = NULL
+    split_strings[308] = NULL
+    split_strings[263] = NULL
+    split_strings[236] = NULL
+    split_strings[210] = NULL
+    split_strings[209] = NULL
+    split_strings[157] = NULL
+    split_strings[119] = NULL
+    split_strings[108] = NULL
+    split_strings[101] = NULL
+    split_strings[100] = NULL
+    split_strings[84] = NULL
+    split_strings[56] = NULL
+    split_strings[16] = NULL
+    
+    
+    # cull it down to the first few entries in each line
+    variants = data.frame(t(sapply(split_strings, "[", 1:11)))
+    names(variants) = c("person_id", "category", "hgnc", "type", "aa_change", "dbSNP", "transcript", "protein", "chrom", "start_pos", "alleles")
+    
+    # drop out the controls
+    variants = variants[variants$category != "Control", ]
+    
+    variants = prepare_zaiidi_coordinates(variants, "alleles")
+    variants$consequence = apply(variants, 1, get_most_severe_vep_consequence, verbose=TRUE)
+    
+    variants$study_code = "zaiidi_nature_2013"
+    variants$publication_doi = "10.1038/nature12141"
+    variants$study_phenotype = "congenital_heart_disease"
+    
+    variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
+        ref_allele, alt_allele, hgnc, consequence, study_code, publication_doi, 
+        study_phenotype))
 }
 
 prepare_rauch_de_novos()
@@ -364,4 +620,3 @@ prepare_epi4k_de_novos()
 prepare_autism_de_novos()
 prepare_fromer_de_novos()
 prepare_zaidi_de_novos()
-prepare_iossifov_de_novos()
