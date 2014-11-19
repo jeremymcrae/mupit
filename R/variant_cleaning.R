@@ -1,6 +1,11 @@
 # functions to clean de novo data, and identify variant consequences
 
-#' find the most severe VEP consequence for a variant
+# consequence list, as sorted at http://www.ensembl.org/info/genome/variation/predicted_data.html
+consequences = c("transcript_ablation", "splice_donor_variant", "splice_acceptor_variant", "stop_gained", "frameshift_variant", "stop_lost", "initiator_codon_variant", "transcript_amplification", "inframe_insertion", "inframe_deletion", "missense_variant", "splice_region_variant", "incomplete_terminal_codon_variant", "stop_retained_variant", "synonymous_variant", "coding_sequence_variant", "mature_miRNA_variant", "5_prime_UTR_variant", "3_prime_UTR_variant", "non_coding_transcript_exon_variant", "intron_variant", "NMD_transcript_variant", "non_coding_transcript_variant", "upstream_gene_variant", "downstream_gene_variant", "TFBS_ablation", "TFBS_amplification", "TF_binding_site_variant", "regulatory_region_ablation", "regulatory_region_amplification", "regulatory_region_variant", "feature_elongation", "feature_truncation", "intergenic_variant")
+severity = data.frame(consequence=consequences, rank=seq(1:length(consequences)),
+    stringsAsFactors=FALSE)
+
+#' find the VEP consequence for a variant
 #' 
 #' @param variant data frame or list for a variant, containing columns named
 #'     "chrom", "start_pos", "end_pos", and "alt_allele" code for a single variant
@@ -12,12 +17,12 @@
 #'     annotation formats.
 #' 
 #' @examples
-#' get_most_severe_vep_consequence(data.frame(chrom=c("1"), 
+#' get_vep_consequence(data.frame(chrom=c("1"), 
 #'     start_pos=c("1000000"), end_pos=c("1000000"), alt_allele=c("A"), 
 #'     ref_allele=c("G")))
-#' get_most_severe_vep_consequence(list(chrom="1", start_pos="1000000", 
+#' get_vep_consequence(list(chrom="1", start_pos="1000000", 
 #'     end_pos="1000000", alt_allele="A", ref_allele="G"))
-get_most_severe_vep_consequence <- function(variant, build="grch37", verbose=FALSE) {
+get_vep_consequence <- function(variant, build="grch37", verbose=FALSE) {
     
     # only tolerate the grch37 and grch38 genome builds, since they are the only
     # genome builds supported by the Ensembl REST API
@@ -49,7 +54,49 @@ get_most_severe_vep_consequence <- function(variant, build="grch37", verbose=FAL
     json = try(rjson::fromJSON(file=url), silent=TRUE)
     if (class(json) == "try-error") {json = rjson::fromJSON(file=ref_url)}
     
-    return(json[[1]]$most_severe_consequence)
+    transcript = find_most_severe_transcript(json)
+    
+    consequence = transcript$consequence_terms
+    temp_severity = min(severity$rank[severity$consequence %in% consequence])
+    consequence = severity$consequence[severity$rank == temp_severity]
+    
+    value = list(consequence=consequence, gene=transcript$gene_symbol)
+    
+    return(value)
+}
+
+#' find the VEP consequence for a variant
+#' 
+#' @param ensembl_json json data for variant from Ensembl
+#' 
+#' @export
+#' @return a character string containing the most severe consequence, as per VEP
+#'     annotation formats.
+find_most_severe_transcript <- function(ensembl_json) {
+    
+    bad_transcripts = c("lincRNA", "nonsense_mediated_decay", "transcribed_unprocessed_pseudogene")
+    
+    best_transcript = NA
+    best_severity = NA
+    
+    for (transcript in ensembl_json[[1]]$transcript_consequences) {
+        
+        # don't bother to check some transcript types
+        if (transcript$biotype %in% bad_transcripts) { next }
+        
+        # get consequence and severity rank in the current transcript
+        consequence = transcript$consequence_terms
+        temp_severity = min(severity$rank[severity$consequence %in% consequence])
+        consequence = severity$consequence[severity$rank == temp_severity]
+        
+        # check if this is the most severe consequence
+        if (is.na(best_severity) | temp_severity < best_severity) {
+            best_severity = temp_severity
+            best_transcript = transcript
+        }
+    }
+    
+    return(best_transcript)
 }
 
 #' find the hgnc symbol overlapping a variant position
@@ -281,6 +328,36 @@ fix_ins_alleles <-function(variants, allele_column) {
     variants$start_pos[temp] = as.numeric(variants$start_pos[temp]) + 1
     
     return(variants)
+    
+}
+
+#' fix duplication allele codes
+#' 
+#' fix the allele column for variants with allele columns that are structured
+#' like "dup"
+#' 
+#' @param variants data frame of variants
+#' @param allele_column name of column containing allele information
+#' 
+#' @export
+#' @return a data frame with chrom, start_pos, end_pos and allele columns.
+fix_dup_alleles <-function(variants, allele_column) {
+    
+    temp = grepl("dup", variants[[allele_column]])
+    
+    # if we don't have any of these variants, simply return the vartiant table,
+    # as it will cause an error if this continues to run on zero variants
+    if (!(any(temp))) { return(variants) }
+    
+    variants$start_pos[temp] = as.numeric(variants$start_pos[temp]) - 1
+    variants$end_pos[temp] = as.numeric(variants$end_pos[temp]) - 1
+    
+    ref_alleles = apply(variants[temp, ], 1, get_sequence_in_region)
+    variants[[allele_column]][temp] = paste(ref_alleles, "/", ref_alleles, ref_alleles, sep = "")
+    
+    variants$start_pos[temp] = as.numeric(variants$start_pos[temp]) + 1
+    
+    return(variants)
 }
 
 #' extract genomic coordinates for variants from a dataframe
@@ -397,6 +474,10 @@ prepare_coordinates_with_hgvs_genomic <- function(variants, hgvs_column) {
     variants$temp_alleles[ins] = paste("ins", "(", gsub("ins", "", variants$temp_alleles[ins]), ")", sep = "")
     variants = fix_ins_alleles(variants, "temp_alleles")
     
+    # duplications
+    dup = grepl("dup", variants$temp_alleles)
+    variants = fix_dup_alleles(variants, "temp_alleles")
+    
     # standardise the allele separator
     variants$temp_alleles = gsub(">", "/", variants$temp_alleles)
     
@@ -420,7 +501,6 @@ prepare_coordinates_with_hgvs_genomic <- function(variants, hgvs_column) {
 #' cleans up coordinates where one column
 #' 
 #' @param variants data frame of variants
-#' @param coordinate_column name of column containing chromosome information
 #' @param allele_column name of column containing allele information
 #' 
 #' @export

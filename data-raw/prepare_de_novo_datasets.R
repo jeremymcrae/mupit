@@ -33,14 +33,14 @@ prepare_rauch_de_novos <- function() {
     table_s3_text = test$content[879:890]
     
     # clean up table S2
-    table_s2_text = gsub("^[ \t]+", "", table_s2_text) # trim leading whitespace
+    table_s2_text = gsub("^[ \t\f]+", "", table_s2_text) # trim leading whitespace
     split_strings = strsplit(table_s2_text, "[ \t]+")
     split_strings = iconv(unlist(split_strings), "latin1", "ASCII", sub="")
     table_s2 = as.data.frame(matrix(split_strings, ncol=12, byrow=TRUE))
     names(table_s2) = c("person_id", "hgnc", "type", "hgvs_genomic")
     
     # clean up table S3
-    table_s3_text = gsub("^[ \t]+", "", table_s3_text) # trim leading whitespace
+    table_s3_text = gsub("^[ \t\f]+", "", table_s3_text) # trim leading whitespace
     split_strings = strsplit(table_s3_text, "[ \t]+")
     split_strings[7][[1]] = c(split_strings[[7]], "") # one row lacks an entry
     split_strings = iconv(unlist(split_strings), "latin1", "ASCII", sub="")
@@ -54,7 +54,9 @@ prepare_rauch_de_novos <- function() {
     variants = rbind(table_s2, table_s3)
     
     variants = prepare_coordinates_with_hgvs_genomic(variants, "hgvs_genomic")
-    variants$consequence = apply(variants, 1, get_most_severe_vep_consequence, verbose=TRUE)
+    vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
+    variants$consequence = sapply(vep, "[", 1)
+    variants$hgnc = sapply(vep, "[", 2)
     
     variants$study_code = "rauch_lancet_2012"
     variants$publication_doi = "10.1016/S0140-6736(12)61480-9"
@@ -70,7 +72,7 @@ prepare_rauch_de_novos <- function() {
 #' get de novo data for De Ligt et al. intellectual disability exome study
 #' 
 #' De novo mutation data sourced from supplementary table 3 from
-#' De Ligt et al. (2012) N Engl J Med (2012) 367:1921-1929
+#' De Ligt et al. (2012) N Engl J Med 367:1921-1929
 #' doi: 10.1056/NEJMoa1206524
 #' 
 #' @return data frame of de novos, including gene symbol, functional consequence
@@ -81,7 +83,7 @@ prepare_deligt_de_novos <- function() {
     
     temp = "temp.html"
     cookie = "cookie.txt"
-    system("wget --cookies=on --keep-session-cookies --save-cookies=", cookie, " ", url, " -O", temp, sep="")
+    system(paste("wget --cookies=on --keep-session-cookies --save-cookies=", cookie, " ", url, " -O", temp, sep=""))
     
     # obtain the supplementary material
     # path = tempfile()
@@ -106,7 +108,7 @@ prepare_deligt_de_novos <- function() {
     table_s3_text = test$content[1709:1795]
     
     # clean up table S2
-    table_s3_text = gsub("^[ \t]+", "", table_s3_text) # trim leading whitespace
+    table_s3_text = gsub("^[ \t\f]+", "", table_s3_text) # trim leading whitespace
     split_strings = strsplit(table_s3_text, "[ \t]+")
     
     # fix the lines that come after the page breaks
@@ -138,7 +140,10 @@ prepare_deligt_de_novos <- function() {
     variants$hgvs_genomic[27] = "chr19:g.53958839G>C"
     
     variants = prepare_coordinates_with_hgvs_genomic(variants, "hgvs_genomic")
-    variants$consequence = apply(variants, 1, get_most_severe_vep_consequence, verbose=TRUE)
+    # variants$consequence = apply(variants, 1, get_vep_consequence, verbose=TRUE)
+    vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
+    variants$consequence = sapply(vep, "[", 1)
+    variants$hgnc = sapply(vep, "[", 2)
     
     variants$study_code = "deligt_nejm_2012"
     variants$publication_doi = "10.1056/NEJMoa1206524"
@@ -151,15 +156,91 @@ prepare_deligt_de_novos <- function() {
     return(variants)
 }
 
+#' get de novo data for Gilissen et al. intellectual disability exome study
+#' 
+#' De novo mutation data sourced from supplementary table 8 from:
+#' Gilissen et al. (2014) Nature 511:344-347
+#' doi: 10.1038/nature13394
+#' 
+#' NOTE: the number of males and females will form part of the De Ligt counts,
+#' NOTE: since the Gilissen samples were in the De Ligt study, they just didn't
+#' receive a diagnosis in the original study
+#' 
+#' @return data frame of de novos, including gene symbol, functional consequence
+#'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
+prepare_gilissen_de_novos <- function() {
+    
+    url = "http://www.nature.com/nature/journal/v511/n7509/extref/nature13394-s1.pdf"
+    
+    # obtain the supplementary material
+    path = tempfile()
+    download.file(url, path)
+    
+    # extract the supplementary tables from the pdf
+    test = tm::readPDF(control=list(text = "-layout"))(elem = list(uri = path), language = "en", id = "id1")
+    unlink(path)
+    
+    # get the lines corresponding to each table
+    table_s8 = test$content[1434:1563]
+    
+    # clean up table S2
+    table_s8 = gsub("^[ \t]+", "", table_s8) # trim leading whitespace
+    
+    # fix the lines that come after the page breaks
+    table_s8 = table_s8[table_s8 != ""]
+    table_s8 = table_s8[table_s8 != "#"]
+    table_s8 = table_s8[!grepl("NATURE.COM", table_s8)]
+    table_s8 = table_s8[!grepl("SUPPLEMENTARY INFORMATION", table_s8)]
+    
+    # one line in the table is spread across three lines, rather than fixing
+    # this in code, just re-insert the correct line
+    table_s8[50] = "25  SATB2     Chr2(GRCh37):g.200213667_200213668insGTTGCCTTACAA    NM_001172517.1:c.929_930insTTGTAAGGCAAC  p.Gln310delinsHis_CysLys_AlaThr  Insertion  no  K  F  D  C  B  G  M  Known"
+    
+    # trim the too short lines (which only contain page numbers)
+    table_s8 = table_s8[lapply(table_s8, nchar) > 5]
+    
+    # split the tabel, and drop the erroneous lines from the bad line
+    split_strings = strsplit(table_s8, "[ \t]+")
+    split_strings[50] = NULL
+    split_strings[49] = NULL
+    
+    # cull it down to the first few entries in each line
+    variants = data.frame(t(sapply(split_strings, "[", 1:6)))
+    names(variants) = c("person_id", "hgnc", "hgvs_genomic", "hgvs_transcript", "hgvs_protein", "type")
+    
+    # fix the hgvs genomic string
+    variants$hgvs_genomic = gsub("\\(GRCh37\\)g", ":g", variants$hgvs_genomic)
+    variants$hgvs_genomic = gsub("\\(GRCh37\\)", "", variants$hgvs_genomic)
+    variants$hgvs_genomic = gsub("\\(GRCH37\\)", "", variants$hgvs_genomic)
+    variants$hgvs_genomic = gsub("Chr", "chr", variants$hgvs_genomic)
+    variants$hgvs_genomic = gsub("-", "_", variants$hgvs_genomic)
+    
+    variants = prepare_coordinates_with_hgvs_genomic(variants, "hgvs_genomic")
+    # variants$consequence = apply(variants, 1, get_vep_consequence, verbose=TRUE)
+    vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
+    variants$consequence = sapply(vep, "[", 1)
+    variants$hgnc = sapply(vep, "[", 2)
+    
+    variants$study_code = "gilissen_nature_2014"
+    variants$publication_doi = "10.1038/nature13394"
+    variants$study_phenotype = "intellectual_disability"
+    
+    variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
+        ref_allele, alt_allele, hgnc, consequence, study_code, publication_doi, 
+        study_phenotype))
+    
+    return(variants)
+}
+
 #' get de novo data for the Epi4K epilepsy exome study
 #' 
-#' De novo mutation data sourced from supplementary table 2 from
+#' De novo mutation data from the most recent EPI4K publication:
+#' American Journal of Human Genetics (2014) 95:360-370
+#' doi: 10.1016/j.ajhg.2014.08.013
+#' 
+#' This incorporates the de novo mutation data from supplementary table 2 of:
 #' Allen et al. (2013) Nature 501:217-221 
 #' doi: 10.1038/nature12439
-#' 
-#' TODO: swap out this data for that used in the more recent EPI4K publication:
-#' TODO: American Journal of Human Genetics (2014) 95:360-370
-#' TODO: doi: 10.1016/j.ajhg.2014.08.013
 #' 
 #' @return data frame of de novos, including gene symbol, functional consequence
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
@@ -177,12 +258,15 @@ prepare_epi4k_de_novos <- function() {
     # get the HGNC symbol
     # NOTE: the variant with the most severe consequence might not necessarily  
     # NOTE: be within the listed gene. I haven't accounted for this yet.
-    variants$consequence = apply(variants, 1, get_most_severe_vep_consequence, verbose=TRUE)
+    # variants$consequence = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     
     # get the hgnc symbol, and clean any anomalies
-    variants$hgnc = variants$Gene
-    variants$hgnc = gsub(" \\(MLL4\\)", "", variants$hgnc)
-    variants$hgnc = gsub(" \\^", "", variants$hgnc)
+    # variants$hgnc = variants$Gene
+    # variants$hgnc = gsub(" \\(MLL4\\)", "", variants$hgnc)
+    # variants$hgnc = gsub(" \\^", "", variants$hgnc)
+    vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
+    variants$consequence = sapply(vep, "[", 1)
+    variants$hgnc = sapply(vep, "[", 2)
     
     variants$person_id = variants$Child.ID
     variants$study_code = "epi4k_ajhg_2014"
@@ -229,10 +313,14 @@ prepare_sanders_de_novos <- function() {
     variants = fix_het_alleles(variants)
     
     variants$consequence = NA
+    variants$hgnc = NA
     for (row_num in 1:nrow(variants)) {
-        variants$consequence[row_num] = get_most_severe_vep_consequence(variants[row_num, ], verbose=TRUE)
+        # variants$consequence[row_num] = get_vep_consequence(variants[row_num, ], verbose=TRUE)
+        vep = get_vep_consequence(variants[row_num, ], verbose=TRUE)
+        variants$consequence[row_num] = vep$consequence
+        variants$hgnc[row_num] = vep$gene
     }
-    variants$hgnc = variants$Gene
+    # variants$hgnc = variants$Gene
     variants$person_id = variants$Child_ID
     variants$study_code = "sanders_nature_2012"
     variants$publication_doi = "10.1038/nature10945"
@@ -288,12 +376,15 @@ prepare_oroak_de_novos <- function() {
     variants$end_pos[deletions] = as.numeric(variants$end_pos[deletions]) + nchar(variants$ref_allele[deletions]) - 1
     
     variants = fix_het_alleles(variants)
-    variants$consequence = apply(variants, 1, get_most_severe_vep_consequence, verbose=TRUE)
-    variants$hgnc = variants$Gene_SeaSeq
-    oroak$person_id = oroak$Person
-    oroak$study_code = "oroak_nature_2012"
-    oroak$publication_doi = "10.1038/nature10989"
-    oroak$study_phenotype = "autism"
+    # variants$consequence = apply(variants, 1, get_vep_consequence, verbose=TRUE)
+    vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
+    variants$consequence = sapply(vep, "[", 1)
+    variants$hgnc = sapply(vep, "[", 2)
+    # variants$hgnc = variants$Gene_SeaSeq
+    variants$person_id = variants$Person
+    variants$study_code = "variants_nature_2012"
+    variants$publication_doi = "10.1038/nature10989"
+    variants$study_phenotype = "autism"
     
     variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
         ref_allele, alt_allele, hgnc, consequence, study_code, publication_doi, 
@@ -329,11 +420,14 @@ prepare_iossifov_neuron_de_novos <- function() {
     
     # get the coordinates and VEP consequence
     variants = prepare_coordinates_with_allele(variants, "location", "variant")
-    variants$consequence = apply(variants, 1, get_most_severe_vep_consequence, verbose=TRUE)
+    # variants$consequence = apply(variants, 1, get_vep_consequence, verbose=TRUE)
+    vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
+    variants$consequence = sapply(vep, "[", 1)
+    variants$hgnc = sapply(vep, "[", 2)
     
     # get hgnc symbols for the few genes that have missing values
-    no_gene = variants$effectGenes == ""
-    variants$effectGenes[no_gene] = apply(variants[no_gene, ], 1, get_gene_id_for_variant)
+    # no_gene = variants$effectGenes == ""
+    # variants$effectGenes[no_gene] = apply(variants[no_gene, ], 1, get_gene_id_for_variant)
     
     # extract the hgnc symbol from a gene:consequence string
     variants$hgnc = sapply(strsplit(variants$effectGenes, ":"), "[[", 1)
@@ -374,13 +468,16 @@ prepare_iossifov_nature_de_novos <- function() {
     
     # NOTE: the variant with the most severe consequence might not necessarily  
     # NOTE: be within the listed gene. I haven't accounted for this yet.
-    variants$consequence = apply(variants, 1, get_most_severe_vep_consequence, verbose=TRUE)
+    # variants$consequence = apply(variants, 1, get_vep_consequence, verbose=TRUE)
+    vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
+    variants$consequence = sapply(vep, "[", 1)
+    variants$hgnc = sapply(vep, "[", 2)
     variants = variants[!(variants$consequence %in% NONCODING_CONSEQUENCES), ]
     
     # get the HGNC symbol
-    no_gene = variants$effectGene == ""
-    variants$effectGene[no_gene] = apply(variants[no_gene, ], 1, get_gene_id_for_variant, verbose=TRUE)
-    variants$hgnc = variants$effectGene
+    # no_gene = variants$effectGene == ""
+    # variants$effectGene[no_gene] = apply(variants[no_gene, ], 1, get_gene_id_for_variant, verbose=TRUE)
+    # variants$hgnc = variants$effectGene
     variants$person_id = variants$familyId
     variants$study_code = "iossifov_nature_2014"
     variants$publication_doi = "10.1038/nature13908"
@@ -408,6 +505,9 @@ prepare_de_rubeis_de_novos <- function() {
     
     variants = gdata::read.xls(url, sheet="De Novo", stringsAsFactors=FALSE)
     
+    # exclude the final row, which is contains a footnote
+    variants = variants[1:(nrow(variants) - 1), ]
+    
     # rename columns to match the other de novo datasets, and strip whitespace
     variants$start_pos = gsub("[ \t]", "", variants$Pos)
     variants$chrom = gsub("[ \t]", "", variants$Chr)
@@ -417,8 +517,10 @@ prepare_de_rubeis_de_novos <- function() {
     
     # get the end position
     variants$end_pos = as.character(as.numeric(variants$start_pos) + nchar(variants$ref_allele))
-    variants$consequence = apply(variants, 1, get_most_severe_vep_consequence, verbose=TRUE)
-    
+    # variants$consequence = apply(variants, 1, get_vep_consequence, verbose=TRUE)
+    vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
+    variants$consequence = sapply(vep, "[", 1)
+    variants$hgnc = sapply(vep, "[", 2)
     
     variants$study_code = "iossifov_nature_2014"
     variants$publication_doi = "10.1038/nature13908"
@@ -490,7 +592,7 @@ prepare_autism_de_novos <- function() {
     # # person_id, chrom, start_pos, end_pos, ref_allele, alt_allele, hgnc_symbol, consequence, variant_type, study_code, publication_doi, and study_phenotype
     # autism_de_novos$study = "autism"
     
-    save(autism_de_novos, file="data/autism_de_novos.rda")
+    # save(autism_de_novos, file="data/autism_de_novos.rda")
 }
 
 #' get de novo data from Fromer et al. schizophrenia exome study
@@ -520,9 +622,11 @@ prepare_fromer_de_novos <- function() {
     variants$ref_allele = variants$Reference.allele
     variants$alt_allele = variants$Alternate.allele
     
-    variants$consequence = apply(variants, 1, get_most_severe_vep_consequence, verbose=TRUE)
+    vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
+    variants$consequence = sapply(vep, "[", 1)
+    variants$hgnc = sapply(vep, "[", 2)
     
-    variants$hgnc = variants$Genes
+    # variants$hgnc = variants$Genes
     variants$person_id = variants$Proband.ID
     variants$study_code = "fromer_nature_2014"
     variants$publication_doi = "10.1038/nature12929"
@@ -558,44 +662,19 @@ prepare_zaidi_de_novos <- function() {
     table_s4 = test$content[314:912]
     table_s4 = table_s4[table_s4 != ""]
     
-    # clean up table S2
-    table_s4 = gsub("^[ \t]+", "", table_s4) # trim leading whitespace
+    # clean up table S4
+    table_s4 = gsub("^[ \t\f]+", "", table_s4) # trim leading whitespace
     table_s4 = gsub(" bp beyond exon ", "_bp_beyond_exon_", table_s4)
     table_s4 = gsub(" bp up of exon ", "_bp_up_of_exon_", table_s4)
-    split_strings = strsplit(table_s4, "[ \t]+")
     
-    # drop the lines that are part of the page breaks
-    split_strings[556] = NULL
-    split_strings[537] = NULL
-    split_strings[536] = NULL
-    split_strings[514] = NULL
-    split_strings[443] = NULL
-    split_strings[428] = NULL
-    split_strings[427] = NULL
-    split_strings[407] = NULL
-    split_strings[391] = NULL
-    split_strings[369] = NULL
-    split_strings[351] = NULL
-    split_strings[337] = NULL
-    split_strings[334] = NULL
-    split_strings[319] = NULL
-    split_strings[318] = NULL
-    split_strings[308] = NULL
-    split_strings[263] = NULL
-    split_strings[236] = NULL
-    split_strings[210] = NULL
-    split_strings[209] = NULL
-    split_strings[157] = NULL
-    split_strings[119] = NULL
-    split_strings[108] = NULL
-    split_strings[101] = NULL
-    split_strings[100] = NULL
-    split_strings[84] = NULL
-    split_strings[56] = NULL
-    split_strings[16] = NULL
-    
+    # drop the section breaks from the table, as well as the lines that are part
+    # of the line breaks
+    table_s4 = table_s4[!grepl("[Mm]utations", table_s4)]
+    table_s4 = table_s4[!grepl("N A T U R E", table_s4)]
+    table_s4 = table_s4[!grepl("SUPPLEMENTARY INFORMATION", table_s4)]
     
     # cull it down to the first few entries in each line
+    split_strings = strsplit(table_s4, "[ \t]+")
     variants = data.frame(t(sapply(split_strings, "[", 1:11)))
     names(variants) = c("person_id", "category", "hgnc", "type", "aa_change", "dbSNP", "transcript", "protein", "chrom", "start_pos", "alleles")
     
@@ -603,7 +682,9 @@ prepare_zaidi_de_novos <- function() {
     variants = variants[variants$category != "Control", ]
     
     variants = prepare_zaiidi_coordinates(variants, "alleles")
-    variants$consequence = apply(variants, 1, get_most_severe_vep_consequence, verbose=TRUE)
+    vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
+    variants$consequence = sapply(vep, "[", 1)
+    variants$hgnc = sapply(vep, "[", 2)
     
     variants$study_code = "zaiidi_nature_2013"
     variants$publication_doi = "10.1038/nature12141"
@@ -612,11 +693,25 @@ prepare_zaidi_de_novos <- function() {
     variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
         ref_allele, alt_allele, hgnc, consequence, study_code, publication_doi, 
         study_phenotype))
+    
+    return(variants)
 }
 
-prepare_rauch_de_novos()
-prepare_deligt_de_novos()
-prepare_epi4k_de_novos()
-prepare_autism_de_novos()
-prepare_fromer_de_novos()
-prepare_zaidi_de_novos()
+rauch = prepare_rauch_de_novos()
+deligt = prepare_deligt_de_novos()
+gilissen = prepare_gilissen_de_novos()
+epi4k = prepare_epi4k_de_novos()
+autism = prepare_autism_de_novos()
+fromer = prepare_fromer_de_novos()
+zaiidi = prepare_zaidi_de_novos()
+
+de_novos = rbind(rauch, deligt, gilissen, epi4k, austism, fromer, zaiidi)
+de_novos$type = "indel"
+de_novos$type[nchar(de_novos$ref_allele) != 1 | nchar(de_novos$alt_allele) != 1)] = "snv"
+
+# check that the gene names are fine
+
+# Check that all the frameshifts are indels ()
+
+# check that almost all the non-frameshifts are SNVs (aside from ones that have stop_gain consequences)
+
