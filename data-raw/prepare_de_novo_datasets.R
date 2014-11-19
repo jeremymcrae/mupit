@@ -53,7 +53,7 @@ prepare_rauch_de_novos <- function() {
     table_s3 = subset(table_s3, select=c(person_id, hgnc, type, hgvs_genomic))
     variants = rbind(table_s2, table_s3)
     
-    variants = prepare_coordinates_with_hgvs_genomic(variants, "hgvs_genomic")
+    variants = fix_coordinates_with_hgvs_genomic(variants, "hgvs_genomic")
     vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     variants$consequence = sapply(vep, "[", 1)
     variants$hgnc = sapply(vep, "[", 2)
@@ -109,21 +109,10 @@ prepare_deligt_de_novos <- function() {
     
     # clean up table S2
     table_s3_text = gsub("^[ \t\f]+", "", table_s3_text) # trim leading whitespace
+    table_s3_text = table_s3_text[table_s3_text != ""]
+    table_s3_text = table_s3_text[table_s3_text != "#"]
+    table_s3_text = table_s3_text[lapply(table_s3_text, nchar) > 5]
     split_strings = strsplit(table_s3_text, "[ \t]+")
-    
-    # fix the lines that come after the page breaks
-    split_strings[[28]][1] = "31"
-    split_strings[[61]] = split_strings[[61]][2:length(split_strings[[61]])]
-    
-    # drop the lines that are part of the page breaks
-    split_strings[75] = NULL
-    split_strings[62] = NULL
-    split_strings[60] = NULL
-    split_strings[59] = NULL
-    split_strings[58] = NULL
-    split_strings[27] = NULL
-    split_strings[26] = NULL
-    split_strings[25] = NULL
     
     # cull it down to the first few entries in each line
     variants = data.frame(t(sapply(split_strings, "[", 1:6)))
@@ -139,7 +128,7 @@ prepare_deligt_de_novos <- function() {
     # convert a position with NCBI36 genome assembly coordinates
     variants$hgvs_genomic[27] = "chr19:g.53958839G>C"
     
-    variants = prepare_coordinates_with_hgvs_genomic(variants, "hgvs_genomic")
+    variants = fix_coordinates_with_hgvs_genomic(variants, "hgvs_genomic")
     # variants$consequence = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     variants$consequence = sapply(vep, "[", 1)
@@ -215,7 +204,7 @@ prepare_gilissen_de_novos <- function() {
     variants$hgvs_genomic = gsub("Chr", "chr", variants$hgvs_genomic)
     variants$hgvs_genomic = gsub("-", "_", variants$hgvs_genomic)
     
-    variants = prepare_coordinates_with_hgvs_genomic(variants, "hgvs_genomic")
+    variants = fix_coordinates_with_hgvs_genomic(variants, "hgvs_genomic")
     # variants$consequence = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     variants$consequence = sapply(vep, "[", 1)
@@ -235,6 +224,7 @@ prepare_gilissen_de_novos <- function() {
 #' get de novo data for the Epi4K epilepsy exome study
 #' 
 #' De novo mutation data from the most recent EPI4K publication:
+#' Supplementary table 1:
 #' American Journal of Human Genetics (2014) 95:360-370
 #' doi: 10.1016/j.ajhg.2014.08.013
 #' 
@@ -252,7 +242,7 @@ prepare_epi4k_de_novos <- function() {
     # tabular data, so we remove these
     variants = variants[1:(nrow(variants) - 3), ]
     
-    variants = prepare_coordinates_with_allele(variants, 
+    variants = fix_coordinates_with_allele(variants, 
         "hg19.coordinates..chr.position.", "Ref.Alt.alleles")
     
     # get the HGNC symbol
@@ -419,7 +409,7 @@ prepare_iossifov_neuron_de_novos <- function() {
     variants = rbind(snvs, indels)
     
     # get the coordinates and VEP consequence
-    variants = prepare_coordinates_with_allele(variants, "location", "variant")
+    variants = fix_coordinates_with_allele(variants, "location", "variant")
     # variants$consequence = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     variants$consequence = sapply(vep, "[", 1)
@@ -464,7 +454,7 @@ prepare_iossifov_nature_de_novos <- function() {
     unzip(path, files="nature13908-s2/Supplementary Table 2.xlsx", exdir=tmpdir)
     variants = gdata::read.xls(file.path(tmpdir, "nature13908-s2", "Supplementary Table 2.xlsx"), stringsAsFactors=FALSE)
     
-    variants = prepare_coordinates(variants, "location", "vcfVariant")
+    variants = fix_coordinates(variants, "location", "vcfVariant")
     
     # NOTE: the variant with the most severe consequence might not necessarily  
     # NOTE: be within the listed gene. I haven't accounted for this yet.
@@ -681,7 +671,7 @@ prepare_zaidi_de_novos <- function() {
     # drop out the controls
     variants = variants[variants$category != "Control", ]
     
-    variants = prepare_zaiidi_coordinates(variants, "alleles")
+    variants = fix_zaiidi_coordinates(variants, "alleles")
     vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     variants$consequence = sapply(vep, "[", 1)
     variants$hgnc = sapply(vep, "[", 2)
@@ -705,10 +695,11 @@ autism = prepare_autism_de_novos()
 fromer = prepare_fromer_de_novos()
 zaiidi = prepare_zaidi_de_novos()
 
-de_novos = rbind(rauch, deligt, gilissen, epi4k, austism, fromer, zaiidi)
-de_novos$type = "indel"
-de_novos$type[nchar(de_novos$ref_allele) != 1 | nchar(de_novos$alt_allele) != 1)] = "snv"
+published_de_novos = rbind(rauch, deligt, gilissen, epi4k, austism, fromer, zaiidi)
+published_de_novos$type = "indel"
+published_de_novos$type[nchar(published_de_novos$ref_allele) != 1 | nchar(published_de_novos$alt_allele) != 1)] = "snv"
 
+save(published_de_novos, file="data/published_de_novos.rda")
 # check that the gene names are fine
 
 # Check that all the frameshifts are indels ()
