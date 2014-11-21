@@ -16,7 +16,7 @@ NONCODING_CONSEQUENCES = c("non_coding_transcript_exon_variant",
 #' 
 #' @return data frame of de novos, including gene symbol, functional consequence
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
-prepare_rauch_de_novos <- function() {
+rauch_de_novos <- function() {
     
     url = "http://www.sciencedirect.com/science/MiamiMultiMediaURL/1-s2.0-S0140673612614809/1-s2.0-S0140673612614809-mmc1.pdf/271074/FULL/S0140673612614809/55b26043f4a279334b3a5ec00b9faf4b/mmc1.pdf"
     
@@ -77,7 +77,7 @@ prepare_rauch_de_novos <- function() {
 #' 
 #' @return data frame of de novos, including gene symbol, functional consequence
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
-prepare_deligt_de_novos <- function() {
+deligt_de_novos <- function() {
     
     url = "http://www.nejm.org/doi/suppl/10.1056/NEJMoa1206524/suppl_file/nejmoa126524_appendix.pdf"
     
@@ -157,7 +157,7 @@ prepare_deligt_de_novos <- function() {
 #' 
 #' @return data frame of de novos, including gene symbol, functional consequence
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
-prepare_gilissen_de_novos <- function() {
+gilissen_de_novos <- function() {
     
     url = "http://www.nature.com/nature/journal/v511/n7509/extref/nature13394-s1.pdf"
     
@@ -234,7 +234,7 @@ prepare_gilissen_de_novos <- function() {
 #' 
 #' @return data frame of de novos, including gene symbol, functional consequence
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
-prepare_epi4k_de_novos <- function() {
+epi4k_de_novos <- function() {
     
     variants = gdata::read.xls("http://www.sciencedirect.com/science/MiamiMultiMediaURL/1-s2.0-S0002929714003838/1-s2.0-S0002929714003838-mmc2.xlsx/276895/FULL/S0002929714003838/bf21945d72e3297fc44969dc0296f4f1/mmc2.xlsx", stringsAsFactors=FALSE)
     
@@ -279,7 +279,7 @@ prepare_epi4k_de_novos <- function() {
 #' 
 #' @return data frame of de novos, with standardised genome coordinates and VEP
 #      consequences for each variant
-prepare_sanders_de_novos <- function() {
+sanders_de_novos <- function() {
     url = "http://www.nature.com/nature/journal/v485/n7397/extref/nature10945-s3.xls"
     sanders_probands = gdata::read.xls(url, sheet="Probands", stringsAsFactors=FALSE)
     sanders_siblings = gdata::read.xls(url, sheet="Siblings", stringsAsFactors=FALSE)
@@ -331,7 +331,7 @@ prepare_sanders_de_novos <- function() {
 #' 
 #' @return data frame of de novos, with standardised genome coordinates and VEP
 #      consequences for each variant
-prepare_oroak_de_novos <- function() {
+oroak_de_novos <- function() {
     url = "http://www.nature.com/nature/journal/v485/n7397/extref/nature10989-s2.xls"
     variants = gdata::read.xls(url, sheet="Supplementary Table 3", stringsAsFactors=FALSE)
     
@@ -340,10 +340,11 @@ prepare_oroak_de_novos <- function() {
     variants = variants[1:(nrow(variants) - 2), ]
     
     # standardise the chrom, position and allele column names
-    variants$chrom = variants$Chromosome
-    variants$start_pos = variants$Position..hg19.
-    variants$ref_allele = variants$Ref
-    variants$alt_allele = variants$Allele
+    variants$chrom = gsub(" ", "", variants$Chromosome)
+    variants$start_pos = gsub(" ", "", variants$Position..hg19.)
+    variants$end_pos = variants$start_pos
+    variants$ref_allele = gsub(" ", "", variants$Ref)
+    variants$alt_allele = gsub(" ", "", variants$Allele)
     
     # sort out the "complex" allele events
     variants$alt_allele[61] = "S"
@@ -353,26 +354,30 @@ prepare_oroak_de_novos <- function() {
     variants$alt_allele[185] = "1D, -G"
     
     # fix the alleles and positions for insertions and deletions
-    deletions = grep("D, -", variants$alt_allele)
-    insertions = grep("I, +", variants$alt_allele)
+    deletions = grep("D, *-", variants$alt_allele)
+    insertions = grep("I, *\\+", variants$alt_allele)
     
-    variants$ref_allele[deletions] = sapply(strsplit(variants$alt_allele[deletions], "D, -"), "[[", 2)
-    variants$alt_allele[deletions] = "-"
-    variants$ref_allele[insertions] = "N"
-    variants$alt_allele[insertions] = paste("A", sapply(strsplit(variants$alt_allele[insertions], "I, \\+"), "[[", 2), sep="")
+    # find the reference sequence at the site. Deletions use this as the 
+    # alternate allele, whereas the insertions use this as the reference allele
+    alt_dels = apply(variants[deletions, ], 1, get_sequence_in_region)
+    ref_ins = apply(variants[insertions, ], 1, get_sequence_in_region)
+    
+    # find the sequence at the site + the distance of the deletion
+    variants$ref_allele[deletions] = paste(alt_dels, sapply(strsplit(variants$alt_allele[deletions], "D, *-"), "[", 2), sep="")
+    variants$alt_allele[deletions] = alt_dels
+    variants$ref_allele[insertions] = ref_ins
+    variants$alt_allele[insertions] = paste(ref_ins, sapply(strsplit(variants$alt_allele[insertions], "I, *\\+"), "[", 2), sep="")
     
     # get the end coordinate, including those for the insertions and deletions
-    variants$end_pos = variants$start_pos
     variants$end_pos[deletions] = as.numeric(variants$end_pos[deletions]) + nchar(variants$ref_allele[deletions]) - 1
     
     variants = fix_het_alleles(variants)
-    # variants$consequence = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     variants$consequence = sapply(vep, "[", 1)
     variants$hgnc = sapply(vep, "[", 2)
-    # variants$hgnc = variants$Gene_SeaSeq
+    
     variants$person_id = variants$Person
-    variants$study_code = "variants_nature_2012"
+    variants$study_code = "oroak_nature_2012"
     variants$publication_doi = "10.1038/nature10989"
     variants$study_phenotype = "autism"
     
@@ -392,7 +397,7 @@ prepare_oroak_de_novos <- function() {
 #' 
 #' @return data frame of de novos, with standardised genome coordinates and VEP
 #      consequences for each variant
-prepare_iossifov_neuron_de_novos <- function() {
+iossifov_neuron_de_novos <- function() {
     url = "http://www.sciencedirect.com/science/MiamiMultiMediaURL/1-s2.0-S0896627312003406/1-s2.0-S0896627312003406-mmc2.xlsx/272195/FULL/S0896627312003406/26c5ba3b72a2410ef43fec52a40f35e6/mmc2.xlsx"
     snvs = gdata::read.xls(url, sheet="SNV.v4.1-normlized", stringsAsFactors=FALSE)
     
@@ -420,7 +425,7 @@ prepare_iossifov_neuron_de_novos <- function() {
     # variants$effectGenes[no_gene] = apply(variants[no_gene, ], 1, get_gene_id_for_variant)
     
     # extract the hgnc symbol from a gene:consequence string
-    variants$hgnc = sapply(strsplit(variants$effectGenes, ":"), "[[", 1)
+    # variants$hgnc = sapply(strsplit(variants$effectGenes, ":"), "[[", 1)
     
     # exclude de novos not located within the coding sequence of a gene
     variants = variants[!(variants$consequence %in% NONCODING_CONSEQUENCES), ]
@@ -445,7 +450,7 @@ prepare_iossifov_neuron_de_novos <- function() {
 #' 
 #' @return data frame of de novos, including gene symbol, functional consequence
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
-prepare_iossifov_nature_de_novos <- function() {
+iossifov_nature_de_novos <- function() {
     tmpdir = tempdir()
     path = tempfile(tmpdir=tmpdir)
     
@@ -453,8 +458,12 @@ prepare_iossifov_nature_de_novos <- function() {
     download.file("http://www.nature.com/nature/journal/v515/n7526/extref/nature13908-s2.zip", path)
     unzip(path, files="nature13908-s2/Supplementary Table 2.xlsx", exdir=tmpdir)
     variants = gdata::read.xls(file.path(tmpdir, "nature13908-s2", "Supplementary Table 2.xlsx"), stringsAsFactors=FALSE)
+    unlink(path)
     
     variants = fix_coordinates(variants, "location", "vcfVariant")
+    
+    # exclude the de novos from the unaffected sibs
+    variants = variants[!grepl("^s", variants$inChild), ]
     
     # NOTE: the variant with the most severe consequence might not necessarily  
     # NOTE: be within the listed gene. I haven't accounted for this yet.
@@ -465,9 +474,6 @@ prepare_iossifov_nature_de_novos <- function() {
     variants = variants[!(variants$consequence %in% NONCODING_CONSEQUENCES), ]
     
     # get the HGNC symbol
-    # no_gene = variants$effectGene == ""
-    # variants$effectGene[no_gene] = apply(variants[no_gene, ], 1, get_gene_id_for_variant, verbose=TRUE)
-    # variants$hgnc = variants$effectGene
     variants$person_id = variants$familyId
     variants$study_code = "iossifov_nature_2014"
     variants$publication_doi = "10.1038/nature13908"
@@ -476,8 +482,6 @@ prepare_iossifov_nature_de_novos <- function() {
     variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
         ref_allele, alt_allele, hgnc, consequence, study_code, publication_doi, 
         study_phenotype))
-    
-    unlink(path)
     
     return(variants)
 }
@@ -490,7 +494,7 @@ prepare_iossifov_nature_de_novos <- function() {
 #' 
 #' @return data frame of de novos, including gene symbol, functional consequence
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
-prepare_de_rubeis_de_novos <- function() {
+de_rubeis_de_novos <- function() {
     url = "http://www.nature.com/nature/journal/v515/n7526/extref/nature13772-s4.xlsx"
     
     variants = gdata::read.xls(url, sheet="De Novo", stringsAsFactors=FALSE)
@@ -512,8 +516,8 @@ prepare_de_rubeis_de_novos <- function() {
     variants$consequence = sapply(vep, "[", 1)
     variants$hgnc = sapply(vep, "[", 2)
     
-    variants$study_code = "iossifov_nature_2014"
-    variants$publication_doi = "10.1038/nature13908"
+    variants$study_code = "derubeis_nature_2014"
+    variants$publication_doi = "10.1038/nature13772"
     variants$study_phenotype = "autism"
     
     variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
@@ -544,13 +548,13 @@ prepare_de_rubeis_de_novos <- function() {
 #' 
 #' @return data frame of de novos, including gene symbol, functional consequence
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
-prepare_autism_de_novos <- function() {
+autism_de_novos <- function() {
     
-    sanders = prepare_sanders_de_novos()
-    oroak = prepare_oroak_de_novos()
-    iossifov_neuron = prepare_iossifov_neuron_de_novos()
-    iossifov_nature = prepare_iossifov_nature_de_novos()
-    derubeis_nature = prepare_de_rubeis_de_novos()
+    sanders = sanders_de_novos()
+    oroak = oroak_de_novos()
+    iossifov_neuron = iossifov_neuron_de_novos()
+    iossifov_nature = iossifov_nature_de_novos()
+    derubeis_nature = de_rubeis_de_novos()
     
     # exclude de novos identified in previous studies
     key_1 = paste(iossifov_neuron$person_id, iossifov_neuron$start_pos)
@@ -593,7 +597,7 @@ prepare_autism_de_novos <- function() {
 #' 
 #' @return data frame of de novos, including gene symbol, functional consequence
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
-prepare_fromer_de_novos <- function() {
+fromer_de_novos <- function() {
     
     url = "http://www.nature.com/nature/journal/v506/n7487/extref/nature12929-s2.xlsx"
     variants = gdata::read.xls(url, stringsAsFactors=FALSE)
@@ -637,7 +641,7 @@ prepare_fromer_de_novos <- function() {
 #' 
 #' @return data frame of de novos, including gene symbol, functional consequence
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
-prepare_zaidi_de_novos <- function() {
+zaidi_de_novos <- function() {
     
     url = "http://www.nature.com/nature/journal/v498/n7453/extref/nature12141-s1.pdf"
     
@@ -687,19 +691,19 @@ prepare_zaidi_de_novos <- function() {
     return(variants)
 }
 
-rauch = prepare_rauch_de_novos()
-deligt = prepare_deligt_de_novos()
-gilissen = prepare_gilissen_de_novos()
-epi4k = prepare_epi4k_de_novos()
-autism = prepare_autism_de_novos()
-fromer = prepare_fromer_de_novos()
-zaiidi = prepare_zaidi_de_novos()
+rauch = rauch_de_novos()
+deligt = deligt_de_novos()
+gilissen = gilissen_de_novos()
+epi4k = epi4k_de_novos()
+autism = autism_de_novos()
+fromer = fromer_de_novos()
+zaiidi = zaidi_de_novos()
 
-published_de_novos = rbind(rauch, deligt, gilissen, epi4k, austism, fromer, zaiidi)
-published_de_novos$type = "indel"
-published_de_novos$type[nchar(published_de_novos$ref_allele) != 1 | nchar(published_de_novos$alt_allele) != 1)] = "snv"
+published_de_novos = rbind(rauch, deligt, gilissen, epi4k, autism, fromer, zaiidi)
+published_de_novos$type = "snv"
+published_de_novos$type[nchar(published_de_novos$ref_allele) != 1 | nchar(published_de_novos$alt_allele) != 1] = "indel"
 
-save(published_de_novos, file="data/published_de_novos.rda")
+save(published_de_novos, file="../data/published_de_novos.rda")
 # check that the gene names are fine
 
 # Check that all the frameshifts are indels ()

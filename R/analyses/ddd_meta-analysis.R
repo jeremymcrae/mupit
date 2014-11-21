@@ -27,7 +27,7 @@ get_trio_counts <- function(diagnosed) {
     female.autism = 183
     
     # number of trios studied in rauch data
-    male.rauch = 32
+    male.rauch = 32 # the gender numbers are swapped!
     female.rauch = 19
     
     # number of trios studied in fromer data

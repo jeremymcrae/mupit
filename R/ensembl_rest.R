@@ -6,6 +6,58 @@ consequences = c("transcript_ablation", "splice_donor_variant", "splice_acceptor
 severity = data.frame(consequence=consequences, rank=seq(1:length(consequences)),
     stringsAsFactors=FALSE)
 
+timeEnv = new.env()
+assign("initial_time", Sys.time(), envir=timeEnv)
+
+#' make a URL request to the Ensembl service
+#' 
+#' @param url string of URL to be accessed
+#' @param tries number of attempts that have been mader to access the URL
+#' 
+#' @export
+#' @return a character string, typically json encoded
+#' 
+#' @examples
+#' request_from_ensembl(paste("http://rest.ensembl.org/vep/human/region/1:", 
+#'     "205901016:205901016/A?content-type=application/json", sep=""))
+request_from_ensembl <- function(url, tries=0) {
+    
+    # check that we are not requesting urls fater than that allowed by Ensembl, 
+    # sleep until the period expires
+    current_time = Sys.time()
+    diff = 0.067 - as.numeric(current_time - get("initial_time", current_time, envir=timeEnv))
+    if (diff > 0) { Sys.sleep(diff) }
+    
+    # set the previous request time to that of the current request
+    assign("initial_time", current_time, envir=timeEnv)
+    
+    # cut out after making 5 attempts to access the url
+    tries = tries + 1
+    stopifnot(tries <= 5)
+    
+    request = httr::GET(url)
+    
+    # handle the possible http request return status codes, such as when the 
+    # server is unavailable, when we have made too many requests, or requested
+    # an impossible URL.
+    if (request$status_code == 503) { # server down
+        Sys.sleep(30)
+        return(request_from_ensembl(url, tries))
+    } else if (request$status_code == 429) { # too frequent requests
+        reset_time = as.numeric(request$headers$`x-ratelimit-reset`)
+        Sys.sleep(reset_time)
+        return(request_from_ensembl(url, tries))
+    } else if (request$status_code == 400) { # bad url
+        msg = paste("bad url request: ", url, sep = "")
+        stop(msg)
+    } else if (request$status_code != 200) { # other status errors
+        msg = paste("unknown status: ", request$status$code, " at: ", url, sep = "")
+        stop(msg)
+    }
+    
+    return(intToUtf8(request$content))
+}
+
 #' find the VEP consequence for a variant
 #' 
 #' @param variant data frame or list for a variant, containing columns named
@@ -52,8 +104,9 @@ get_vep_consequence <- function(variant, build="grch37", verbose=FALSE) {
             variant[["alt_allele"]], "    ", url, sep=""))
     }
     
-    json = try(rjson::fromJSON(file=url), silent=TRUE)
-    if (class(json) == "try-error") {json = rjson::fromJSON(file=ref_url)}
+    json = try(request_from_ensembl(url))
+    if (class(json) == "try-error") {json = request_from_ensembl(ref_url)}
+    json = rjson::fromJSON(json)
     
     transcript = find_most_severe_transcript(json)
     
@@ -66,24 +119,39 @@ get_vep_consequence <- function(variant, build="grch37", verbose=FALSE) {
     return(value)
 }
 
-#' find the VEP consequence for a variant
+#' find the most severe transcript from Ensembl data
 #' 
 #' @param ensembl_json json data for variant from Ensembl
+#' @param exclude_bad boolean to show whether we want to exclude nonsense 
+#'     mediated decay transcripts and so forth. We only supply a false value for
+#'     recursive calling, when we have failed to find any transcript during 
+#'     normal usage.
 #' 
 #' @export
 #' @return a character string containing the most severe consequence, as per VEP
 #'     annotation formats.
-find_most_severe_transcript <- function(ensembl_json) {
+find_most_severe_transcript <- function(ensembl_json, exclude_bad=TRUE) {
     
     bad_transcripts = c("lincRNA", "nonsense_mediated_decay", "transcribed_unprocessed_pseudogene")
     
     best_transcript = NA
     best_severity = NA
     
+    # if we are dealing with an intergenic variant, the variant won't have any
+    # transcript consequences, and so the function will enter an infinite 
+    # recursion. Instead return the json entry (appending the correct 
+    # annotations for the higher function)
+    if (!("transcript_consequences" %in% names(ensembl_json[[1]]))) {
+        nontranscript = ensembl_json[[1]]
+        nontranscript$consequence_terms = nontranscript$most_severe_consequence
+        nontranscript$gene_symbol = ""
+        return(nontranscript)
+    }
+    
     for (transcript in ensembl_json[[1]]$transcript_consequences) {
         
-        # don't bother to check some transcript types
-        if (transcript$biotype %in% bad_transcripts) { next }
+        # don't bother to check some transcript types, depending on whether we
+        if (exclude_bad & transcript$biotype %in% bad_transcripts) { next }
         
         # get consequence and severity rank in the current transcript
         consequence = transcript$consequence_terms
@@ -94,6 +162,14 @@ find_most_severe_transcript <- function(ensembl_json) {
         if (is.na(best_severity) | temp_severity < best_severity) {
             best_severity = temp_severity
             best_transcript = transcript
+        }
+    }
+    
+    # sometimes we don't have any useable transcripts, in which case, select
+    # any of the transcripts
+    if (length(best_transcript) == 1) {
+        if (is.na(best_transcript)) {
+            best_transcript = find_most_severe_transcript(ensembl_json, exclude_bad=FALSE)
         }
     }
     
@@ -143,7 +219,8 @@ get_gene_id_for_variant <- function(variant, build="grch37", verbose=FALSE) {
             "    ", url, sep=""))
     }
     
-    json = rjson::fromJSON(file=url)
+    json = request_from_ensembl(url)
+    json = rjson::fromJSON(json)
     
     # return blank string for variants not in genes
     if (length(json) > 0) {
@@ -195,7 +272,8 @@ get_sequence_in_region <- function(variant, build="grch37", verbose=FALSE) {
             "    ", url, sep=""))
     }
     
-    json = rjson::fromJSON(file=url)
+    json = request_from_ensembl(url)
+    json = rjson::fromJSON(json)
     
     # return blank string for variants not in genes
     if (length(json) > 0) {

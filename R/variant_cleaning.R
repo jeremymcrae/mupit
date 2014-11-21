@@ -1,209 +1,5 @@
 # functions to clean de novo data, and identify variant consequences
 
-# consequence list, as sorted at http://www.ensembl.org/info/genome/variation/predicted_data.html
-consequences = c("transcript_ablation", "splice_donor_variant", "splice_acceptor_variant", "stop_gained", "frameshift_variant", "stop_lost", "initiator_codon_variant", "transcript_amplification", "inframe_insertion", "inframe_deletion", "missense_variant", "splice_region_variant", "incomplete_terminal_codon_variant", "stop_retained_variant", "synonymous_variant", "coding_sequence_variant", "mature_miRNA_variant", "5_prime_UTR_variant", "3_prime_UTR_variant", "non_coding_transcript_exon_variant", "intron_variant", "NMD_transcript_variant", "non_coding_transcript_variant", "upstream_gene_variant", "downstream_gene_variant", "TFBS_ablation", "TFBS_amplification", "TF_binding_site_variant", "regulatory_region_ablation", "regulatory_region_amplification", "regulatory_region_variant", "feature_elongation", "feature_truncation", "intergenic_variant")
-severity = data.frame(consequence=consequences, rank=seq(1:length(consequences)),
-    stringsAsFactors=FALSE)
-
-#' find the VEP consequence for a variant
-#' 
-#' @param variant data frame or list for a variant, containing columns named
-#'     "chrom", "start_pos", "end_pos", and "alt_allele" code for a single variant
-#' @param build genome build to find consequences on
-#' @param verbose flag indicating whether to print variants as they are checked
-#' 
-#' @export
-#' @return a character string containing the most severe consequence, as per VEP
-#'     annotation formats.
-#' 
-#' @examples
-#' get_vep_consequence(data.frame(chrom=c("1"), 
-#'     start_pos=c("1000000"), end_pos=c("1000000"), alt_allele=c("A"), 
-#'     ref_allele=c("G")))
-#' get_vep_consequence(list(chrom="1", start_pos="1000000", 
-#'     end_pos="1000000", alt_allele="A", ref_allele="G"))
-get_vep_consequence <- function(variant, build="grch37", verbose=FALSE) {
-    
-    # only tolerate the grch37 and grch38 genome builds, since they are the only
-    # genome builds supported by the Ensembl REST API
-    allowed_builds = c("grch37", "grch38")
-    stopifnot( tolower(build) %in% allowed_builds )
-    
-    # get the correct allele for deletions for the Ensembl REST API requests
-    if (variant[["alt_allele"]] == "") {variant[["alt_allele"]] = "-"}
-    
-    base_url = "rest.ensembl.org/vep/human/region/"
-    if (build == "grch37") {
-        base_url = paste("grch37", base_url, sep = ".")
-    }
-    
-    # define parts of the URL
-    url_start = paste("http://", base_url, variant[["chrom"]], ":", 
-        variant[["start_pos"]], ":", variant[["end_pos"]], "/", sep="")
-    content = "?content-type=application/json"
-    
-    # define the URLs for the ref and alt alleles
-    url = paste(url_start, variant[["alt_allele"]], content, sep = "")
-    ref_url = paste(url_start, variant[["ref_allele"]], content, sep = "")
-    
-    if (verbose) {
-        print(paste("chr", variant[["chrom"]], ":", variant[["start_pos"]], " ", 
-            variant[["alt_allele"]], "    ", url, sep=""))
-    }
-    
-    json = try(rjson::fromJSON(file=url), silent=TRUE)
-    if (class(json) == "try-error") {json = rjson::fromJSON(file=ref_url)}
-    
-    transcript = find_most_severe_transcript(json)
-    
-    consequence = transcript$consequence_terms
-    temp_severity = min(severity$rank[severity$consequence %in% consequence])
-    consequence = severity$consequence[severity$rank == temp_severity]
-    
-    value = list(consequence=consequence, gene=transcript$gene_symbol)
-    
-    return(value)
-}
-
-#' find the VEP consequence for a variant
-#' 
-#' @param ensembl_json json data for variant from Ensembl
-#' 
-#' @export
-#' @return a character string containing the most severe consequence, as per VEP
-#'     annotation formats.
-find_most_severe_transcript <- function(ensembl_json) {
-    
-    bad_transcripts = c("lincRNA", "nonsense_mediated_decay", "transcribed_unprocessed_pseudogene")
-    
-    best_transcript = NA
-    best_severity = NA
-    
-    for (transcript in ensembl_json[[1]]$transcript_consequences) {
-        
-        # don't bother to check some transcript types
-        if (transcript$biotype %in% bad_transcripts) { next }
-        
-        # get consequence and severity rank in the current transcript
-        consequence = transcript$consequence_terms
-        temp_severity = min(severity$rank[severity$consequence %in% consequence])
-        consequence = severity$consequence[severity$rank == temp_severity]
-        
-        # check if this is the most severe consequence
-        if (is.na(best_severity) | temp_severity < best_severity) {
-            best_severity = temp_severity
-            best_transcript = transcript
-        }
-    }
-    
-    return(best_transcript)
-}
-
-#' find the hgnc symbol overlapping a variant position
-#' 
-#' @param variant data frame or list for a variant, containing columns named
-#'     "chrom", "start_pos", and "end_pos" for a single variant
-#' @param build genome build to find consequences on
-#' @param verbose flag indicating whether to print variants as they are checked
-#' 
-#' @export
-#' @return a character string containing the HGNC symbol.
-#' 
-#' @examples
-#' get_gene_id_for_variant(data.frame(chrom=c("1"), start_pos=c("1000000"),
-#'     end_pos=c("1000000")))
-#' get_gene_id_for_variant(list(chrom="1", start_pos="1000000", 
-#'     end_pos="1000000"))
-get_gene_id_for_variant <- function(variant, build="grch37", verbose=FALSE) {
-    
-    # only tolerate the grch37 and grch38 genome builds, since they are the only
-    # genome builds supported by the Ensembl REST API
-    allowed_builds = c("grch37", "grch38")
-    stopifnot( tolower(build) %in% allowed_builds )
-    
-    base_url = "rest.ensembl.org/overlap/region/human/"
-    if (build == "grch37") {
-        base_url = paste("grch37", base_url, sep = ".")
-    }
-    
-    # make sure the end position is suitable for the Ensembl REST API request
-    if (as.numeric(variant[["end_pos"]]) < as.numeric(variant[["start_pos"]])) {
-        variant[["end_pos"]] = variant[["start_pos"]]
-    }
-    
-    # define parts of the URL
-    url_start = paste("http://", base_url, variant[["chrom"]], ":", 
-        variant[["start_pos"]], ":", variant[["end_pos"]], "/", sep="")
-    content = "?feature=gene;content-type=application/json"
-    url = paste(url_start, content, sep = "")
-    
-    if (verbose) {
-        print(paste("chr", variant[["chrom"]], ":", variant[["start_pos"]], 
-            "    ", url, sep=""))
-    }
-    
-    json = rjson::fromJSON(file=url)
-    
-    # return blank string for variants not in genes
-    if (length(json) > 0) {
-        return(json[[1]]$external_name)
-    }
-    
-    return("")
-}
-
-#' find genomic sequence within a region
-#' 
-#' @param variant data frame or list for a variant, containing columns named
-#'     "chrom", "start_pos", and "end_pos" for a single variant
-#' @param build genome build to find consequences on
-#' @param verbose flag indicating whether to print variants as they are checked
-#' 
-#' @export
-#' @return a character string containing the HGNC symbol.
-#' 
-#' @examples
-#' get_gene_id_for_variant(data.frame(chrom=c("1"), start_pos=c("1000000"),
-#'     end_pos=c("1000000")))
-#' get_gene_id_for_variant(list(chrom="1", start_pos="1000000", 
-#'     end_pos="1000000"))
-get_sequence_in_region <- function(variant, build="grch37", verbose=FALSE) {
-    
-    # only tolerate the grch37 and grch38 genome builds, since they are the only
-    # genome builds supported by the Ensembl REST API
-    allowed_builds = c("grch37", "grch38")
-    stopifnot( tolower(build) %in% allowed_builds )
-    
-    base_url = "rest.ensembl.org/sequence/region/human/"
-    if (build == "grch37") {
-        base_url = paste("grch37", base_url, sep = ".")
-    }
-    
-    # make sure the end position is suitable for the Ensembl REST API request
-    if (as.numeric(variant[["end_pos"]]) < as.numeric(variant[["start_pos"]])) {
-        variant[["end_pos"]] = variant[["start_pos"]]
-    }
-    
-    # define the URL
-    url = paste("http://", base_url, variant[["chrom"]], ":", 
-        variant[["start_pos"]], ":", variant[["end_pos"]], 
-        ":1?content-type=application/json", sep="")
-    
-    if (verbose) {
-        print(paste("chr", variant[["chrom"]], ":", variant[["start_pos"]], 
-            "    ", url, sep=""))
-    }
-    
-    json = rjson::fromJSON(file=url)
-    
-    # return blank string for variants not in genes
-    if (length(json) > 0) {
-        return(json$seq)
-    }
-    
-    return("")
-}
-
 #' extract genomic coordinates for variants from a dataframe
 #' 
 #' Genomic coordinates can be encoded in a variety of ways, this function
@@ -217,11 +13,11 @@ get_sequence_in_region <- function(variant, build="grch37", verbose=FALSE) {
 #' @return a data frame with chrom, start_pos, end_pos and allele columns. 
 #' 
 #' @examples
-#' prepare_coordinates(data.frame(coord=c("chr1:10000:A"), 
+#' fix_coordinates(data.frame(coord=c("chr1:10000:A"), 
 #'     allele=c("chr1:10000:A:G")), "coord", "allele")
-#' prepare_coordinates(data.frame(coord=c("chr1:10000:A"), 
+#' fix_coordinates(data.frame(coord=c("chr1:10000:A"), 
 #'     allele=c("chr1:10003:ATGC:G")), "coord", "allele")
-prepare_coordinates <- function(variants, coordinate_column, allele_column) {
+fix_coordinates <- function(variants, coordinate_column, allele_column) {
     
     # make sure the required columns are as character
     variants[[coordinate_column]] = as.character(variants[[coordinate_column]])
@@ -245,121 +41,6 @@ prepare_coordinates <- function(variants, coordinate_column, allele_column) {
     return(variants)
 }
 
-#' fix substitution allele codes
-#' 
-#' fix the allele column for variants with allele columns that are structured
-#' like "sub(G-&gt;T)" (the "-&gt;" translates to ">", and sub(G->T), this is 
-#' an excel to R conversion issue. Perhaps it is unicode from excel?
-#' 
-#' @param variants data frame of variants
-#' @param allele_column name of column containing allele information
-#' 
-#' @export
-#' @return a data frame with chrom, start_pos, end_pos and allele columns.
-fix_sub_alleles <-function(variants, allele_column) {
-    
-    temp = grepl("sub", variants[[allele_column]])
-    variants[[allele_column]][temp] = gsub("-&gt;|>", "/", variants[[allele_column]][temp])
-    variants[[allele_column]][temp] = gsub("\\(|\\)", "", variants[[allele_column]][temp])
-    variants[[allele_column]][temp] = gsub("sub", "", variants[[allele_column]][temp])
-    
-    return(variants)
-}
-
-#' fix deletion allele codes
-#' 
-#' fix the allele column for variants with allele columns that are structured
-#' like "del(1)"
-#' 
-#' @param variants data frame of variants
-#' @param allele_column name of column containing allele information
-#' 
-#' @export
-#' @return a data frame with chrom, start_pos, end_pos and allele columns.
-fix_del_alleles <- function(variants, allele_column) {
-    
-    temp = grepl("del", variants[[allele_column]])
-    
-    # if we don't have any of these variants, simply return the vartiant table,
-    # as it will cause an error if this continues to run on zero variants
-    if (!(any(temp))) { return(variants) }
-    
-    variants[[allele_column]][temp] = gsub("\\(|\\)", "", variants[[allele_column]][temp])
-    variants[[allele_column]][temp] = gsub("del", "", variants[[allele_column]][temp])
-    temp_distance = variants[[allele_column]][temp]
-    
-    # find the reference sequence at the site
-    variants[[allele_column]][temp] = apply(variants[temp, ], 1, get_sequence_in_region)
-    
-    # find the sequence at the site + the distance of the deletion
-    variants$end_pos[temp] = as.numeric(variants$end_pos[temp]) + as.numeric(temp_distance)
-    variants[[allele_column]][temp] = paste(apply(variants[temp, ], 1, get_sequence_in_region), "/", variants[[allele_column]][temp],  sep="")
-    
-    return(variants)
-}
-
-#' fix insertion allele codes
-#' 
-#' fix the allele column for variants with allele columns that are structured
-#' like "ins(1)"
-#' 
-#' @param variants data frame of variants
-#' @param allele_column name of column containing allele information
-#' 
-#' @export
-#' @return a data frame with chrom, start_pos, end_pos and allele columns.
-fix_ins_alleles <-function(variants, allele_column) {
-    
-    temp = grepl("ins", variants[[allele_column]])
-    
-    # if we don't have any of these variants, simply return the vartiant table,
-    # as it will cause an error if this continues to run on zero variants
-    if (!(any(temp))) { return(variants) }
-    
-    variants[[allele_column]][temp] = gsub("\\(|\\)", "", variants[[allele_column]][temp])
-    variants[[allele_column]][temp] = gsub("ins", "", variants[[allele_column]][temp])
-    
-    variants$start_pos[temp] = as.numeric(variants$start_pos[temp]) - 1
-    variants$end_pos[temp] = as.numeric(variants$end_pos[temp]) - 1
-    
-    ref_alleles = apply(variants[temp, ], 1, get_sequence_in_region)
-    variants[[allele_column]][temp] = paste(ref_alleles, "/", ref_alleles, variants[[allele_column]][temp], sep = "")
-    
-    variants$start_pos[temp] = as.numeric(variants$start_pos[temp]) + 1
-    
-    return(variants)
-    
-}
-
-#' fix duplication allele codes
-#' 
-#' fix the allele column for variants with allele columns that are structured
-#' like "dup"
-#' 
-#' @param variants data frame of variants
-#' @param allele_column name of column containing allele information
-#' 
-#' @export
-#' @return a data frame with chrom, start_pos, end_pos and allele columns.
-fix_dup_alleles <-function(variants, allele_column) {
-    
-    temp = grepl("dup", variants[[allele_column]])
-    
-    # if we don't have any of these variants, simply return the vartiant table,
-    # as it will cause an error if this continues to run on zero variants
-    if (!(any(temp))) { return(variants) }
-    
-    variants$start_pos[temp] = as.numeric(variants$start_pos[temp]) - 1
-    variants$end_pos[temp] = as.numeric(variants$end_pos[temp]) - 1
-    
-    ref_alleles = apply(variants[temp, ], 1, get_sequence_in_region)
-    variants[[allele_column]][temp] = paste(ref_alleles, "/", ref_alleles, ref_alleles, sep = "")
-    
-    variants$start_pos[temp] = as.numeric(variants$start_pos[temp]) + 1
-    
-    return(variants)
-}
-
 #' extract genomic coordinates for variants from a dataframe
 #' 
 #' Genomic coordinates can be encoded in a variety of ways, this function
@@ -373,17 +54,17 @@ fix_dup_alleles <-function(variants, allele_column) {
 #' @return a data frame with chrom, start_pos, end_pos and allele columns.
 #' 
 #' @examples
-#' prepare_coordinates_with_allele(data.frame(coord=c("chr1:10000"), 
+#' fix_coordinates_with_allele(data.frame(coord=c("chr1:10000"), 
 #'     allele=c("A/G")), "coord", "allele")
-#' prepare_coordinates_with_allele(data.frame(coord=c("chr1:10000"), 
+#' fix_coordinates_with_allele(data.frame(coord=c("chr1:10000"), 
 #'     allele=c("ATGC/G")), "coord", "allele")
-#' prepare_coordinates_with_allele(data.frame(coord=c("chr1:10000"), 
+#' fix_coordinates_with_allele(data.frame(coord=c("chr1:10000"), 
 #'     allele=c("sub(G-&gt;T)")), "coord", "allele")
-#' prepare_coordinates_with_allele(data.frame(coord=c("chr1:10000"), 
+#' fix_coordinates_with_allele(data.frame(coord=c("chr1:10000"), 
 #'     allele=c("del(1)")), "coord", "allele")
-#' prepare_coordinates_with_allele(data.frame(coord=c("chr1:10000"), 
+#' fix_coordinates_with_allele(data.frame(coord=c("chr1:10000"), 
 #'     allele=c("ins(ATG)")), "coord", "allele")
-prepare_coordinates_with_allele <- function(variants, coordinate_column, allele_column) {
+fix_coordinates_with_allele <- function(variants, coordinate_column, allele_column) {
     
     # make sure the required columns are as character
     variants[[coordinate_column]] = as.character(variants[[coordinate_column]])
@@ -423,13 +104,13 @@ prepare_coordinates_with_allele <- function(variants, coordinate_column, allele_
 #' @return a data frame with chrom, start_pos, end_pos and allele columns.
 #' 
 #' @examples
-#' prepare_coordinates_with_hgvs_genomic(
+#' fix_coordinates_with_hgvs_genomic(
 #'    data.frame(hgvs=c("chr7:g.155556643G>A")), "hgvs")
-#' prepare_coordinates_with_hgvs_genomic(data.frame(
+#' fix_coordinates_with_hgvs_genomic(data.frame(
 #'    hgvs=c("chr3:g.11060365_11060365del")), "hgvs")
-#' prepare_coordinates_with_hgvs_genomic(data.frame(
+#' fix_coordinates_with_hgvs_genomic(data.frame(
 #'    hgvs=c("chr13:g.50057690_50057691insA")), "hgvs")
-prepare_coordinates_with_hgvs_genomic <- function(variants, hgvs_column) {
+fix_coordinates_with_hgvs_genomic <- function(variants, hgvs_column) {
     
     # make sure the required columns are as character
     variants[[hgvs_column]] = as.character(variants[[hgvs_column]])
@@ -507,13 +188,13 @@ prepare_coordinates_with_hgvs_genomic <- function(variants, hgvs_column) {
 #' @return a data frame with chrom, start_pos, end_pos and allele columns.
 #' 
 #' @examples
-#' prepare_zaiidi_coordinates(data.frame(chrom=c("1"), start_pos=c("100000"),
+#' fix_zaiidi_coordinates(data.frame(chrom=c("1"), start_pos=c("100000"),
 #'     alleles=c("A/G")), "alleles")
-#' prepare_zaiidi_coordinates(data.frame(chrom=c("1"), start_pos=c("100000"),
+#' fix_zaiidi_coordinates(data.frame(chrom=c("1"), start_pos=c("100000"),
 #'     alleles=c("-AAAA")), "alleles")
-#' prepare_zaiidi_coordinates(data.frame(chrom=c("1"), start_pos=c("100000"),
+#' fix_zaiidi_coordinates(data.frame(chrom=c("1"), start_pos=c("100000"),
 #'     alleles=c("+AAAA")), "alleles")
-prepare_zaiidi_coordinates <- function(variants, allele_column) {
+fix_zaiidi_coordinates <- function(variants, allele_column) {
     
     # make sure the required columns are as character
     variants[[allele_column]] = as.character(variants[[allele_column]])
@@ -545,36 +226,6 @@ prepare_zaiidi_coordinates <- function(variants, allele_column) {
     variants$alt_allele = sapply(variants[[allele_column]], "[[", 2)
     
     variants[[allele_column]] = NULL
-    
-    return(variants)
-}
-
-#' correct alt alleles which have been encoded as an IUPAC ambiguous base
-#' 
-#' Sometimes the de novo variants from studies provide alt alleles as "R", or
-#' "Y", which indicate ambigous bases. We can identify the correct alt base by
-#' comparison with the reference allele.
-#' 
-#' @param variants data frame of variants
-#' 
-#' @export
-#' @return a data frame with chrom, start_pos, end_pos and allele columns.
-fix_het_alleles <- function(variants) {
-    iupac = list("R" = c("A", "G"), "Y" = c("C", "T"), "S" = c("G", "C"),
-                 "W" = c("A", "T"), "K" = c("G", "T"), "M" = c("A", "C"))
-    
-    # we need to correct
-    for (row_num in 1:nrow(variants)) {
-        alt = variants$alt_allele[row_num]
-        ref = variants$ref_allele[row_num]
-        
-        # figure the correct base from the ambigous base which is not the 
-        # reference allele.
-        if (alt %in% names(iupac)) {
-            alt = setdiff(iupac[[alt]], ref)
-            variants$alt_allele[row_num] = alt
-        }
-    }
     
     return(variants)
 }

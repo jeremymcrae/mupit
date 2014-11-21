@@ -14,6 +14,7 @@ Imports:
     reshape (>= 0.8.5),
     rjson (>= 0.2.13),
     gdata (>= 2.13.3),
-    tm (>= 0.6)
+    tm (>= 0.6),
+    httr (>= 0.5)
 Suggests:
     testthat
