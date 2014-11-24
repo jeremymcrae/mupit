@@ -140,6 +140,7 @@ find_most_severe_transcript <- function(ensembl_json, exclude_bad=TRUE) {
     
     best_transcript = NA
     best_severity = NA
+    symbol = NA
     
     # if we are dealing with an intergenic variant, the variant won't have any
     # transcript consequences, and so the function will enter an infinite 
@@ -162,10 +163,13 @@ find_most_severe_transcript <- function(ensembl_json, exclude_bad=TRUE) {
         temp_severity = min(severity$rank[severity$consequence %in% consequence])
         consequence = severity$consequence[severity$rank == temp_severity]
         
-        # check if this is the most severe consequence
-        if (is.na(best_severity) | temp_severity < best_severity) {
+        # check if this is the most severe consequence; prefer HGNC transcripts
+        if (is.na(best_severity) | temp_severity < best_severity | 
+                (symbol != "HGNC" & transcript$gene_symbol_source == "HGNC" & 
+                temp_severity == best_severity)) {
             best_severity = temp_severity
             best_transcript = transcript
+            symbol = transcript$gene_symbol_source
         }
     }
     
