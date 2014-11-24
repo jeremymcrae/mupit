@@ -11,12 +11,12 @@ library(mupit)
 get_trio_counts <- function(diagnosed) {
     
     # number of trios studied in our data
-    male_ddd = 582 # trios with male offspring
-    female_ddd = 548 # trios with female offspring
+    male_ddd = 582 # male probands
+    female_ddd = 548 # female probands
     
     # remove diagnosed patients, if maximising power
-    male_ddd = male_ddd - length(which(diagnosed$sex == "Male"))
-    female_ddd = female_ddd - length(which(diagnosed$sex == "Female"))
+    male_ddd = male_ddd - sum(diagnosed$sex == "Male")
+    female_ddd = female_ddd - sum(diagnosed$sex == "Female")
     
     male = sum(cohorts$unique_male, male_ddd)
     female = sum(cohorts$unique_female, female_ddd)
@@ -30,12 +30,12 @@ get_trio_counts <- function(diagnosed) {
 #' 
 #' @return data frame containing HGNC, chrom, position, consequence, SNV or 
 #'    INDEL type, and study ID.
-open_datasets <- function(diagnosed) {
+get_de_novos <- function(diagnosed) {
     
-    ddd = open_ddd_de_novos(diagnosed)
-    data = rbind(ddd, published_de_novos)
+    ddd_de_novos = get_ddd_de_novos(diagnosed)
+    variants = rbind(ddd_de_novos, published_de_novos)
     
-    return(data)
+    return(variants)
 }
 
 main <- function() {
@@ -47,7 +47,7 @@ main <- function() {
     num.trios.female = num$female
     
     # open the de novos, and 
-    de_novos = open_data sets(diagnosed)
+    de_novos = get_de_novos sets(diagnosed)
     
     enriched = analyse_gene_enrichment(de_novos, num.trios.male, num.trios.female)
     head(enriched[order(enriched$p.func.daly), ])

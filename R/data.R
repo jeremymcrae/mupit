@@ -54,6 +54,18 @@
 #'     \code{publication_doi}, \code{study_phenotype} and \code{type}
 "published_de_novos"
 
+#' De novos found in the DDD study.
+#'
+#' De novo variants found within participants in the DDD study. As this is an
+#' unpblished dataset, the dataset in the package will be a blank dataframe,
+#' and only be complete for DDD researchers.
+#' 
+#' @format A data frame with twelve variables: c(\code{person_id}, \code{chrom},
+#'     \code{start_pos}, \code{end_pos}, \code{ref_allele}, \code{alt_allele}, 
+#'     \code{hgnc}, \code{consequence}, \code{study_code}, 
+#'     \code{publication_doi}, \code{study_phenotype} and \code{type}
+"ddd_de_novos"
+
 #' Gene information.
 #' 
 #' Table of all genes in the genome with HGNC symbol, chromosome and coding

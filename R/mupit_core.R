@@ -53,11 +53,11 @@ get_de_novo_counts <- function(de_novos) {
 #' tests whether genes are enriched with de novo mutations
 #' 
 #' @param rates gene mutation rates per consequence type
-#' @param counts data frame with tally of de novo mutations for each of the
-#'            mutation types.
+#' @param counts data frame with tally of de novo mutations per gene for each of
+#'     the mutation types: lof_snv, lof_indel, missense_snv, missense_indel.
 #' @param num.tests number of tests performed (used for multiple correction).
-#' @export
 #' 
+#' @export
 #' @return data frame with gene info, mutation rates and P values from testing
 #'     for enrichment.
 get_p_values <- function(rates, counts, num.tests) {

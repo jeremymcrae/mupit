@@ -30,18 +30,18 @@ get_ddd_probands_with_seizures <- function(phenotype_filename) {
 #' 
 #' @return data frame containing HGNC, chrom, position, consequence, SNV or INDEL
 #'     type, and study ID.
-open_datasets <- function(diagnosed) {
+get_de_novos <- function(diagnosed) {
     
     seizure_probands = get_ddd_probands_with_seizures(PHENOYTYPE_FILENAME) 
     sample_ids = seizure_probands$sample_id
     
-    ddd = open_ddd_de_novos(diagnosed, sample_ids)
+    ddd_de_novos = get_ddd_de_novos(diagnosed, subset=sample_ids)
     
     # read in other datasets and calculate numbers of LoF and NS, SNVs and indels
-    epilepsy_de_novos = published_de_novos[published_de_novos$study_phenotype == "epilepsy", ]
-    data = rbind(ddd, epilepsy_de_novos)
+    seizure_de_novos = published_de_novos[published_de_novos$study_phenotype == "epilepsy", ]
+    variants = rbind(ddd_de_novos, seizure_de_novos)
     
-    return(data)
+    return(variants)
 }
 
 #' defines the cohort sizes, used to get the overall population size
@@ -53,18 +53,15 @@ get_trio_counts <- function(diagnosed) {
     
     seizure_probands = get_ddd_probands_with_seizures(PHENOYTYPE_FILENAME)
     
-    # number of trios studied in our data
-    male.ddd = table(seizure_probands$sex)[["Male"]] # trios with male offspring
-    female.ddd = table(seizure_probands$sex)[["Female"]] # trios with female offspring
-    
-    # remove diagnosed patients, if maximising power
-    diagnosed_index = which(seizure_probands$decipher_id %in% diagnosed$id)
-    male.ddd = male.ddd - length(which(seizure_probands$sex[diagnosed_index] == "Male"))
-    female.ddd = female.ddd - length(which(seizure_probands$sex[diagnosed_index] == "Female"))
+    # number of trios studied in our data, minus the samples with diagnoses, in 
+    # order to maximise the power
+    undiagnosed = !(seizure_probands$sample_id %in% diagnosed$id)
+    male_ddd = sum(seizure_probands$sex[undiagnosed] == "Male") # male probands
+    female_ddd = sum(seizure_probands$sex[undiagnosed] == "Female") # female probands
     
     # sum up males and females across studies
-    male = male.ddd + sum(cohorts$unique_male[cohorts$study_phenotype == "epilepsy"])
-    female = female.ddd + sum(cohorts$unique_female[cohorts$study_phenotype == "epilepsy"])
+    male = male_ddd + sum(cohorts$unique_male[cohorts$study_phenotype == "epilepsy"])
+    female = female_ddd + sum(cohorts$unique_female[cohorts$study_phenotype == "epilepsy"])
     
     return(list(male = male, female = female))
 }

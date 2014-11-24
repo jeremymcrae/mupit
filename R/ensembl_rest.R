@@ -136,7 +136,8 @@ get_vep_consequence <- function(variant, build="grch37", verbose=FALSE) {
 #'     annotation formats.
 find_most_severe_transcript <- function(ensembl_json, exclude_bad=TRUE) {
     
-    bad_transcripts = c("lincRNA", "nonsense_mediated_decay", "transcribed_unprocessed_pseudogene")
+    bad_transcripts = c("lincRNA", "nonsense_mediated_decay", "pseudogene", 
+        "transcribed_unprocessed_pseudogene")
     
     best_transcript = NA
     best_severity = NA
