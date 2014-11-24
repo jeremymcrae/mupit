@@ -22,6 +22,10 @@ assign("initial_time", Sys.time(), envir=timeEnv)
 #'     "205901016:205901016/A?content-type=application/json", sep=""))
 request_from_ensembl <- function(url, tries=0) {
     
+    # strip any possible whitespace from the url, since imported datasets
+    # occasionally contain whitespace in the values used to construct the URL.
+    url = gsub(" ", "", url)
+    
     # check that we are not requesting urls fater than that allowed by Ensembl, 
     # sleep until the period expires
     current_time = Sys.time()

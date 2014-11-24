@@ -9,5 +9,5 @@ gene_info$chrom = gene_info$chr
 # only include the renamed columns
 gene_info = subset(gene_info, select = c(hgnc, chrom, cds_length))
 
-save(gene_info, file="data/gene_info.rda")
+save(gene_info, file="data/gene_info.rda", compress="xz")
 

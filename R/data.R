@@ -54,7 +54,6 @@
 #'     \code{publication_doi}, \code{study_phenotype} and \code{type}
 "published_de_novos"
 
-#' 
 #' Gene information.
 #' 
 #' Table of all genes in the genome with HGNC symbol, chromosome and coding
@@ -64,3 +63,22 @@
 #' @format A data frame with three variables: \code{hgnc}, \code{chrom},
 #'     and \code{cds_length}
 "gene_info"
+
+#' Cohort information.
+#' 
+#' Table of sex-specific numbers of affected probands reported on in published
+#' exome sequencing of children with developmental disorders (autism, congenital
+#' heart disease, intellectual disability, epilepsy, and schizophrenia). 
+#' 
+#' This provides the total population of trio-based probands investigated within
+#' these studies, that is, the population for whom a de novo mutation might have
+#' been identified. This determines the number of mutations we expect to find
+#' within the total population.
+#' 
+#' The table of sex-counts has been carefully extracted from the publications, 
+#' accounting for overlap in samples between different publications.
+#' 
+#' @format A data frame with eight variables: \code{study_code}, \code{year}, 
+#'     \code{study_phenotype}, \code{publication_doi}, \code{unique_male}, 
+#'     \code{unique_female}, \code{subsets}, and \code{comment}.
+"cohorts"

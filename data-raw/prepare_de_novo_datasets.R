@@ -62,9 +62,9 @@ rauch_de_novos <- function() {
     variants$publication_doi = "10.1016/S0140-6736(12)61480-9"
     variants$study_phenotype = "intellectual_disability"
     
-    variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
-        ref_allele, alt_allele, hgnc, consequence, study_code, publication_doi, 
-        study_phenotype))
+    variants = subset(variants, select=c("person_id", "chrom", "start_pos", 
+        "end_pos", "ref_allele", "alt_allele", "hgnc", "consequence", 
+        "study_code", "publication_doi", "study_phenotype"))
     
     return(variants)
 }
@@ -138,9 +138,9 @@ deligt_de_novos <- function() {
     variants$publication_doi = "10.1056/NEJMoa1206524"
     variants$study_phenotype = "intellectual_disability"
     
-    variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
-        ref_allele, alt_allele, hgnc, consequence, study_code, publication_doi, 
-        study_phenotype))
+    variants = subset(variants, select=c("person_id", "chrom", "start_pos", 
+        "end_pos", "ref_allele", "alt_allele", "hgnc", "consequence", 
+        "study_code", "publication_doi", "study_phenotype"))
     
     return(variants)
 }
@@ -214,9 +214,9 @@ gilissen_de_novos <- function() {
     variants$publication_doi = "10.1038/nature13394"
     variants$study_phenotype = "intellectual_disability"
     
-    variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
-        ref_allele, alt_allele, hgnc, consequence, study_code, publication_doi, 
-        study_phenotype))
+    variants = subset(variants, select=c("person_id", "chrom", "start_pos", 
+        "end_pos", "ref_allele", "alt_allele", "hgnc", "consequence", 
+        "study_code", "publication_doi", "study_phenotype"))
     
     return(variants)
 }
@@ -263,9 +263,9 @@ epi4k_de_novos <- function() {
     variants$publication_doi = "10.1016/j.ajhg.2014.08.013"
     variants$study_phenotype = "epilepsy"
     
-    variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
-        ref_allele, alt_allele, hgnc, consequence, study_code, publication_doi, 
-        study_phenotype))
+    variants = subset(variants, select=c("person_id", "chrom", "start_pos", 
+        "end_pos", "ref_allele", "alt_allele", "hgnc", "consequence", 
+        "study_code", "publication_doi", "study_phenotype"))
     
     return(variants)
 }
@@ -316,9 +316,9 @@ sanders_de_novos <- function() {
     variants$publication_doi = "10.1038/nature10945"
     variants$study_phenotype = "autism"
     
-    variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
-        ref_allele, alt_allele, hgnc, consequence, study_code, publication_doi, 
-        study_phenotype))
+    variants = subset(variants, select=c("person_id", "chrom", "start_pos", 
+        "end_pos", "ref_allele", "alt_allele", "hgnc", "consequence", 
+        "study_code", "publication_doi", "study_phenotype"))
     
     return(variants)
 }
@@ -381,9 +381,9 @@ oroak_de_novos <- function() {
     variants$publication_doi = "10.1038/nature10989"
     variants$study_phenotype = "autism"
     
-    variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
-        ref_allele, alt_allele, hgnc, consequence, study_code, publication_doi, 
-        study_phenotype))
+    variants = subset(variants, select=c("person_id", "chrom", "start_pos", 
+        "end_pos", "ref_allele", "alt_allele", "hgnc", "consequence", 
+        "study_code", "publication_doi", "study_phenotype"))
     
     return(variants)
 }
@@ -435,9 +435,9 @@ iossifov_neuron_de_novos <- function() {
     variants$publication_doi = "10.1016/j.neuron.2012.04.009"
     variants$study_phenotype = "autism"
     
-    variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
-        ref_allele, alt_allele, hgnc, consequence, study_code, publication_doi, 
-        study_phenotype))
+    variants = subset(variants, select=c("person_id", "chrom", "start_pos", 
+        "end_pos", "ref_allele", "alt_allele", "hgnc", "consequence", 
+        "study_code", "publication_doi", "study_phenotype"))
     
     return(variants)
 }
@@ -479,9 +479,9 @@ iossifov_nature_de_novos <- function() {
     variants$publication_doi = "10.1038/nature13908"
     variants$study_phenotype = "autism"
     
-    variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
-        ref_allele, alt_allele, hgnc, consequence, study_code, publication_doi, 
-        study_phenotype))
+    variants = subset(variants, select=c("person_id", "chrom", "start_pos", 
+        "end_pos", "ref_allele", "alt_allele", "hgnc", "consequence", 
+        "study_code", "publication_doi", "study_phenotype"))
     
     return(variants)
 }
@@ -520,9 +520,9 @@ de_rubeis_de_novos <- function() {
     variants$publication_doi = "10.1038/nature13772"
     variants$study_phenotype = "autism"
     
-    variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
-        ref_allele, alt_allele, hgnc, consequence, study_code, publication_doi, 
-        study_phenotype))
+    variants = subset(variants, select=c("person_id", "chrom", "start_pos", 
+        "end_pos", "ref_allele", "alt_allele", "hgnc", "consequence", 
+        "study_code", "publication_doi", "study_phenotype"))
     
     return(variants)
 }
@@ -626,9 +626,9 @@ fromer_de_novos <- function() {
     variants$publication_doi = "10.1038/nature12929"
     variants$study_phenotype = "schizophrenia"
     
-    variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
-        ref_allele, alt_allele, hgnc, consequence, study_code, publication_doi, 
-        study_phenotype))
+    variants = subset(variants, select=c("person_id", "chrom", "start_pos", 
+        "end_pos", "ref_allele", "alt_allele", "hgnc", "consequence", 
+        "study_code", "publication_doi", "study_phenotype"))
     
     return(variants)
 }
@@ -684,9 +684,9 @@ zaidi_de_novos <- function() {
     variants$publication_doi = "10.1038/nature12141"
     variants$study_phenotype = "congenital_heart_disease"
     
-    variants = subset(variants, select=c(person_id, chrom, start_pos, end_pos, 
-        ref_allele, alt_allele, hgnc, consequence, study_code, publication_doi, 
-        study_phenotype))
+    variants = subset(variants, select=c("person_id", "chrom", "start_pos", 
+        "end_pos", "ref_allele", "alt_allele", "hgnc", "consequence", 
+        "study_code", "publication_doi", "study_phenotype"))
     
     return(variants)
 }
@@ -703,7 +703,7 @@ published_de_novos = rbind(rauch, deligt, gilissen, epi4k, autism, fromer, zaiid
 published_de_novos$type = "snv"
 published_de_novos$type[nchar(published_de_novos$ref_allele) != 1 | nchar(published_de_novos$alt_allele) != 1] = "indel"
 
-save(published_de_novos, file="../data/published_de_novos.rda")
+save(published_de_novos, file="../data/published_de_novos.rda", compress="xz")
 # check that the gene names are fine
 
 # Check that all the frameshifts are indels ()

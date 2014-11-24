@@ -15,7 +15,7 @@ PHENOYTYPE_FILENAME = file.path(DATAFREEZE_DIR, "phenotypes.shared.pcs.relatedne
 #'     sex
 get_ddd_probands_with_seizures <- function(phenotype_filename) {
     
-    samples = read.table(phenotype_filename, sep = "\t", header = TRUE, colClasses = "character")
+    samples = read.table(phenotype_filename, sep="\t", header=TRUE, colClasses="character")
     samples = samples[samples$seizures == 1, ]
     
     probands = data.frame(sample_id = samples$DDD_ID, decipher_id = 
@@ -38,7 +38,8 @@ open_datasets <- function(diagnosed) {
     ddd = open_ddd_de_novos(diagnosed, sample_ids)
     
     # read in other datasets and calculate numbers of LoF and NS, SNVs and indels
-    data = rbind(ddd, epi4k_de_novos)
+    epilepsy_de_novos = published_de_novos[published_de_novos$study_phenotype == "epilepsy", ]
+    data = rbind(ddd, epilepsy_de_novos)
     
     return(data)
 }
@@ -61,13 +62,9 @@ get_trio_counts <- function(diagnosed) {
     male.ddd = male.ddd - length(which(seizure_probands$sex[diagnosed_index] == "Male"))
     female.ddd = female.ddd - length(which(seizure_probands$sex[diagnosed_index] == "Female"))
     
-    # number of trios studied in epi4k data
-    male.epi4k = 156
-    female.epi4k = 108
-    
     # sum up males and females across studies
-    male = male.ddd + male.epi4k 
-    female = female.ddd + female.epi4k
+    male = male.ddd + sum(cohorts$unique_male[cohorts$study_phenotype == "epilepsy"])
+    female = female.ddd + sum(cohorts$unique_female[cohorts$study_phenotype == "epilepsy"])
     
     return(list(male = male, female = female))
 }

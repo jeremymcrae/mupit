@@ -18,6 +18,9 @@
 #'     types
 get_de_novo_counts <- function(de_novos) {
     
+    de_novos$hgnc = as.character(de_novos$hgnc)
+    de_novos$consequence = as.character(de_novos$consequence)
+    
     # define the VEP consequence types for loss of function and missense variants
     lof_cq = c("stop_gained", "splice_acceptor_variant", "splice_donor_variant",
         "frameshift_variant")
@@ -34,12 +37,12 @@ get_de_novo_counts <- function(de_novos) {
     de_novos = de_novos[grepl("missense|lof", de_novos$consequence), ]
     
     # count the number of de novos for each type/consequence combination
-    de_novo_counts = reshape::cast(de_novos, hgnc ~ consequence + type, value = "study", length)
+    de_novo_counts = reshape::cast(de_novos, hgnc ~ consequence + type, value = "person_id", length)
     
     # include the positions of the de novos at the minimum position for each gene
     de_novos$min_pos = "min_pos"
     de_novos$temp = "chrom"
-    pos = reshape::cast(de_novos, hgnc ~ min_pos, value = "position", min)
+    pos = reshape::cast(de_novos, hgnc ~ min_pos, value = "start_pos", min)
     chrom = reshape::cast(de_novos, hgnc ~ temp, value = "chrom", min)
     de_novo_counts = merge(pos, de_novo_counts, by = "hgnc")
     de_novo_counts = merge(chrom, de_novo_counts, by = "hgnc")
@@ -63,8 +66,8 @@ get_p_values <- function(rates, counts, num.tests) {
     
     # for each gene, sum the de novo counts across SNVs and indels for the
     # different functional categories: loss of function, missense and functional
-    lof_count = observed$lof_SNV + observed$lof_INDEL
-    missense_count = observed$missense_SNV + observed$missense_INDEL
+    lof_count = observed$lof_snv + observed$lof_indel
+    missense_count = observed$missense_snv + observed$missense_indel
     func_count = lof_count + missense_count
     
     # for each gene, sum the mutation rates across SNVs and indels for the
@@ -111,11 +114,11 @@ analyse_gene_enrichment <- function(de_novos, num.trios.male, num.trios.female) 
     
     # write out results table
     enriched = merge(p_vals_length, p_vals_daly, by = c("hgnc", "chrom", 
-        "min_pos", "lof_INDEL", "lof_SNV", "missense_INDEL", "missense_SNV"))
+        "min_pos", "lof_indel", "lof_snv", "missense_indel", "missense_snv"))
     
     # fix the column names
-    names(enriched) = c("hgnc", "chrom", "min_pos", "lof_INDEL", 
-        "lof_SNV", "missense_INDEL", "missense_SNV", 
+    names(enriched) = c("hgnc", "chrom", "min_pos", "lof_indel", 
+        "lof_snv", "missense_indel", "missense_snv", 
         "snv.missense.rate.length", "snv.lof.rate.length", 
         "indel.missense.rate.length", "indel.lof.rate.length", "p.lof.length", 
         "p.func.length", "fdr.lof.length", "fdr.func.length", 
