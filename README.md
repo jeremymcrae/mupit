@@ -14,18 +14,18 @@ mutations from Kryukov et al 2007
 
 #### POTENTIAL FUTURE IMPROVEMENTS (highest priority first)
 
-task           | status
----------------|--------
-adapt for chrX |  DONE
-FDR estimates  |  DONE
-analytical rather than permutation | DONE
-use actual number of exons to predict essential_splice_site mutations |
-predict mutation rates from base composition |  DONE
-use estimate of de novo mutation discovery power in a gene to better estimate gene-specific mutation rate | 
-get CDS length for all genes. use longest transcript if >1 | DONE
-calculate coding sequence length according to intersection of exome targeted regions and the union of all transcripts for a gene. | 
-account for incomplete sensitivity for DNMs, especially indels | 
-look at clustering of de novos in genes with recurrent mutations | DONE 
+- [x] adapt for chrX
+- [x] FDR estimates
+- [x] analytical rather than permutation
+- [ ] use actual number of exons to predict essential_splice_site mutations
+- [x] predict mutation rates from base composition
+- [ ] use estimate of de novo mutation discovery power in a gene to 
+    better estimate gene-specific mutation rate.
+- [x] get CDS length for all genes. use longest transcript if >1
+- [ ] calculate coding sequence length according to intersection of exome 
+    targeted regions and the union of all transcripts for a gene.
+- [ ] account for incomplete sensitivity for DNMs, especially indels
+- [x] look at clustering of de novos in genes with recurrent mutations 
 
 #### Format
 Read in table of genes and the numbers of families with SNV DNMs
