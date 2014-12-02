@@ -32,16 +32,6 @@ standardise_ddd_de_novos <- function() {
         "DNG_Variants_20Feb2014_NonRed_Clean_NoTwins_NoClusters.txt"), header=TRUE, 
         sep="\t", stringsAsFactors=FALSE, comment.char="")
     
-    # remove diagnosed patients, if maximising power
-    variants = variants[-which(variants$DECIPHER_ID %in% diagnosed$id), ]
-    
-    # sometimes we only want to use a subset of the DDD, such as when we are 
-    # investigating a single disease type, e.g. seizures. Then we will have
-    # specified the DDD sample IDs that we wish to restrict to.
-    if (!is.null(sample_ids)[1]) {
-        variants = variants[variants$person_stable_id %in% sample_ids, ]
-    }
-    
     # standardise the SNV or INDEL flag
     variants$type = "indel"
     variants$type[variants$snp_or_indel == "DENOVO-SNP"] = "snv"
