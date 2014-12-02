@@ -12,8 +12,7 @@ coding sequence, use genome-wide average of functional consequences of coding
 mutations from Kryukov et al 2007
 
 
-#### POTENTIAL FUTURE IMPROVEMENTS (highest priority first)
-
+#### Potential future improvements (highest priority first)
 - [x] adapt for chrX
 - [x] FDR estimates
 - [x] analytical rather than permutation
