@@ -68,7 +68,7 @@ get_trio_counts <- function(diagnosed) {
 
 
 main <- function() {
-    diagnosed_path = "/nfs/users/nfs_j/jm33/apps/enrichment_analysis/data-raw/Diagnoses_1133.txt"
+    diagnosed_path = "/nfs/users/nfs_j/jm33/apps/mupit/data-raw/Diagnoses_1133.txt"
     diagnosed = get_ddd_diagnosed(diagnosed_path)
     num = get_trio_counts(diagnosed)
     num.trios.male = num$male

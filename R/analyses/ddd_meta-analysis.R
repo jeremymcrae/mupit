@@ -40,7 +40,7 @@ get_de_novos <- function(diagnosed) {
 
 main <- function() {
     # here's an example of how to use the functions in this script
-    diagnosed_path = "/nfs/users/nfs_j/jm33/apps/enrichment_analysis/data-raw/Diagnoses_1133.txt"
+    diagnosed_path = "/nfs/users/nfs_j/jm33/apps/mupit/data-raw/Diagnoses_1133.txt"
     diagnosed = get_ddd_diagnosed(diagnosed_path)
     num = get_trio_counts(diagnosed)
     num.trios.male = num$male

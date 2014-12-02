@@ -1,6 +1,6 @@
 # code to combine the different tests statistics together into a single table
 
-CODE_DIR = "/nfs/users/nfs_j/jm33/apps/enrichment_analysis"
+CODE_DIR = "/nfs/users/nfs_j/jm33/apps/mupit"
 DATA_DIR = file.path(CODE_DIR, "data")
 
 # load all the data files in

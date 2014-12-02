@@ -1,6 +1,6 @@
 # code to combine p values from numbers and spacing of DNMs
 
-CODE_DIR = "/nfs/users/nfs_j/jm33/apps/enrichment_analysis"
+CODE_DIR = "/nfs/users/nfs_j/jm33/apps/mupit"
 DATA_DIR = file.path(CODE_DIR, "data")
 
 fishersMethod <- function(x) {
