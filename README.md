@@ -12,32 +12,30 @@ coding sequence, use genome-wide average of functional consequences of coding
 mutations from Kryukov et al 2007
 
 
-#### POTENTIAL FUTURE IMPROVEMENTS (highest priority first)
-- adapt for chrX, lower mutation rate, and number of transmissions required.
-      Assume male/female of proband = 1:1, unless known [DONE]
-- incorporate FDR estimation [DONE]
-- convert to analytical approach from permutation approach [DONE]
-- use actual number of exons to predict essential_splice_site mutations,
-- use base composition of coding sequence to predict gene-specific mutation
-      rate for each class of mutation, rather than just scaling the
-      genome-average.
-- use estimate of de novo mutation discovery power in a gene to better
-      estimate gene-specific mutation rate
-- get CDS length for all genes, not just this subset, 455/478 in test data.
-      use longest transcript if >1 [DONE]
-- calculate coding sequence length according to intersection of exome
-      targeted regions and the union of all transcripts for a gene.
-- account for incomplete sensitivity for DNMs, especially indels
-- look at clustering of de novos in genes with recurrent mutations, within
-      protein space
+#### Potential future improvements (highest priority first)
+- [x] adapt for chrX
+- [x] FDR estimates
+- [x] analytical rather than permutation
+- [ ] use actual number of exons to predict essential_splice_site mutations
+- [x] predict mutation rates from base composition
+- [ ] use estimate of de novo mutation discovery power in a gene to 
+    better estimate gene-specific mutation rate.
+- [x] get CDS length for all genes. use longest transcript if >1
+- [ ] calculate coding sequence length according to intersection of exome 
+    targeted regions and the union of all transcripts for a gene.
+- [ ] account for incomplete sensitivity for DNMs, especially indels
+- [x] look at clustering of de novos in genes with recurrent mutations 
 
-format: read in table of genes and the numbers of families with SNV DNMs
+#### Format
+Read in table of genes and the numbers of families with SNV DNMs
 within different functiona classes and indel DNMS in different functional
 classes, output same table with added column of probability of seeing that
 combination of DNMs.
 
-input data (validated SNV DNMs in TSV format, HGNC_ID, NUM_LOF, NUM_MISSENSE,
-NUM_LOF_INDEL, NUM_MISSENSE_INDEL):
+#### Input data
+validated de novo mutations in TSV format:
+
+proband ID | chrom | start | stop | ref | alt | HGNC symbol | VEP consequence | study | DOI | phenotype | SNV or indel
 
 note: current test input file is numbers of mutations, not number of families,
 some families have >1 mutation in the same gene
