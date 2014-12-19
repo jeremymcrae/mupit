@@ -43,7 +43,11 @@ get_de_novos <- function(diagnosed) {
     seizure_probands = get_ddd_probands_with_seizures(PHENOTYPE_PATH, ID_MAP_PATH) 
     sample_ids = seizure_probands$proband_id
     
-    variants = get_ddd_de_novos(diagnosed, subset=sample_ids)
+    ddd_de_novos = get_ddd_de_novos(diagnosed, subset=sample_ids)
+    
+    # read in other datasets and calculate numbers of LoF and NS, SNVs and indels
+    seizure_de_novos = published_de_novos[published_de_novos$study_phenotype == "epilepsy", ]
+    variants = rbind(ddd_de_novos, seizure_de_novos)
     
     return(variants)
 }
@@ -64,8 +68,8 @@ get_trio_counts <- function(diagnosed) {
     female_ddd = sum(seizure_probands$sex[undiagnosed] == "Female") # female probands
     
     # sum up males and females across studies
-    male = male_ddd
-    female = female_ddd
+    male = male_ddd + sum(cohorts$unique_male[cohorts$study_phenotype == "epilepsy"])
+    female = female_ddd + sum(cohorts$unique_female[cohorts$study_phenotype == "epilepsy"])
     
     return(list(male = male, female = female))
 }

@@ -14,28 +14,7 @@ get_trio_counts <- function(diagnosed) {
     male_ddd = 2408 # male probands
     female_ddd = 1887 # female probands
     
-    # remove diagnosed patients, if maximising power
-    male_ddd = male_ddd - sum(diagnosed$sex == "Male")
-    female_ddd = female_ddd - sum(diagnosed$sex == "Female")
-    
-    male = sum(cohorts$unique_male, male_ddd)
-    female = sum(cohorts$unique_female, female_ddd)
-    
-    return(list(male = male, female = female))
-}
-
-#' combine datasets listing de novo mutations into a single data frame
-#' 
-#' @param diagnosed list of IDs and sex for probands with diagnoses in the DDD
-#' 
-#' @return data frame containing HGNC, chrom, position, consequence, SNV or 
-#'    INDEL type, and study ID.
-get_de_novos <- function(diagnosed) {
-    
-    ddd_de_novos = get_ddd_de_novos(diagnosed)
-    variants = rbind(ddd_de_novos, published_de_novos)
-    
-    return(variants)
+    return(list(male = male_ddd, female = female_ddd))
 }
 
 main <- function() {
@@ -47,7 +26,7 @@ main <- function() {
     num.trios.female = num$female
     
     # open the de novos, and 
-    de_novos = get_de_novos(diagnosed)
+    de_novos = get_ddd_de_novos(diagnosed)
     
     enriched = analyse_gene_enrichment(de_novos, num.trios.male, num.trios.female)
     head(enriched[order(enriched$p.func.daly), ])
