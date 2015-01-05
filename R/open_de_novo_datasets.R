@@ -31,7 +31,7 @@ standardise_ddd_de_novos <- function() {
     # load a set of DDD de novos, that are the independent event (ie duplicate
     # de novos within families have been removed).
     variants = read.table(file.path("data-raw", "de_novo_datasets", 
-        "ddd_de_novos.passed_coding_and_independent.txt"), header=TRUE, 
+        "de_novos.ddd_4k.ddd_only.txt"), header=TRUE, 
         sep="\t", stringsAsFactors=FALSE, comment.char="")
     
     # standardise the SNV or INDEL flag

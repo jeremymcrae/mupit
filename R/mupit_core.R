@@ -26,6 +26,7 @@ get_de_novo_counts <- function(de_novos) {
         "frameshift_variant")
     missense_cq = c("missense_variant", "initiator_codon_variant", "stop_lost",
         "inframe_deletion", "inframe_insertion")
+    synonymous = "synonymous_variant"
     
     lof_regex = paste(lof_cq, collapse = "|")
     missense_regex = paste(missense_cq, collapse = "|")
@@ -34,7 +35,8 @@ get_de_novo_counts <- function(de_novos) {
     # non-functional de novos
     de_novos$consequence[grepl(lof_regex, de_novos$consequence)] = "lof"
     de_novos$consequence[grepl(missense_regex, de_novos$consequence)] = "missense"
-    de_novos = de_novos[grepl("missense|lof", de_novos$consequence), ]
+    de_novos$consequence[grepl(synonymous, de_novos$consequence)] = "synonymous"
+    de_novos = de_novos[grepl("missense|lof|synonymous", de_novos$consequence), ]
     
     # count the number of de novos for each type/consequence combination
     de_novo_counts = reshape::cast(de_novos, hgnc ~ consequence + type, value = "person_id", length)
@@ -60,35 +62,40 @@ get_de_novo_counts <- function(de_novos) {
 #' @export
 #' @return data frame with gene info, mutation rates and P values from testing
 #'     for enrichment.
-get_p_values <- function(rates, counts, num.tests) {
+test_enrichment <- function(rates, counts, num.tests) {
     
     observed = merge(counts, rates, by = c("hgnc", "chrom"), all.x=TRUE)
     
     # for each gene, sum the de novo counts across SNVs and indels for the
-    # different functional categories: loss of function, missense and functional
+    # different functional categories: synonymous, loss of function, missense 
+    # and functional
+    synonymous_count = observed$synonymous_snv
     lof_count = observed$lof_snv + observed$lof_indel
     missense_count = observed$missense_snv + observed$missense_indel
     func_count = lof_count + missense_count
     
     # for each gene, sum the mutation rates across SNVs and indels for the
     # different functional categories
+    synonymous_rate = observed$snv.silent.rate
     lof_rate = observed$snv.lof.rate + observed$indel.lof.rate
     missense_rate = observed$snv.missense.rate + observed$indel.missense.rate
     func_rate = lof_rate + missense_rate
     
     # calculate the probably of getting the observed number of de novos, given
     # the mutation rate
+    observed$p_synonymous = dpois(synonymous_count, lambda=synonymous_rate)
     observed$p_lof = dpois(lof_count, lambda=lof_rate)
     observed$p_func = dpois(func_count, lambda=func_rate)
     
     # correct the P values for multiple testing by false discovery rate
+    observed$fdr_synonymous = p.adjust(observed$p_lof, method="BH", n=num.tests)
     observed$fdr_lof = p.adjust(observed$p_lof, method="BH", n=num.tests)
     observed$fdr_func = p.adjust(observed$p_func, method="BH", n=num.tests)
     
     return(observed)
 }
 
-#' run the analysis of whether de novo mutations are enriched in genes
+#' analyse whether de novo mutations are enriched in genes
 #' 
 #' @param de_novos data frame containing all the observed de novos for all the
 #'     genes
@@ -102,29 +109,12 @@ analyse_gene_enrichment <- function(de_novos, trios) {
     # tally the de novos by consequence and variant type
     de_novo_counts = get_de_novo_counts(de_novos)
     
-    # get the length-based, and Daly-based mutation rates for each gene
-    # cds_rates = get_length_based_rates(trios)
+    # get the Daly-based mutation rates for each gene
     daly_rates = get_mutation_rates(trios)
     
-    # calculate p values for each gene using the different mutation rates
+    # calculate p values for each gene using the mutation rates
     num.tests = 18500
-    # p_vals_length = get_p_values(cds_rates, de_novo_counts, num.tests)
-    enriched = get_p_values(daly_rates, de_novo_counts, num.tests)
-    
-    # # write out results table
-    # enriched = merge(p_vals_length, p_vals_daly, by = c("hgnc", "chrom", 
-    #     "min_pos", "lof_indel", "lof_snv", "missense_indel", "missense_snv"))
-    
-    # # fix the column names
-    # names(enriched) = c("hgnc", "chrom", "min_pos", "lof_indel", 
-    #     "lof_snv", "missense_indel", "missense_snv", 
-    #     "snv.missense.rate.length", "snv.lof.rate.length", 
-    #     "indel.missense.rate.length", "indel.lof.rate.length", "p.lof.length", 
-    #     "p.func.length", "fdr.lof.length", "fdr.func.length", 
-    #     "snv.silent.rate.daly", "snv.missense.rate.daly", "snv.lof.rate.daly", 
-    #     "indel.missense.rate.daly", "indel.lof.rate.daly", "p.lof.daly", 
-    #     "p.func.daly", "fdr.lof.daly", "fdr.func.daly")
-    
+    enriched = test_enrichment(daly_rates, de_novo_counts, num.tests)
     plot_enrichment_graphs(enriched, num.tests)
     
     return(enriched)

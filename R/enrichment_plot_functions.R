@@ -78,6 +78,7 @@ plot_enrichment_graphs <- function(enriched, num.tests) {
     # plot the results from loss-of-function and functional de novos
     plot_values(num.tests, enriched, enriched$p_lof, "Loss-of-Function DNMs", color_index)
     plot_values(num.tests, enriched, enriched$p_func, "Functional DNMs", color_index)
+    plot_values(num.tests, enriched, enriched$p_synonymous, "Synonymous DNMs", color_index)
     
     dev.off()
 }

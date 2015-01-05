@@ -60,11 +60,11 @@ main <- function() {
     enriched_meta = analyse_gene_enrichment(de_novos_meta, trios_meta)
     
     write.table(enriched, file=file.path("results", 
-        "de_novos.ddd.ddd_only.enrichment_results.txt"), sep="\t", 
+        "de_novos.ddd_4k.ddd_only.enrichment_results.txt"), sep="\t", 
         row.names=FALSE, quote=FALSE)
     
     write.table(enriched_meta, file=file.path("results", 
-        "de_novos.ddd.meta-analysis.enrichment_results.txt"), sep="\t", 
+        "de_novos.ddd_4k.meta-analysis.enrichment_results.txt"), sep="\t", 
         row.names=FALSE, quote=FALSE)
     
     head(enriched[order(enriched$p_func), ])
