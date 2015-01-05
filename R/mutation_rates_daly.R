@@ -62,15 +62,14 @@ adjust_indel_rates <- function(rates) {
 
 #' gets mutation rates from the Daly dataset
 #' 
-#' @param num.trios.male number of trios with a male offspring
-#' @param num.trios.female number of trios with a female offspring
+#' @param trios list of male and female proband counts in the dataset
 #' @export
 #' 
 #' @return a list containing mutation rates for genes under different mutation 
 #'     classes, along with the original Daly mutation rate dataset.
-get_mutation_rates <- function(num.trios.male, num.trios.female) {
+get_mutation_rates <- function(trios) {
     
-    num.trios = num.trios.male + num.trios.female 
+    num.trios = trios$male + trios$female 
     auto.transmissions = 2 * num.trios
     
     daly = read.delim(file.path("data-raw", "fixed_mut_prob_fs_adjdepdiv.txt"), header=TRUE)
@@ -96,7 +95,7 @@ get_mutation_rates <- function(num.trios.male, num.trios.female) {
     rates$snv.lof.rate[is.na(rates$snv.lof.rate)] = (10^daly$non[is.na(rates$snv.lof.rate)]) * auto.transmissions
     
     # and correct for the X-chromosome rates
-    rates = correct_for_x_chrom(rates, num.trios.male, num.trios.female)
+    rates = correct_for_x_chrom(rates, trios$male, trios$female)
     
     return(rates)
 }

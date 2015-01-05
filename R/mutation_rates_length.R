@@ -6,17 +6,16 @@
 
 #' calculate mutation rates based on the gene length
 #' 
-#' @param num.trios.male number of trios with male offspring in the dataset
-#' @param num.trios.female number of trios with female offspring in the dataset
+#' @param trios list of male and female proband counts in the dataset
 #' @export
 #' 
 #' @return list containing vectors of mutation rates
-get_length_based_rates <- function(num.trios.male, num.trios.female) {
+get_length_based_rates <- function(trios) {
     
     cds.length = gene_info$cds_length
     chrX = which(gene_info$chrom == "X")
     
-    auto.transmissions = 2 * (num.trios.male + num.trios.female)
+    auto.transmissions = 2 * (trios$male + trios$female)
     
     # set mutation rates for snvs and indels
     snv_rate = 1.5E-8 # higher than genome-wide mutation rate, due to higher GC ...
@@ -41,7 +40,7 @@ get_length_based_rates <- function(num.trios.male, num.trios.female) {
     rates$indel.missense.rate = cds.length * indel_rate * props$indel.missense * auto.transmissions
     rates$indel.lof.rate = cds.length * indel_rate * props$indel.lof * auto.transmissions
     
-    rates = correct_length_rate_for_x_chrom(rates, num.trios.male, num.trios.female, cds.length, chrX, snv_rate, indel_rate, props)
+    rates = correct_length_rate_for_x_chrom(rates, trios$male, trios$female, cds.length, chrX, snv_rate, indel_rate, props)
     
     return(rates)
 }

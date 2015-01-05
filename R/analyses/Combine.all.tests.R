@@ -4,10 +4,10 @@ CODE_DIR = "/nfs/users/nfs_j/jm33/apps/mupit"
 DATA_DIR = file.path(CODE_DIR, "data")
 
 # load all the data files in
-ddd.all = read.delim("/Volumes/DDD_meh/Analysis/Exome/For_1133_trio_ms/DDD_all/Mup-it_Daly_020514_DDD.output.combined.txt", header=TRUE)
-ddd.undiagnosed = read.delim("/Volumes/DDD_meh/Analysis/Exome/For_1133_trio_ms/DDD_undiagnosed/Mup-it_Daly_020514_DDD_undiagnosed.output.combined.txt", header=TRUE)
-meta.all = read.delim("/Volumes/DDD_meh/Analysis/Exome/For_1133_trio_ms/Meta_DD_all/Mup-it_Daly_020514_META.output.combined.txt", header=TRUE)
-meta.undiagnosed = read.delim(file.path(DATA_DIR, "Mup-it_Daly_020514_META_undiagnosed.output.combined.txt"), header=TRUE)
+ddd.all = read.table(file.path(DATA_DIR, "Mup-it_Daly_020514_DDD.output.combined.txt", header=TRUE)
+ddd.undiagnosed = read.table(file.path(DATA_DIR, "Mup-it_Daly_020514_DDD.undiagnosed.output.combined.txt", header=TRUE)
+meta.all = read.table(file.path(DATA_DIR, "Mup-it_Daly_020514_META.output.combined.txt", header=TRUE)
+meta.undiagnosed = read.table(file.path(DATA_DIR, "Mup-it_Daly_020514_META.undiagnosed.output.combined.txt"), header=TRUE)
 
 # need names that are more informative as same across files, add prefix
 names(ddd.all) = paste("ddd.all",names(ddd.all), sep=".")
