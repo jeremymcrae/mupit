@@ -37,7 +37,7 @@ get_observed_values <- function() {
     nonddg2p$inframe = 9
     nonddg2p$frameshift = 57
     
-    return(list(ddg2p.ar = ddg2p.ar, ddg2p.non.ar = ddg2p.non.ar, nonddg2p = nonddg2p))
+    return(list(ddg2p.ar=ddg2p.ar, ddg2p.non.ar=ddg2p.non.ar, nonddg2p=nonddg2p))
 }
 
 #' gets index positions for gene subsets of the rates datasets
@@ -134,15 +134,15 @@ main <- function(){
     observed = get_observed_values()
     
     # number of trios studied in our data
-    num.trios.male = 582 # trios with male offspring
-    num.trios.female = 548 # trios with female offspring
+    trios = list()
+    trios$male = 2408 # trios with male offspring
+    trios$female = 1887 # trios with female offspring
     
     # get the mutation rates
-    rates = get_mutation_rates(num.trios.male, num.trios.female)
-    daly = rates$daly
+    rates = get_mutation_rates(trios)
     
     # find which genes have autosomal recessive (or not) inheritance
-    indexes = get_ddg2p_index(daly)
+    indexes = get_ddg2p_index(rates)
     ar.index = indexes$ar.index
     non.ar.index = indexes$non.ar.index
     ddg2p.index = indexes$ddg2p.index

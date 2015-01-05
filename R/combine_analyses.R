@@ -1,6 +1,6 @@
 # code to combine p values from enrichment and proximity clustering of de novos
 
-#' function to combine p values
+#' function to combine p values, using Fisher's method
 #' 
 #' @param x vector of P values for a gene
 #' @export
@@ -10,7 +10,7 @@ fishersMethod <- function(x) {
     x = x[!is.na(x)]
     if (length(x) == 0) { return(NA) }
     
-    adjusted = pchisq(-2 * sum(log(x)), df=2 * length(x), lower=FALSE)
+    adjusted = pchisq(-2 * sum(log(x)), df=2 * length(x), lower.tail=FALSE)
     
     return(adjusted)
 }
@@ -18,14 +18,14 @@ fishersMethod <- function(x) {
 #' combine P values from enrichment and clustering tests into a single P value
 #' 
 #' @param enrichment_path path to enrichment testing results
-#' @param enrichment_path path to clustering testing results
+#' @param clustering_path path to clustering testing results
 #' @export
 #' 
 #' @return a merged dataset where the P values have been combined
 combine_analyses <- function(enrichment_path, clustering_path) {
     # read in p values from clustering analysis, only for genes with >1 mutation
     clust = read.table(clustering_path, header=TRUE, sep="\t")
-    clust = cast(clust, gene_id ~ mutation_category, value="probability", mean)
+    clust = reshape::cast(clust, gene_id ~ mutation_category, value="probability", mean)
     
     # read in p values from mupit analyses
     enriched = read.table(enrichment_path, header=TRUE, sep="\t")
@@ -56,7 +56,7 @@ main <- function() {
     enrichment_path = file.path(RESULTS_DIR, "de_novos.ddd_4k.meta-analysis.enrichment_results.txt")
     output_path = file.path(RESULTS_DIR, "de_novos.ddd_4k.meta-analysis.combined.txt")
     
-    combine_analyses(enrichment_path, clustering_path, output_path)
+    merged = combine_analyses(enrichment_path, clustering_path)
     write.table(merged, file=output_path, row.names=FALSE, quote=FALSE, sep="\t")
 }
 
