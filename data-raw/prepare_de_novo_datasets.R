@@ -129,7 +129,6 @@ deligt_de_novos <- function() {
     variants$hgvs_genomic[27] = "chr19:g.53958839G>C"
     
     variants = fix_coordinates_with_hgvs_genomic(variants, "hgvs_genomic")
-    # variants$consequence = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     variants$consequence = sapply(vep, "[", 1)
     variants$hgnc = sapply(vep, "[", 2)
@@ -157,7 +156,7 @@ deligt_de_novos <- function() {
 #' 
 #' @return data frame of de novos, including gene symbol, functional consequence
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
-gilissen_de_novos <- function() {
+gilissen_de_novos <- function(deligt) {
     
     url = "http://www.nature.com/nature/journal/v511/n7509/extref/nature13394-s1.pdf"
     
@@ -217,6 +216,11 @@ gilissen_de_novos <- function() {
     variants = subset(variants, select=c("person_id", "chrom", "start_pos", 
         "end_pos", "ref_allele", "alt_allele", "hgnc", "consequence", 
         "study_code", "publication_doi", "study_phenotype"))
+    
+    # remove the variants that were present in the De Ligt study
+    temp = rbind(deligt, variants)
+    temp$dups = duplicated(temp[, 2:7])
+    variants = variants[!(temp$dups[temp$study_code == "gilissen_nature_2014"]), ]
     
     return(variants)
 }
@@ -693,7 +697,7 @@ zaidi_de_novos <- function() {
 
 rauch = rauch_de_novos()
 deligt = deligt_de_novos()
-gilissen = gilissen_de_novos()
+gilissen = gilissen_de_novos(deligt)
 epi4k = epi4k_de_novos()
 autism = autism_de_novos()
 fromer = fromer_de_novos()
@@ -703,7 +707,7 @@ published_de_novos = rbind(rauch, deligt, gilissen, epi4k, autism, fromer, zaiid
 published_de_novos$type = "snv"
 published_de_novos$type[nchar(published_de_novos$ref_allele) != 1 | nchar(published_de_novos$alt_allele) != 1] = "indel"
 
-save(published_de_novos, file="../data/published_de_novos.rda", compress="xz")
+save(published_de_novos, file="data/published_de_novos.rda", compress="xz")
 # check that the gene names are fine
 
 # Check that all the frameshifts are indels ()

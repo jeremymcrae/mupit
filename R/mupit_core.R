@@ -25,7 +25,7 @@ get_de_novo_counts <- function(de_novos) {
     lof_cq = c("stop_gained", "splice_acceptor_variant", "splice_donor_variant",
         "frameshift_variant")
     missense_cq = c("missense_variant", "initiator_codon_variant", "stop_lost",
-        "inframe_deletion", "inframe_insertion")
+        "inframe_deletion", "inframe_insertion", "splice_region_variant")
     synonymous = "synonymous_variant"
     
     lof_regex = paste(lof_cq, collapse = "|")
