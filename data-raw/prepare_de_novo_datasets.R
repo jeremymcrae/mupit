@@ -514,7 +514,7 @@ de_rubeis_de_novos <- function() {
     variants$alt_allele = gsub("[ \t]", "", variants$Alt)
     
     # get the end position
-    variants$end_pos = as.character(as.numeric(variants$start_pos) + nchar(variants$ref_allele))
+    variants$end_pos = as.character(as.numeric(variants$start_pos) + nchar(variants$ref_allele)) - 1
     # variants$consequence = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     variants$consequence = sapply(vep, "[", 1)
@@ -571,26 +571,6 @@ autism_de_novos <- function() {
         derubeis_nature)
     
     return(autism_de_novos)
-    
-    # autism_de_novos = read.delim(file.path("data-raw", "de_novo_datasets", "autism_v3_PJ.txt"), header=TRUE, colClasses = "character")
-    
-    # # select only de novos in probands
-    # autism_de_novos = autism_de_novos[which(autism_de_novos$pheno == "Pro"), ]
-    
-    # # standardise the SNV or INDEL flag
-    # TYPE.index = which(nchar(autism_de_novos$ref.1) != nchar(autism_de_novos$var))
-    # autism_de_novos$TYPE = "INDEL"
-    # autism_de_novos$TYPE[TYPE.index] = "SNV"
-    
-    # # standardise the columns, and column names
-    # autism_de_novos = subset(autism_de_novos, select = c("INFO.HGNC", "INFO.CQ", "pos", "CHROM", "TYPE"))
-    # names(autism_de_novos) = c("hgnc", "consequence", "position", "chrom", "type")
-    
-    # # TODO: what I actually want is: 
-    # # person_id, chrom, start_pos, end_pos, ref_allele, alt_allele, hgnc_symbol, consequence, variant_type, study_code, publication_doi, and study_phenotype
-    # autism_de_novos$study = "autism"
-    
-    # save(autism_de_novos, file="data/autism_de_novos.rda")
 }
 
 #' get de novo data from Fromer et al. schizophrenia exome study
@@ -706,6 +686,9 @@ zaiidi = zaidi_de_novos()
 published_de_novos = rbind(rauch, deligt, gilissen, epi4k, autism, fromer, zaiidi)
 published_de_novos$type = "snv"
 published_de_novos$type[nchar(published_de_novos$ref_allele) != 1 | nchar(published_de_novos$alt_allele) != 1] = "indel"
+
+# make sure all the columns are character
+published_de_novos[] = lapply(published_de_novos, as.character)
 
 save(published_de_novos, file="data/published_de_novos.rda", compress="xz")
 # check that the gene names are fine
