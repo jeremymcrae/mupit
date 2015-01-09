@@ -291,30 +291,24 @@ sanders_de_novos <- function() {
     
     variants$chrom = gsub("chr", "", variants$Chr.1)
     variants$start_pos = gsub(" ", "", variants$Pos..hg19.)
+    variants$end_pos = variants$start_pos
     variants$ref_allele = variants$Ref
     variants$alt_allele = variants$Alt
     
-    variants$temp = NA
-    
+    # get the correct ref and alt alleles for indels
     indels = grep(":", variants$alt_allele)
-    
-    variants$ref_allele[indels] = sapply(strsplit(variants$alt_allele[indels], ":"), "[[", 2)
-    variants$alt_allele[indels] = "-"
-    
-    variants$end_pos = variants$start_pos
-    variants$end_pos[indels] = as.numeric(variants$end_pos[indels]) + nchar(variants$ref_allele[indels])
+    temp_distance = nchar(sapply(strsplit(variants$alt_allele[indels], ":"), "[[", 2))
+    variants$alt_allele[indels] = apply(variants[indels, ], 1, get_sequence_in_region)
+    variants$end_pos[indels] = as.numeric(variants$end_pos[indels]) + temp_distance
+    variants$ref_allele[indels] = apply(variants[indels, ], 1, get_sequence_in_region)
     
     variants = fix_het_alleles(variants)
     
-    variants$consequence = NA
-    variants$hgnc = NA
-    for (row_num in 1:nrow(variants)) {
-        # variants$consequence[row_num] = get_vep_consequence(variants[row_num, ], verbose=TRUE)
-        vep = get_vep_consequence(variants[row_num, ], verbose=TRUE)
-        variants$consequence[row_num] = vep$consequence
-        variants$hgnc[row_num] = vep$gene
-    }
-    # variants$hgnc = variants$Gene
+    # get the HGNC symbol and VEP consequence for each variant
+    vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
+    variants$consequence = sapply(vep, "[", 1)
+    variants$hgnc = sapply(vep, "[", 2)
+    
     variants$person_id = variants$Child_ID
     variants$study_code = "sanders_nature_2012"
     variants$publication_doi = "10.1038/nature10945"
@@ -563,7 +557,7 @@ autism_de_novos <- function() {
     # exclude de novos identified in previous studies
     key_1 = paste(iossifov_neuron$person_id, iossifov_neuron$start_pos)
     key_2 = paste(iossifov_nature$person_id, iossifov_nature$start_pos)
-    iossifov_nature = iossifov_nature[key_2 %in% key_1, ]
+    iossifov_nature = iossifov_nature[!(key_2 %in% key_1), ]
     
     # TODO: exclude derubeis_nature variants from previous studies
     
