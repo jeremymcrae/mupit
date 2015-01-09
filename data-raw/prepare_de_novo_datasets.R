@@ -514,7 +514,7 @@ de_rubeis_de_novos <- function() {
     variants$alt_allele = gsub("[ \t]", "", variants$Alt)
     
     # get the end position
-    variants$end_pos = as.character(as.numeric(variants$start_pos) + nchar(variants$ref_allele)) - 1
+    variants$end_pos = as.character(as.numeric(variants$start_pos) + nchar(variants$ref_allele) - 1)
     # variants$consequence = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     variants$consequence = sapply(vep, "[", 1)

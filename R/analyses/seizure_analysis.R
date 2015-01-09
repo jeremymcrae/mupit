@@ -16,8 +16,15 @@ ID_MAP_PATH = file.path(DATAFREEZE_DIR, "person_sanger_decipher.txt")
 #'     sex
 get_ddd_probands_with_seizures <- function(phenotype_filename, id_path) {
     
-    samples = read.table(phenotype_filename, sep="\t", header=TRUE, colClasses="character")
-    samples = samples[grepl("[Ss]eizures", samples$child_terms), ]
+    samples = read.table(phenotype_filename, sep="\t", header=TRUE, stringsAsFactors=FALSE)
+    
+    # find the samples with either "seizure" or "epilep" in their HPO terms. 
+    # this probably should check the HPO tree below the top term of "seizures", 
+    # but this should suffice for now.
+    seizure = grepl("[Ss]eizures", samples$child_terms)
+    epilepsy = grepl("[Ep]pilep", samples$child_terms)
+    has_seizure_term = seizure | epilepsy
+    samples = samples[has_seizure_term, ]
     
     ddd_ids = read.table(id_path, sep="\t", header=TRUE, stringsAsFactors=FALSE)
     ddd_ids = ddd_ids[!grepl(":", ddd_ids$decipher_id), ]
