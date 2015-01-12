@@ -57,12 +57,12 @@ get_de_novo_counts <- function(de_novos) {
 #' @param rates gene mutation rates per consequence type
 #' @param counts data frame with tally of de novo mutations per gene for each of
 #'     the mutation types: lof_snv, lof_indel, missense_snv, missense_indel.
-#' @param num.tests number of tests performed (used for multiple correction).
+#' @param num_tests number of tests performed (used for multiple correction).
 #' 
 #' @export
 #' @return data frame with gene info, mutation rates and P values from testing
 #'     for enrichment.
-test_enrichment <- function(rates, counts, num.tests) {
+test_enrichment <- function(rates, counts, num_tests) {
     
     observed = merge(counts, rates, by = c("hgnc", "chrom"), all.x=TRUE)
     
@@ -88,9 +88,9 @@ test_enrichment <- function(rates, counts, num.tests) {
     observed$p_func = dpois(func_count, lambda=func_rate)
     
     # correct the P values for multiple testing by false discovery rate
-    observed$fdr_synonymous = p.adjust(observed$p_lof, method="BH", n=num.tests)
-    observed$fdr_lof = p.adjust(observed$p_lof, method="BH", n=num.tests)
-    observed$fdr_func = p.adjust(observed$p_func, method="BH", n=num.tests)
+    observed$fdr_synonymous = p.adjust(observed$p_lof, method="BH", n=num_tests)
+    observed$fdr_lof = p.adjust(observed$p_lof, method="BH", n=num_tests)
+    observed$fdr_func = p.adjust(observed$p_func, method="BH", n=num_tests)
     
     return(observed)
 }
@@ -100,11 +100,12 @@ test_enrichment <- function(rates, counts, num.tests) {
 #' @param de_novos data frame containing all the observed de novos for all the
 #'     genes
 #' @param trios list of male and female proband counts in the population
+#' @param plot_path path to save enrichment plots to
 #' @export
 #' 
 #' @return data frame containing results from testiong for enrichment of de
 #'     in each gene with de novos in it.
-analyse_gene_enrichment <- function(de_novos, trios) {
+analyse_gene_enrichment <- function(de_novos, trios, plot_path) {
     
     # tally the de novos by consequence and variant type
     de_novo_counts = get_de_novo_counts(de_novos)
@@ -113,9 +114,9 @@ analyse_gene_enrichment <- function(de_novos, trios) {
     daly_rates = get_mutation_rates(trios)
     
     # calculate p values for each gene using the mutation rates
-    num.tests = 18500
-    enriched = test_enrichment(daly_rates, de_novo_counts, num.tests)
-    plot_enrichment_graphs(enriched, num.tests)
+    num_tests = 18500
+    enriched = test_enrichment(daly_rates, de_novo_counts, num_tests)
+    plot_enrichment_graphs(enriched, num_tests, plot_path)
     
     return(enriched)
 }

@@ -86,19 +86,16 @@ deligt_de_novos <- function() {
     system(paste("wget --cookies=on --keep-session-cookies --save-cookies=", cookie, " ", url, " -O", temp, sep=""))
     
     # obtain the supplementary material
-    # path = tempfile()
     path = "corrupted_pdf.pdf"
     system(paste("wget --referer=", url, " --cookies=on --load-cookies=", cookie, " --keep-session-cookies --save-cookies=", cookie, " ", url, " -O ", path, sep=""))
-    # download.file(url, path, extra=c("--cookies=on", "--load-cookies=cookie.txt", "--keep-session-cookies", "--save-cookies=cookie.txt"))
     
     # repair the pdf with ghostscript
-    # repaired = tempfile()
     repaired = "repaired.pdf"
     system(paste("gs -o ", repaired, " -sDEVICE=pdfwrite -dPDFSETTINGS=/prepress ", path, sep=""))
     
     test = tm::readPDF(control=list(text = "-layout"))(elem = list(uri=repaired), language = "en", id = "id1")
     
-    # delet the pdf and temporary files
+    # delete the pdf and temporary files
     unlink(temp)
     unlink(cookie)
     unlink(path)
@@ -187,7 +184,7 @@ gilissen_de_novos <- function(deligt) {
     # trim the too short lines (which only contain page numbers)
     table_s8 = table_s8[lapply(table_s8, nchar) > 5]
     
-    # split the tabel, and drop the erroneous lines from the bad line
+    # split the table, and drop the erroneous lines from the bad line
     split_strings = strsplit(table_s8, "[ \t]+")
     split_strings[50] = NULL
     split_strings[49] = NULL
@@ -204,7 +201,6 @@ gilissen_de_novos <- function(deligt) {
     variants$hgvs_genomic = gsub("-", "_", variants$hgvs_genomic)
     
     variants = fix_coordinates_with_hgvs_genomic(variants, "hgvs_genomic")
-    # variants$consequence = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     variants$consequence = sapply(vep, "[", 1)
     variants$hgnc = sapply(vep, "[", 2)
@@ -249,15 +245,7 @@ epi4k_de_novos <- function() {
     variants = fix_coordinates_with_allele(variants, 
         "hg19.coordinates..chr.position.", "Ref.Alt.alleles")
     
-    # get the HGNC symbol
-    # NOTE: the variant with the most severe consequence might not necessarily  
-    # NOTE: be within the listed gene. I haven't accounted for this yet.
-    # variants$consequence = apply(variants, 1, get_vep_consequence, verbose=TRUE)
-    
     # get the hgnc symbol, and clean any anomalies
-    # variants$hgnc = variants$Gene
-    # variants$hgnc = gsub(" \\(MLL4\\)", "", variants$hgnc)
-    # variants$hgnc = gsub(" \\^", "", variants$hgnc)
     vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     variants$consequence = sapply(vep, "[", 1)
     variants$hgnc = sapply(vep, "[", 2)
@@ -413,17 +401,9 @@ iossifov_neuron_de_novos <- function() {
     
     # get the coordinates and VEP consequence
     variants = fix_coordinates_with_allele(variants, "location", "variant")
-    # variants$consequence = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     variants$consequence = sapply(vep, "[", 1)
     variants$hgnc = sapply(vep, "[", 2)
-    
-    # get hgnc symbols for the few genes that have missing values
-    # no_gene = variants$effectGenes == ""
-    # variants$effectGenes[no_gene] = apply(variants[no_gene, ], 1, get_gene_id_for_variant)
-    
-    # extract the hgnc symbol from a gene:consequence string
-    # variants$hgnc = sapply(strsplit(variants$effectGenes, ":"), "[[", 1)
     
     # exclude de novos not located within the coding sequence of a gene
     variants = variants[!(variants$consequence %in% NONCODING_CONSEQUENCES), ]
@@ -465,13 +445,11 @@ iossifov_nature_de_novos <- function() {
     
     # NOTE: the variant with the most severe consequence might not necessarily  
     # NOTE: be within the listed gene. I haven't accounted for this yet.
-    # variants$consequence = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     variants$consequence = sapply(vep, "[", 1)
     variants$hgnc = sapply(vep, "[", 2)
     variants = variants[!(variants$consequence %in% NONCODING_CONSEQUENCES), ]
     
-    # get the HGNC symbol
     variants$person_id = variants$familyId
     variants$study_code = "iossifov_nature_2014"
     variants$publication_doi = "10.1038/nature13908"
@@ -497,7 +475,7 @@ de_rubeis_de_novos <- function() {
     
     variants = gdata::read.xls(url, sheet="De Novo", stringsAsFactors=FALSE)
     
-    # exclude the final row, which is contains a footnote
+    # exclude the final row, which contains a footnote
     variants = variants[1:(nrow(variants) - 1), ]
     
     # rename columns to match the other de novo datasets, and strip whitespace
@@ -509,7 +487,7 @@ de_rubeis_de_novos <- function() {
     
     # get the end position
     variants$end_pos = as.character(as.numeric(variants$start_pos) + nchar(variants$ref_allele) - 1)
-    # variants$consequence = apply(variants, 1, get_vep_consequence, verbose=TRUE)
+    
     vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     variants$consequence = sapply(vep, "[", 1)
     variants$hgnc = sapply(vep, "[", 2)
@@ -559,10 +537,16 @@ autism_de_novos <- function() {
     key_2 = paste(iossifov_nature$person_id, iossifov_nature$start_pos)
     iossifov_nature = iossifov_nature[!(key_2 %in% key_1), ]
     
-    # TODO: exclude derubeis_nature variants from previous studies
-    
     autism_de_novos = rbind(sanders, oroak, iossifov_neuron, iossifov_nature,
         derubeis_nature)
+    
+    # remove de novos that have been dupicated between studies. These are easily
+    # spotted as individuals who have IDs that are nearly identical between 
+    # different studies eg 14323.p1 vs 14323
+    temp = autism_de_novos
+    temp$person_id = sapply(strsplit(temp$person_id, "\\."), "[", 1)
+    to_remove =  temp[duplicated(temp[, c("person_id", "chrom", "start_pos")]), ]
+    autism_de_novos = autism_de_novos[!row.names(autism_de_novos) %in% row.names(to_remove), ]
     
     return(autism_de_novos)
 }
@@ -598,7 +582,6 @@ fromer_de_novos <- function() {
     variants$consequence = sapply(vep, "[", 1)
     variants$hgnc = sapply(vep, "[", 2)
     
-    # variants$hgnc = variants$Genes
     variants$person_id = variants$Proband.ID
     variants$study_code = "fromer_nature_2014"
     variants$publication_doi = "10.1038/nature12929"

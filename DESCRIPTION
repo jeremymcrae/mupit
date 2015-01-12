@@ -1,6 +1,6 @@
 Package: mupit
 Title: Enrichment of de novo mutations within genes
-Version: 0.1
+Version: 0.1.1
 Authors@R: "Matt Hurles <meh@sanger.ac.uk> [aut], Jeremy McRae
     <jeremy.mcrae@sanger.ac.uk> [aut, cre]"
 Description: Tests for enrichment of de novo mutations within genes. Uses

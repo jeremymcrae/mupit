@@ -42,20 +42,14 @@ get_most_significant <- function(meta_clust, meta_enrich, clust, enrich) {
 # define the normal de novo analysis result files
 ddd_meta_clust = file.path(RESULTS_DIR, "de_novos.ddd_4k.meta-analysis.clustering_results.txt")
 ddd_meta_enrich = file.path(RESULTS_DIR, "de_novos.ddd_4k.meta-analysis.enrichment_results.txt")
-ddd_clust = file.path(RESULTS_DIR, "de_novos.ddd_4k.ddd_only.enrichment_results.txt")
-ddd_enrich = file.path(RESULTS_DIR, "de_novos.ddd_4k.ddd_only.clustering_results.txt")
+ddd_clust = file.path(RESULTS_DIR, "de_novos.ddd_4k.ddd_only.clustering_results.txt")
+ddd_enrich = file.path(RESULTS_DIR, "de_novos.ddd_4k.ddd_only.enrichment_results.txt")
 
 # define the seizure analysis result files
 seizures_meta_clust = file.path(RESULTS_DIR, "de_novos.seizures.meta-analysis.clustering_results.txt")
 seizures_meta_enrich = file.path(RESULTS_DIR, "de_novos.seizures.meta-analysis.enrichment_results.txt")
 seizures_clust = file.path(RESULTS_DIR, "de_novos.seizures.ddd_only.clustering_results.txt")
 seizures_enrich = file.path(RESULTS_DIR, "de_novos.seizures.ddd_only.enrichment_results.txt")
-
-
-meta_clust = ddd_meta_clust
-meta_enrich = ddd_meta_enrich
-clust = ddd_clust
-enrich = ddd_enrich
 
 merged = get_most_significant(ddd_meta_clust, ddd_meta_enrich, ddd_clust, ddd_enrich)
 write.table(merged, file=file.path(RESULTS_DIR, "de_novos.ddd_4k.all.txt"), row.names=F, quote=F, sep="\t")

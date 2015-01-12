@@ -52,12 +52,12 @@ main <- function() {
     # analyse the DDD only de novos
     trios = get_trio_counts(diagnosed)
     de_novos = get_de_novos(diagnosed)
-    enriched = analyse_gene_enrichment(de_novos, trios)
+    enriched = analyse_gene_enrichment(de_novos, trios, "results/de_novos.ddd_4k.ddd_only.manhattan.pdf")
     
     # analyse the DDD+ other cohorts de novos
     trios_meta = get_trio_counts(diagnosed, meta=TRUE)
     de_novos_meta = get_de_novos(diagnosed, meta=TRUE)
-    enriched_meta = analyse_gene_enrichment(de_novos_meta, trios_meta)
+    enriched_meta = analyse_gene_enrichment(de_novos_meta, trios_meta, "results/de_novos.ddd_4k.meta-analysis.manhattan.pdf")
     
     write.table(enriched, file=file.path("results", 
         "de_novos.ddd_4k.ddd_only.enrichment_results.txt"), sep="\t", 
