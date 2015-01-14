@@ -41,6 +41,11 @@ combine_analyses <- function(enrichment_path, clustering_path) {
     p_values = merged[, c("synonymous", "missense", "p_func", "p_synonymous")]
     merged$p_combined = apply(p_values, 1, fishersMethod)
     
+    # # we might want to state the correlation between the P values from the
+    # # different analyses, to show that the two analyses are independent.
+    # print(cor(-log10(p_values$synonymous), -log10(p_values$p_synonymous), use="complete.obs")^2)
+    # print(cor(-log10(p_values$missense), -log10(p_values$p_func), use="complete.obs")^2)
+    
     # adjust the P values by false-discovery rate
     num.tests = 18500
     merged$combined_fdr = p.adjust(merged$p_combined, method="BH", n=num.tests)

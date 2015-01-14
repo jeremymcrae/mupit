@@ -58,13 +58,26 @@ get_de_novo_counts <- function(de_novos) {
 #' @param counts data frame with tally of de novo mutations per gene for each of
 #'     the mutation types: lof_snv, lof_indel, missense_snv, missense_indel.
 #' @param num_tests number of tests performed (used for multiple correction).
+#' @param all_genes whether to test all genes in the genome (most will test 
+#'     the probability of observing 0 de novos).
 #' 
 #' @export
 #' @return data frame with gene info, mutation rates and P values from testing
 #'     for enrichment.
-test_enrichment <- function(rates, counts, num_tests) {
+test_enrichment <- function(rates, counts, num_tests, all_genes=FALSE) {
     
     observed = merge(counts, rates, by = c("hgnc", "chrom"), all.x=TRUE)
+    
+    # occasionally we want results for all genes, not just the ones we have 
+    # observed de novos at (basically just testing the probably observing 0 
+    # de novos in the absent genes). We use this full set for plotting QQ plots,
+    # since 
+    if (all_genes) {
+        observed = merge(counts, rates, by = c("hgnc", "chrom"), all=TRUE)
+        observed[is.na(observed)] = 0
+        
+        if (num_tests < nrow(observed)) { num_tests = nrow(observed) }
+    }
     
     # for each gene, sum the de novo counts across SNVs and indels for the
     # different functional categories: synonymous, loss of function, missense 
@@ -101,11 +114,13 @@ test_enrichment <- function(rates, counts, num_tests) {
 #'     genes
 #' @param trios list of male and female proband counts in the population
 #' @param plot_path path to save enrichment plots to
+#' @param all_genes whether to test all genes in the genome (most will test 
+#'     the probability of observing 0 de novos).
 #' @export
 #' 
 #' @return data frame containing results from testiong for enrichment of de
 #'     in each gene with de novos in it.
-analyse_gene_enrichment <- function(de_novos, trios, plot_path) {
+analyse_gene_enrichment <- function(de_novos, trios, plot_path=NA, all_genes=FALSE) {
     
     # tally the de novos by consequence and variant type
     de_novo_counts = get_de_novo_counts(de_novos)
@@ -115,8 +130,12 @@ analyse_gene_enrichment <- function(de_novos, trios, plot_path) {
     
     # calculate p values for each gene using the mutation rates
     num_tests = 18500
-    enriched = test_enrichment(daly_rates, de_novo_counts, num_tests)
-    plot_enrichment_graphs(enriched, num_tests, plot_path)
+    enriched = test_enrichment(daly_rates, de_novo_counts, num_tests, all_genes)
+    
+    # make a manhattan plot of enrichment P values
+    if (!is.na(plot_path)) {
+        plot_enrichment_graphs(enriched, num_tests, plot_path)
+    }
     
     return(enriched)
 }

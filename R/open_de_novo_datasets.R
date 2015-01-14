@@ -6,12 +6,12 @@
 #' @param path path to file defining diagnosed probands
 #' 
 #' @export
-#' @return A list containing vectors with DECIPHER IDs, and sex of the diagnosed
+#' @return A list containing vectors with DDD IDs, and sex of the diagnosed
 #'     probands
 get_ddd_diagnosed <- function(path) {
     
     # read in samples that have been diagnosed, so as to remove from our data
-    diagnoses = read.delim(path, header=TRUE)
+    diagnoses = read.table(path, header=TRUE, fill=TRUE)
     index = rowSums(diagnoses[, c(4:14)]) > 0
     
     diagnosed = list()
@@ -19,6 +19,83 @@ get_ddd_diagnosed <- function(path) {
     diagnosed$sex = diagnoses$Sex[index]
     
     return(diagnosed)
+}
+
+#' find probands likely to have diagnoses, to exclude them from our data
+#' 
+#' We assume DDD samples that have 
+#' 
+#' @export
+#' @return A list containing vectors with DDD IDs, and sex of the diagnosed
+#'     probands
+get_likely_diagnosed <- function() {
+    
+    DATAFREEZE = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2014-11-04/"
+    INDIVIDUALS = file.path(DATAFREEZE, "family_relationships.txt")
+    
+    probands = read.table(INDIVIDUALS, header=TRUE, stringsAsFactors=FALSE)
+    probands = probands[probands$dad_id != 0, ]
+    vcf_paths = get_clinical_filtering_vcf_paths(probands$individual_id)
+    
+    variants = get_variants(vcf_paths)
+    
+    # find the de novo variants
+    de_novos = variants[grepl("deNovo", variants$format_values), ]
+    
+    # find which of the clinically filtered de novos are also in the set of 
+    # high quality DDD de novos
+    de_novo_key = paste(de_novos$CHROM, de_novos$POS)
+    ddd_key = paste(ddd_de_novos$chrom, ddd_de_novos$start_pos)
+    high_quality = de_novo_key %in% ddd_key
+    
+    # get the sample IDs and sex for the probands with high quality, clinically
+    # filtered de novos
+    sample_ids = unique(de_novos$sample_id[high_quality])
+    sex = probands$sex[probands$individual_id %in% sample_ids]
+    
+    diagnosed = list(id=sample_ids, sex=sex)
+    
+    return(diagnosed)
+}
+
+#' find paths to clinical filtering output for DDD samples
+#' 
+#' @param proband_ids vector of proband IDs
+#' @export
+#' 
+#' @return vector of VCF paths
+get_clinical_filtering_vcf_paths <- function(proband_ids) {
+    DIR = "/lustre/scratch113/projects/ddd/users/ddd/ddd_data_releases/2014-11-04"
+    
+    print("finding DDD VCF paths")
+    x = 0
+    pb = txtProgressBar(min=0, max=length(proband_ids), style=3)
+    
+    vcf_paths = c()
+    for (id in proband_ids) {
+        split_path = paste(substring(id, seq(1, nchar(id), 2), seq(2, nchar(id), 2)), collapse="/")
+        
+        folder = file.path(DIR, split_path, id, "clin_filt")
+        
+        # often there will be multiple VCFs for a proband, one for each time the
+        # clinical filtering has been run for that sample. We simply find the
+        # most recent VCF for each proband, by using the dates encoded in the path.
+        if (file.exists(folder)) {
+            paths = Sys.glob(file.path(folder, paste(id, "clin_filt", "*", "vcf.gz", sep=".")))
+            dates = basename(paths)
+            dates = sapply(strsplit(dates, "clin_filt."), "[", 2)
+            dates = sapply(strsplit(dates, ".vcf.gz"), "[", 1)
+            
+            vcf_path = paths[order(as.Date(dates, format="%Y-%m-%d"), decreasing=TRUE)[1]]
+            vcf_paths = c(vcf_paths, vcf_path)
+        }
+        x = x + 1
+        if (x %% 20 == 0) { setTxtProgressBar(pb, x) }
+    }
+    
+    close(pb)
+    
+    return(vcf_paths)
 }
 
 #' get standardised de novo data for DDD study.

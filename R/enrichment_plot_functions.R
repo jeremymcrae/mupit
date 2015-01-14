@@ -47,7 +47,7 @@ plot_values <- function(num_tests, enriched, p_values, title) {
     
     # set up the plot, starting with the length based P values
     plot(-log10(p_values), col=color_index, pch=19, cex=0.75, 
-        ylab=expression("-log"[10]*"("*italic(P)*")"), xaxt="n", main=title, 
+        ylab=expression(-log[10](italic(P))), xaxt="n", main=title, 
         xlab="genome position", ylim=c(0, max(-log10(p_values), na.rm=TRUE) + 1), 
         las=1, cex.axis=1.4, cex.lab=1.4)
     

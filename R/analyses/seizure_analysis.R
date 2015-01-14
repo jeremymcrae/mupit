@@ -87,8 +87,9 @@ get_trio_counts <- function(diagnosed, meta=FALSE) {
 }
 
 main <- function() {
-    diagnosed_path = "/nfs/users/nfs_j/jm33/apps/mupit/data-raw/Diagnoses_1133.txt"
-    diagnosed = get_ddd_diagnosed(diagnosed_path)
+    # diagnosed_path = "/nfs/users/nfs_j/jm33/apps/mupit/data-raw/Diagnoses_1133.txt"
+    # diagnosed = get_ddd_diagnosed(diagnosed_path)
+    diagnosed = get_likely_diagnosed()
     
     # analyse the DDD only de novos
     trios = get_trio_counts(diagnosed)
