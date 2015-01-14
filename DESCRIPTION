@@ -15,6 +15,9 @@ Imports:
     rjson (>= 0.2.13),
     gdata (>= 2.13.3),
     tm (>= 0.6),
-    httr (>= 0.5)
+    httr (>= 0.5),
+    stringr (>= 0.6.2),
+    dplyr (>= 0.2),
+    qqman (>= 0.1.2)
 Suggests:
     testthat
