@@ -11,7 +11,12 @@
 get_ddd_diagnosed <- function(path) {
     
     # read in samples that have been diagnosed, so as to remove from our data
-    diagnoses = read.table(path, header=TRUE, fill=TRUE)
+    diagnoses = read.table(path, header=TRUE, fill=TRUE, sep="\t", stringsAsFactors=FALSE)
+    
+    # remove samples without DDD IDs
+    diagnoses = diagnoses[diagnoses$DDD_ID != "Not in 1133", ]
+    
+    # find the samples with a diagnosis
     index = rowSums(diagnoses[, c(4:14)]) > 0
     
     diagnosed = list()
@@ -25,10 +30,14 @@ get_ddd_diagnosed <- function(path) {
 #' 
 #' We assume DDD samples that have 
 #' 
+#' @param path path to file defining diagnosed probands
 #' @export
+#' 
 #' @return A list containing vectors with DDD IDs, and sex of the diagnosed
 #'     probands
-get_likely_diagnosed <- function() {
+get_likely_diagnosed <- function(path) {
+    
+    first_set = get_ddd_diagnosed(path)
     
     DATAFREEZE = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2014-11-04/"
     INDIVIDUALS = file.path(DATAFREEZE, "family_relationships.txt")
@@ -50,7 +59,7 @@ get_likely_diagnosed <- function() {
     
     # get the sample IDs and sex for the probands with high quality, clinically
     # filtered de novos
-    sample_ids = unique(de_novos$sample_id[high_quality])
+    sample_ids = unique(c(de_novos$sample_id[high_quality], first_set$id))
     sex = probands$sex[probands$individual_id %in% sample_ids]
     
     diagnosed = list(id=sample_ids, sex=sex)

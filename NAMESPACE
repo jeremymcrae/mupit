@@ -2,7 +2,8 @@
 
 export(adjust_indel_rates)
 export(analyse_gene_enrichment)
-export(combine_analyses)
+export(combine_enrichment_and_clustering)
+export(combine_tests)
 export(correct_for_x_chrom)
 export(correct_length_rate_for_x_chrom)
 export(find_most_severe_transcript)

@@ -46,9 +46,9 @@ get_de_novos <- function(diagnosed, meta=FALSE) {
 
 main <- function() {
     # # here's an example of how to use the functions in this script
-    # diagnosed_path = "/nfs/users/nfs_j/jm33/apps/mupit/data-raw/Diagnoses_1133.txt"
+    diagnosed_path = "/nfs/users/nfs_j/jm33/apps/mupit/data-raw/Diagnoses_1133.txt"
     # diagnosed = get_ddd_diagnosed(diagnosed_path)
-    diagnosed = get_likely_diagnosed()
+    diagnosed = get_likely_diagnosed(diagnosed_path)
     
     # analyse the DDD only de novos
     trios = get_trio_counts(diagnosed)
@@ -60,8 +60,9 @@ main <- function() {
     de_novos_meta = get_de_novos(diagnosed, meta=TRUE)
     enriched_meta = analyse_gene_enrichment(de_novos_meta, trios_meta, "results/de_novos.ddd_4k.meta-analysis.manhattan.pdf")
     
+    # # PLot QQ plots for the meta-analysis de novos (requires statistics for 
+    # # all genes).
     # all_genes = analyse_gene_enrichment(de_novos_meta, trios, all_genes=TRUE)
-    
     # qqman::qq(all_genes$p_func, main="Functional P values", las=1, cex.lab=1.4, cex.axis=1.4)
     # qqman::qq(all_genes$p_lof, main="LoF P values", las=1, cex.lab=1.4, cex.axis=1.4)
     # qqman::qq(all_genes$p_synonymous, main="Synomymous P values", las=1, cex.lab=1.4, cex.axis=1.4)
