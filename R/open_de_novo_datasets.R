@@ -82,7 +82,8 @@ get_likely_diagnosed <- function(path) {
 get_clinical_filtering_vcf_paths <- function(proband_ids) {
     DIR = "/lustre/scratch113/projects/ddd/users/ddd/ddd_data_releases/2014-11-04"
     
-    print("finding DDD VCF paths")
+    # report progress when finding the VCF paths, ~10s for 4300 probands.
+    cat("finding DDD VCF paths\n")
     x = 0
     pb = txtProgressBar(min=0, max=length(proband_ids), style=3)
     

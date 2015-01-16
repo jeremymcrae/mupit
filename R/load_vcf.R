@@ -42,7 +42,8 @@ load_vcf <- function(path) {
 get_variants <- function(vcf_paths) {
     variants = vector("list", length=length(vcf_paths))
     
-    print("loading VCFs")
+    # report progress when loading the VCFs, ~70s for 4300 probands.
+    cat("loading VCFs\n")
     pb = txtProgressBar(min=0, max=length(vcf_paths), style=3)
     
     # open each VCF, and add the variants to a list entry
