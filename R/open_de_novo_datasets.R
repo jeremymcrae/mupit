@@ -10,6 +10,12 @@
 #'     probands
 get_ddd_diagnosed <- function(path) {
     
+    # the diagnoses file is a tab-separated file, one row per proband,
+    # containing decipher_id, ddd_id, sex, then 11 columns of how many diagnostic
+    # variants each proband has been identified with from different mutation 
+    # categories, eg DNM_SNV (de novo mutation single nucleotide variant), 
+    # DNM_CNV, AD_INH_SNV (autosomally dominantly inherited SNV).
+    
     # read in samples that have been diagnosed, so as to remove from our data
     diagnoses = read.table(path, header=TRUE, fill=TRUE, sep="\t", stringsAsFactors=FALSE)
     
