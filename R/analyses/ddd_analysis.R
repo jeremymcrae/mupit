@@ -59,7 +59,7 @@ main <- function() {
     
     # write the results, so that we can combine other analyses
     write.table(enriched, file=file.path("results",
-        "de_novos.ddd_4k.ddd_only.enrichment_results.txt"), sep="\t",
+        "de_novos.ddd_4k.without_diagnosed.ddd_only.enrichment_results.txt"), sep="\t",
         row.names=FALSE, quote=FALSE)
     
     # write the set of de novos for clustering analysis
@@ -73,7 +73,7 @@ main <- function() {
     
     # write the results, so that we can combine other analyses
     write.table(enriched_meta, file=file.path("results",
-        "de_novos.ddd_4k.meta-analysis.enrichment_results.txt"), sep="\t",
+        "de_novos.ddd_4k.without_diagnosed.meta-analysis.enrichment_results.txt"), sep="\t",
         row.names=FALSE, quote=FALSE)
     
     # write the set of de novos for clustering analysis
