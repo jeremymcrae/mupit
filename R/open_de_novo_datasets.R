@@ -1,23 +1,23 @@
 # function to open de novo data from the DDD study
-# 
+#
 
 #' find diagnosed probands in the DDD study, to exclude them from our data
-#' 
+#'
 #' @param path path to file defining diagnosed probands
-#' 
+#'
 #' @export
 #' @return A list containing vectors with DDD IDs, and sex of the diagnosed
 #'     probands
 get_ddd_diagnosed <- function(path) {
     
-    # the diagnoses file is a tab-separated file, one row per proband,
+    # the diagnoses file is a sheet of an excel file, one row per proband,
     # containing decipher_id, ddd_id, sex, then 11 columns of how many diagnostic
-    # variants each proband has been identified with from different mutation 
-    # categories, eg DNM_SNV (de novo mutation single nucleotide variant), 
+    # variants each proband has been identified with from different mutation
+    # categories, eg DNM_SNV (de novo mutation single nucleotide variant),
     # DNM_CNV, AD_INH_SNV (autosomally dominantly inherited SNV).
     
     # read in samples that have been diagnosed, so as to remove from our data
-    diagnoses = read.table(path, header=TRUE, fill=TRUE, sep="\t", stringsAsFactors=FALSE)
+    diagnoses = gdata::read.xls(path, sheet="1133 Diagnoses", stringsAsFactors=FALSE)
     
     # remove samples without DDD IDs
     diagnoses = diagnoses[diagnoses$DDD_ID != "Not in 1133", ]
@@ -33,12 +33,12 @@ get_ddd_diagnosed <- function(path) {
 }
 
 #' find probands likely to have diagnoses, to exclude them from our data
-#' 
-#' We assume DDD samples that have 
-#' 
+#'
+#' We assume DDD samples that have
+#'
 #' @param path path to file defining diagnosed probands
 #' @export
-#' 
+#'
 #' @return A list containing vectors with DDD IDs, and sex of the diagnosed
 #'     probands
 get_likely_diagnosed <- function(path) {
@@ -57,10 +57,10 @@ get_likely_diagnosed <- function(path) {
     # find the de novo variants
     de_novos = variants[grepl("deNovo", variants$format_values), ]
     
-    # find which of the clinically filtered de novos are also in the set of 
+    # find which of the clinically filtered de novos are also in the set of
     # high quality DDD de novos
     de_novo_key = paste(de_novos$CHROM, de_novos$POS)
-    ddd_key = paste(ddd_de_novos$chrom, ddd_de_novos$start_pos)
+    ddd_key = paste(mupit::ddd_de_novos$chrom, mupit::ddd_de_novos$start_pos)
     high_quality = de_novo_key %in% ddd_key
     
     # get the sample IDs and sex for the probands with high quality, clinically
@@ -74,10 +74,10 @@ get_likely_diagnosed <- function(path) {
 }
 
 #' find paths to clinical filtering output for DDD samples
-#' 
+#'
 #' @param proband_ids vector of proband IDs
 #' @export
-#' 
+#'
 #' @return vector of VCF paths
 get_clinical_filtering_vcf_paths <- function(proband_ids) {
     DIR = "/lustre/scratch113/projects/ddd/users/ddd/ddd_data_releases/2014-11-04"
@@ -115,7 +115,7 @@ get_clinical_filtering_vcf_paths <- function(proband_ids) {
 }
 
 #' get standardised de novo data for DDD study.
-#' 
+#'
 #' @export
 #' @return data frame of de novos, including gene symbol, functional consequence
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
@@ -123,8 +123,8 @@ standardise_ddd_de_novos <- function() {
     
     # load a set of DDD de novos, that are the independent event (ie duplicate
     # de novos within families have been removed).
-    variants = read.table(file.path("data-raw", "de_novo_datasets", 
-        "de_novos.ddd_4k.ddd_only.txt"), header=TRUE, 
+    variants = read.table(file.path("data-raw", "de_novo_datasets",
+        "de_novos.ddd_4k.ddd_only.txt"), header=TRUE,
         sep="\t", stringsAsFactors=FALSE, comment.char="")
     
     # standardise the SNV or INDEL flag
@@ -148,27 +148,27 @@ standardise_ddd_de_novos <- function() {
     variants$publication_doi = NA
     variants$study_phenotype = "developmental_disorders"
     
-    variants = subset(variants, select=c("person_id", "chrom", "start_pos", 
-        "end_pos", "ref_allele", "alt_allele", "hgnc", "consequence", 
+    variants = subset(variants, select=c("person_id", "chrom", "start_pos",
+        "end_pos", "ref_allele", "alt_allele", "hgnc", "consequence",
         "study_code", "publication_doi", "study_phenotype", "type"))
     
     return(variants)
 }
 
 #' get de novo data for DDD study.
-#' 
+#'
 #' @param diagnosed dataframe of samples in DDD with a diagnosis, who should be
 #'     excluded from analyses
 #' @param subset vector of sample IDs, if we want to restrict to a specific
 #'         set of probands, such as when we are analysing a phenotype-specific
 #'         subset of the DDD.
-#' 
+#'
 #' @export
 #' @return data frame of de novos, including gene symbol, functional consequence
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
 get_ddd_de_novos <- function(diagnosed=NULL, subset=NULL) {
     
-    # try and use the data from the package, if it is available, otherwise 
+    # try and use the data from the package, if it is available, otherwise
     # generate the dataset
     if (exists("ddd_de_novos") & nrow(ddd_de_novos) > 0) {
         variants = ddd_de_novos
@@ -183,7 +183,7 @@ get_ddd_de_novos <- function(diagnosed=NULL, subset=NULL) {
         variants = variants[!(variants$person_id %in% diagnosed$id), ]
     }
     
-    # sometimes we only want to use a subset of the DDD, such as when we are 
+    # sometimes we only want to use a subset of the DDD, such as when we are
     # investigating a single disease type, e.g. seizures. Then we will have
     # specified the DDD sample IDs that we wish to restrict to.
     if (!is.null(subset)[1]) {
