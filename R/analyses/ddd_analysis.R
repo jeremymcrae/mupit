@@ -15,8 +15,8 @@ get_trio_counts <- function(diagnosed, meta=FALSE) {
     female = 1887 # female probands
     
     # remove diagnosed patients, if maximising power
-    male = male - sum(diagnosed$sex == "Male")
-    female = female - sum(diagnosed$sex == "Female")
+    male = male - sum(diagnosed$sex %in% c("Male", "male", "M", "m"))
+    female = female - sum(diagnosed$sex %in% c("Female", "female", "F", "f"))
     
     if (meta) {
         male = male + sum(cohorts$unique_male)
@@ -50,17 +50,35 @@ main <- function() {
     # diagnosed = get_ddd_diagnosed(diagnosed_path)
     diagnosed = get_likely_diagnosed(diagnosed_path)
     
-    diagnosed = list(id=c(), sex=c())
+    no_diagnosed = list(id=c(), sex=c())
     
     # analyse the DDD only de novos
     trios = get_trio_counts(diagnosed)
     de_novos = get_de_novos(diagnosed)
     enriched = analyse_gene_enrichment(de_novos, trios, "results/de_novos.ddd_4k.ddd_only.manhattan.pdf")
     
+    # write the results, so that we can combine other analyses
+    write.table(enriched, file=file.path("results",
+        "de_novos.ddd_4k.ddd_only.enrichment_results.txt"), sep="\t",
+        row.names=FALSE, quote=FALSE)
+    
+    # write the set of de novos for clustering analysis
+    write.table(de_novos[, c("hgnc", "chrom", "start_pos", "consequence", "type")],
+        file="de_novos.ddd_4k.ddd_only.txt", sep="\t", row.names=FALSE, quote=FALSE)
+    
     # analyse the DDD+ other cohorts de novos
     trios_meta = get_trio_counts(diagnosed, meta=TRUE)
     de_novos_meta = get_de_novos(diagnosed, meta=TRUE)
     enriched_meta = analyse_gene_enrichment(de_novos_meta, trios_meta, "results/de_novos.ddd_4k.meta-analysis.manhattan.pdf")
+    
+    # write the results, so that we can combine other analyses
+    write.table(enriched_meta, file=file.path("results",
+        "de_novos.ddd_4k.meta-analysis.enrichment_results.txt"), sep="\t",
+        row.names=FALSE, quote=FALSE)
+    
+    # write the set of de novos for clustering analysis
+    write.table(de_novos_meta[, c("hgnc", "chrom", "start_pos", "consequence", "type")],
+        file="de_novos.ddd_4k.meta-analysis.txt", sep="\t", row.names=FALSE, quote=FALSE)
     
     # # PLot QQ plots for the meta-analysis de novos (requires statistics for
     # # all genes).
@@ -69,20 +87,6 @@ main <- function() {
     # qqman::qq(all_genes$p_lof, main="LoF P values", las=1, cex.lab=1.4, cex.axis=1.4)
     # qqman::qq(all_genes$p_synonymous, main="Synomymous P values", las=1, cex.lab=1.4, cex.axis=1.4)
     # dev.off()
-    
-    write.table(enriched, file=file.path("results",
-        "de_novos.ddd_4k.ddd_only.enrichment_results.txt"), sep="\t",
-        row.names=FALSE, quote=FALSE)
-    
-    write.table(enriched_meta, file=file.path("results",
-        "de_novos.ddd_4k.meta-analysis.enrichment_results.txt"), sep="\t",
-        row.names=FALSE, quote=FALSE)
-    
-    write.table(de_novos[, c("hgnc", "chrom", "start_pos", "consequence", "type")],
-        file="de_novos.ddd_4k.ddd_only.txt", sep="\t", row.names=FALSE, quote=FALSE)
-    
-    write.table(de_novos_meta[, c("hgnc", "chrom", "start_pos", "consequence", "type")],
-        file="de_novos.ddd_4k.meta-analysis.txt", sep="\t", row.names=FALSE, quote=FALSE)
     
     head(enriched[order(enriched$p_func), ])
 }

@@ -73,10 +73,10 @@ get_mutation_rates <- function(trios) {
     auto.transmissions = 2 * num.trios
     
     # add chromosome annotation
-    daly = merge(mupit::gene_rates, mupit::gene_info, by.x="gene", by.y="hgnc", all.x=TRUE)
+    daly = merge(mupit::gene_rates, mupit::gene_info, by="hgnc", all.x=TRUE)
     
     # get the number of expected mutations, given the number of transmissions
-    rates = data.frame(hgnc = daly$gene, chrom = daly$chrom)
+    rates = data.frame(hgnc = daly$hgnc, chrom = daly$chrom)
     rates$snv.silent.rate = (10^daly$syn) * auto.transmissions
     rates$snv.missense.rate = (10^daly$mis) * auto.transmissions
     rates$snv.lof.rate = (10^daly$non + 10^daly$splice_site) * auto.transmissions
