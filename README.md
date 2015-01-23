@@ -11,7 +11,7 @@ initial implementation: use genome-wide mutation rate and scale by length of
 coding sequence, use genome-wide average of functional consequences of coding
 mutations from [Kryukov et al. 2007](http://dx.doi.org/10.1086%2F513473).
 
-## Usage (requires >= R 3.1.0) with:
+#### Usage (requires >= R 3.1.0) with:
 ```R
 # obtain and install
 library(devtools) # if necessary install with install.packages("devtools")
