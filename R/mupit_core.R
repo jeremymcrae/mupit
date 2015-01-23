@@ -8,13 +8,13 @@
 
 
 #' tallies the mutation types observed for each gene
-#' 
+#'
 #' @param de_novos data frame listing all the de novo mutations, with columns
 #'     for HGNC symbol, consequence type (VEP style predictions), and a column
 #'     indicating SNV, or indel.
 #' @export
-#' 
-#' @return data frame with tally of de novo mutations for each of the mutation 
+#'
+#' @return data frame with tally of de novo mutations for each of the mutation
 #'     types
 get_de_novo_counts <- function(de_novos) {
     
@@ -31,7 +31,7 @@ get_de_novo_counts <- function(de_novos) {
     lof_regex = paste(lof_cq, collapse = "|")
     missense_regex = paste(missense_cq, collapse = "|")
     
-    # group the lof and missence consequence strings, and drop all the 
+    # group the lof and missence consequence strings, and drop all the
     # non-functional de novos
     de_novos$consequence[grepl(lof_regex, de_novos$consequence)] = "lof"
     de_novos$consequence[grepl(missense_regex, de_novos$consequence)] = "missense"
@@ -49,18 +49,25 @@ get_de_novo_counts <- function(de_novos) {
     de_novo_counts = merge(pos, de_novo_counts, by = "hgnc")
     de_novo_counts = merge(chrom, de_novo_counts, by = "hgnc")
     
+    # ensure all the required mutation categories are available as columns
+    if (!("lof_indel" %in% names(de_novo_counts))) { de_novo_counts$lof_indel = 0 }
+    if (!("missense_indel" %in% names(de_novo_counts))) { de_novo_counts$missense_indel = 0 }
+    if (!("lof_snv" %in% names(de_novo_counts))) { de_novo_counts$lof_snv = 0 }
+    if (!("missense_snv" %in% names(de_novo_counts))) { de_novo_counts$missense_snv = 0 }
+    if (!("synonymous_snv" %in% names(de_novo_counts))) { de_novo_counts$synonymous_snv = 0 }
+    
     return(de_novo_counts)
 }
 
 #' tests whether genes are enriched with de novo mutations
-#' 
+#'
 #' @param rates gene mutation rates per consequence type
 #' @param counts data frame with tally of de novo mutations per gene for each of
 #'     the mutation types: lof_snv, lof_indel, missense_snv, missense_indel.
 #' @param num_tests number of tests performed (used for multiple correction).
-#' @param all_genes whether to test all genes in the genome (most will test 
+#' @param all_genes whether to test all genes in the genome (most will test
 #'     the probability of observing 0 de novos).
-#' 
+#'
 #' @export
 #' @return data frame with gene info, mutation rates and P values from testing
 #'     for enrichment.
@@ -68,10 +75,10 @@ test_enrichment <- function(rates, counts, num_tests, all_genes=FALSE) {
     
     observed = merge(counts, rates, by = c("hgnc", "chrom"), all.x=TRUE)
     
-    # occasionally we want results for all genes, not just the ones we have 
-    # observed de novos at (basically just testing the probably observing 0 
+    # occasionally we want results for all genes, not just the ones we have
+    # observed de novos at (basically just testing the probably observing 0
     # de novos in the absent genes). We use this full set for plotting QQ plots,
-    # since 
+    # since
     if (all_genes) {
         observed = merge(counts, rates, by = c("hgnc", "chrom"), all=TRUE)
         observed[is.na(observed)] = 0
@@ -80,7 +87,7 @@ test_enrichment <- function(rates, counts, num_tests, all_genes=FALSE) {
     }
     
     # for each gene, sum the de novo counts across SNVs and indels for the
-    # different functional categories: synonymous, loss of function, missense 
+    # different functional categories: synonymous, loss of function, missense
     # and functional
     synonymous_count = observed$synonymous_snv
     lof_count = observed$lof_snv + observed$lof_indel
@@ -109,15 +116,15 @@ test_enrichment <- function(rates, counts, num_tests, all_genes=FALSE) {
 }
 
 #' analyse whether de novo mutations are enriched in genes
-#' 
+#'
 #' @param de_novos data frame containing all the observed de novos for all the
 #'     genes
 #' @param trios list of male and female proband counts in the population
 #' @param plot_path path to save enrichment plots to
-#' @param all_genes whether to test all genes in the genome (most will test 
+#' @param all_genes whether to test all genes in the genome (most will test
 #'     the probability of observing 0 de novos).
 #' @export
-#' 
+#'
 #' @return data frame containing results from testiong for enrichment of de
 #'     in each gene with de novos in it.
 analyse_gene_enrichment <- function(de_novos, trios, plot_path=NA, all_genes=FALSE) {
@@ -139,6 +146,3 @@ analyse_gene_enrichment <- function(de_novos, trios, plot_path=NA, all_genes=FAL
     
     return(enriched)
 }
-
-
-
