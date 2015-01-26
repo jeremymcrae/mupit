@@ -123,21 +123,22 @@ test_enrichment <- function(rates, counts, num_tests, all_genes=FALSE) {
 #' @param plot_path path to save enrichment plots to
 #' @param all_genes whether to test all genes in the genome (most will test
 #'     the probability of observing 0 de novos).
+#' @param rates gene-based mutation rates data frame, or NA
 #' @export
 #'
 #' @return data frame containing results from testiong for enrichment of de
 #'     in each gene with de novos in it.
-analyse_gene_enrichment <- function(de_novos, trios, plot_path=NA, all_genes=FALSE) {
+analyse_gene_enrichment <- function(de_novos, trios, plot_path=NA, all_genes=FALSE, rates=NA) {
     
     # tally the de novos by consequence and variant type
     de_novo_counts = get_de_novo_counts(de_novos)
     
-    # get the Daly-based mutation rates for each gene
-    daly_rates = get_mutation_rates(trios)
+    # get the mutation rates for each gene
+    mutation_rates = get_gene_based_mutation_rates(trios, rates)
     
     # calculate p values for each gene using the mutation rates
     num_tests = 18500
-    enriched = test_enrichment(daly_rates, de_novo_counts, num_tests, all_genes)
+    enriched = test_enrichment(mutation_rates, de_novo_counts, num_tests, all_genes)
     
     # make a manhattan plot of enrichment P values
     if (!is.na(plot_path)) {
