@@ -27,15 +27,24 @@ get_gene_based_mutation_rates <- function(trios, rates=NA) {
     # Samocha et al., Nature Genetics 46:944-950.
     if (length(rates) == 1 && is.na(rates)) { rates = mupit::gene_rates }
     
-    # add chromosome annotation to the rates, so that we can later correct for
-    # chrX transmissions differences
-    merged = merge(rates, mupit::gene_info, by="hgnc", all.x=TRUE)
+    # add chromosome annotation to the rates, if it isn't already included,
+    # so that we can later correct for chrX transmission differences
+    if (!("chrom" %in% names(rates))) {
+        merged = merge(rates, mupit::gene_info, by="hgnc", all.x=TRUE)
+    } else {
+        merged = rates
+    }
     
     # get the number of expected mutations, given the number of transmissions
     rates = data.frame(hgnc = merged$hgnc, chrom = merged$chrom)
     rates$snv.silent.rate = (10^merged$syn) * autosomal
-    rates$snv.missense.rate = (10^merged$mis + 10^merged$rdt) * autosomal
-    rates$snv.lof.rate = (10^merged$non + 10^merged$splice_site) * autosomal
+    if ("rdt" %in% names(merged)) {
+        rates$snv.missense.rate = (10^merged$mis + 10^merged$rdt) * autosomal
+    } else {
+        rates$snv.missense.rate = (10^merged$mis) * autosomal
+    }
+        
+    rates$snv.lof.rate = (10^merged$non + 10^merged$css) * autosomal
     rates$indel.missense.rate = ((10^merged$frameshift) / 9) * autosomal
     rates$indel.lof.rate = (10^merged$frameshift) * autosomal
     

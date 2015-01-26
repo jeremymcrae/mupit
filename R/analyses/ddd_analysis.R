@@ -2,6 +2,8 @@
 
 library(mupit)
 
+RATES_PATH = "/nfs/users/nfs_j/jm33/apps/de_novo_clustering/results/de_novo_gene_rates.ddd_4k.meta-analysis.without_chroms.txt"
+
 #' defines the cohort sizes, used to get the overall population size
 #'
 #' @param diagnosed list of sex and ID for probands diagnosed in the DDD study
@@ -44,41 +46,59 @@ get_de_novos <- function(diagnosed, meta=FALSE) {
     return(variants)
 }
 
+get_rates_dataset <- function(rates_path) {
+    rates = read.table(rates_path, header=TRUE, sep="\t", stringsAsFactors=FALSE)
+    names(rates) = c("hgnc", "length", "mis", "non", "css", "syn", "frameshift")
+    
+    return(rates)
+}
+
 main <- function() {
     # # here's an example of how to use the functions in this script
     diagnosed_path = "/nfs/ddd0/Data/datafreeze/1133trios_20131218/Diagnosis_Summary_1133_20140328.xlsx"
     # diagnosed = get_ddd_diagnosed(diagnosed_path)
     diagnosed = get_likely_diagnosed(diagnosed_path)
+    # diagnosed = list(id=c(), sex=c())
     
-    no_diagnosed = list(id=c(), sex=c())
+    if (length(diagnosed$id) > 0) {
+        prefix = "de_novos.ddd_4k.without_diagnosed"
+    } else {
+        prefix = "de_novos.ddd_4k.with_diagnosed"
+    }
+    
+    rates = get_rates_dataset(RATES_PATH)
     
     # analyse the DDD only de novos
     trios = get_trio_counts(diagnosed)
     de_novos = get_de_novos(diagnosed)
-    enriched = analyse_gene_enrichment(de_novos, trios, "results/de_novos.ddd_4k.ddd_only.manhattan.pdf")
+    enriched = analyse_gene_enrichment(de_novos, trios,
+        plot_path=paste("results/", prefix, ".ddd_only.manhattan.pdf", sep=""),
+        rates=rates)
     
     # write the results, so that we can combine other analyses
     write.table(enriched, file=file.path("results",
-        "de_novos.ddd_4k.without_diagnosed.ddd_only.enrichment_results.txt"), sep="\t",
+        paste(prefix, ".ddd_only.enrichment_results.txt", sep="")), sep="\t",
         row.names=FALSE, quote=FALSE)
     
     # write the set of de novos for clustering analysis
     write.table(de_novos[, c("hgnc", "chrom", "start_pos", "consequence", "type")],
-        file="de_novos.ddd_4k.ddd_only.txt", sep="\t", row.names=FALSE, quote=FALSE)
+        file=paste(prefix, "ddd_only.txt", sep=""), sep="\t", row.names=FALSE, quote=FALSE)
     
     # analyse the DDD+ other cohorts de novos
     trios_meta = get_trio_counts(diagnosed, meta=TRUE)
     de_novos_meta = get_de_novos(diagnosed, meta=TRUE)
-    enriched_meta = analyse_gene_enrichment(de_novos_meta, trios_meta, "results/de_novos.ddd_4k.meta-analysis.manhattan.pdf")
+    enriched_meta = analyse_gene_enrichment(de_novos_meta, trios_meta,
+        plot_path=paste("results/", prefix, ".meta-analysis.manhattan.pdf", sep=""),
+        rates=rates)
     
     # write the results, so that we can combine other analyses
     write.table(enriched_meta, file=file.path("results",
-        "de_novos.ddd_4k.without_diagnosed.meta-analysis.enrichment_results.txt"), sep="\t",
+        paste(prefix, ".meta-analysis.enrichment_results.txt", sep="")), sep="\t",
         row.names=FALSE, quote=FALSE)
     
     # write the set of de novos for clustering analysis
     write.table(de_novos_meta[, c("hgnc", "chrom", "start_pos", "consequence", "type")],
-        file="de_novos.ddd_4k.meta-analysis.txt", sep="\t", row.names=FALSE, quote=FALSE)
+        file=paste(prefix, "meta-analysis.txt", sep=""), sep="\t", row.names=FALSE, quote=FALSE)
     
     # # PLot QQ plots for the meta-analysis de novos (requires statistics for
     # # all genes).

@@ -28,6 +28,26 @@ de_novos = data.frame(person_id="temp", chrom=16, start_pos=89348744, end_pos=89
 enriched = analyse_gene_enrichment(de_novos, trios)
 ```
 
+You can also pass in in a user-specified set of log10-scaled gene-based mutation
+rates with a dataframe such as:
+
+ hgnc  | length |  mis  |  non  |  css  |  syn  | frameshift
+-------|--------|-------|-------|-------|-------|-----------
+ AADAC |  4364  | -4.98 | -6.26 | -6.74 | -5.37 | -6.08
+ARID1B |  6869  | -4.06 | -5.42 | -6.06 | -4.30 | -5.33
+ KMT2A | 11918  | -3.95 | -5.12 | -5.80 | -4.34 | -5.09
+ SCN2A |  6109  | -4.26 | -5.47 | -5.30 | -4.69 | -5.38
+ 
+The columns are HGNC symbol, CDS length, rate of missense mutations, rate of
+nonsense mutations, rate of canonical splice site mutations, rate of synonymous
+mutations, rate of frameshift mutations. The header needs to use the column
+names given in the table above (hgnc, length, mis, non, css, syn, frameshift).
+
+The gene rates can thereafter be used with:
+```R
+enriched = analyse_gene_enrichment(de_novos, trios, rates=RATES_DATAFRAME)
+```
+
 #### Potential future improvements (highest priority first)
 - [x] adapt for chrX
 - [x] FDR estimates

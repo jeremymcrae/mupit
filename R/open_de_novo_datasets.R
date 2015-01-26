@@ -47,6 +47,7 @@ get_likely_diagnosed <- function(path) {
     
     DATAFREEZE = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2014-11-04/"
     INDIVIDUALS = file.path(DATAFREEZE, "family_relationships.txt")
+    KNOWN_GENES = file.path(DATAFREEZE, "DDG2P_freeze_with_gencode19_genomic_coordinates_20141118_fixed.txt")
     
     probands = read.table(INDIVIDUALS, header=TRUE, stringsAsFactors=FALSE)
     probands = probands[probands$dad_id != 0, ]
@@ -67,6 +68,15 @@ get_likely_diagnosed <- function(path) {
     # filtered de novos
     sample_ids = unique(c(de_novos$sample_id[high_quality], first_set$id))
     sex = probands$sex[probands$individual_id %in% sample_ids]
+    
+    # If the length of the sex vector is different from the length of the
+    # sample_ids vector, then something has ghone wrong, and we will have
+    # incorrect stats (particularly when we estimate the number of expected de
+    # novos). Stop and figure out the discrepancy before running any more
+    # analyses. I know of one discrepant individual in the DDD 4300 trios where
+    # the proband had a diagnosis in the 1133 trios, but the proband isn't part
+    # of the 4300 trios.
+    stopifnot(abs(length(sample_ids) - length(sex)) > 1)
     
     diagnosed = list(id=sample_ids, sex=sex)
     
