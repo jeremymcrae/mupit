@@ -76,7 +76,7 @@ get_likely_diagnosed <- function(path) {
     # analyses. I know of one discrepant individual in the DDD 4300 trios where
     # the proband had a diagnosis in the 1133 trios, but the proband isn't part
     # of the 4300 trios.
-    stopifnot(abs(length(sample_ids) - length(sex)) > 1)
+    stopifnot(abs(length(sample_ids) - length(sex)) < 2)
     
     diagnosed = list(id=sample_ids, sex=sex)
     

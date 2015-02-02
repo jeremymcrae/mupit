@@ -2,7 +2,7 @@
 
 library(mupit)
 
-RATES_PATH = "/nfs/users/nfs_j/jm33/apps/de_novo_clustering/results/de_novo_gene_rates.ddd_4k.meta-analysis.without_chroms.txt"
+RATES_PATH = "/nfs/users/nfs_j/jm33/apps/de_novo_clustering/results/de_novo_gene_rates.ddd_4k.meta-analysis.txt"
 
 #' defines the cohort sizes, used to get the overall population size
 #'
@@ -48,7 +48,7 @@ get_de_novos <- function(diagnosed, meta=FALSE) {
 
 get_rates_dataset <- function(rates_path) {
     rates = read.table(rates_path, header=TRUE, sep="\t", stringsAsFactors=FALSE)
-    names(rates) = c("hgnc", "length", "mis", "non", "css", "syn", "frameshift")
+    names(rates) = c("hgnc", "chrom", "length", "mis", "non", "css", "syn", "frameshift")
     
     return(rates)
 }
@@ -80,9 +80,9 @@ main <- function() {
         paste(prefix, ".ddd_only.enrichment_results.txt", sep="")), sep="\t",
         row.names=FALSE, quote=FALSE)
     
-    # write the set of de novos for clustering analysis
-    write.table(de_novos[, c("hgnc", "chrom", "start_pos", "consequence", "type")],
-        file=paste(prefix, "ddd_only.txt", sep=""), sep="\t", row.names=FALSE, quote=FALSE)
+    # # write the set of de novos for clustering analysis
+    # write.table(de_novos[, c("hgnc", "chrom", "start_pos", "consequence", "type")],
+    #     file=paste(prefix, "ddd_only.txt", sep=""), sep="\t", row.names=FALSE, quote=FALSE)
     
     # analyse the DDD+ other cohorts de novos
     trios_meta = get_trio_counts(diagnosed, meta=TRUE)
@@ -96,9 +96,9 @@ main <- function() {
         paste(prefix, ".meta-analysis.enrichment_results.txt", sep="")), sep="\t",
         row.names=FALSE, quote=FALSE)
     
-    # write the set of de novos for clustering analysis
-    write.table(de_novos_meta[, c("hgnc", "chrom", "start_pos", "consequence", "type")],
-        file=paste(prefix, "meta-analysis.txt", sep=""), sep="\t", row.names=FALSE, quote=FALSE)
+    # # write the set of de novos for clustering analysis
+    # write.table(de_novos_meta[, c("hgnc", "chrom", "start_pos", "consequence", "type")],
+    #     file=paste(prefix, "meta-analysis.txt", sep=""), sep="\t", row.names=FALSE, quote=FALSE)
     
     # # PLot QQ plots for the meta-analysis de novos (requires statistics for
     # # all genes).
