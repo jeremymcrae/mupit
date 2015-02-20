@@ -1,15 +1,15 @@
-# functions to standardise allele codes into ref/alt format as nonambiguous 
+# functions to standardise allele codes into ref/alt format as nonambiguous
 # IUPAC bases
 
 #' fix substitution allele codes
-#' 
+#'
 #' fix the allele column for variants with allele columns that are structured
-#' like "sub(G-&gt;T)" (the "-&gt;" translates to ">", and sub(G->T), this is 
+#' like "sub(G-&gt;T)" (the "-&gt;" translates to ">", and sub(G->T), this is
 #' an excel to R conversion issue. Perhaps it is unicode from excel?
-#' 
+#'
 #' @param variants data frame of variants
 #' @param allele_column name of column containing allele information
-#' 
+#'
 #' @export
 #' @return a data frame with chrom, start_pos, end_pos and allele columns.
 fix_sub_alleles <-function(variants, allele_column) {
@@ -23,13 +23,13 @@ fix_sub_alleles <-function(variants, allele_column) {
 }
 
 #' fix deletion allele codes
-#' 
+#'
 #' fix the allele column for variants with allele columns that are structured
 #' like "del(1)"
-#' 
+#'
 #' @param variants data frame of variants
 #' @param allele_column name of column containing allele information
-#' 
+#'
 #' @export
 #' @return a data frame with chrom, start_pos, end_pos and allele columns.
 fix_del_alleles <- function(variants, allele_column) {
@@ -55,13 +55,13 @@ fix_del_alleles <- function(variants, allele_column) {
 }
 
 #' fix insertion allele codes
-#' 
+#'
 #' fix the allele column for variants with allele columns that are structured
 #' like "ins(1)"
-#' 
+#'
 #' @param variants data frame of variants
 #' @param allele_column name of column containing allele information
-#' 
+#'
 #' @export
 #' @return a data frame with chrom, start_pos, end_pos and allele columns.
 fix_ins_alleles <-function(variants, allele_column) {
@@ -87,13 +87,13 @@ fix_ins_alleles <-function(variants, allele_column) {
 }
 
 #' fix duplication allele codes
-#' 
+#'
 #' fix the allele column for variants with allele columns that are structured
 #' like "dup"
-#' 
+#'
 #' @param variants data frame of variants
 #' @param allele_column name of column containing allele information
-#' 
+#'
 #' @export
 #' @return a data frame with chrom, start_pos, end_pos and allele columns.
 fix_dup_alleles <-function(variants, allele_column) {
@@ -116,13 +116,13 @@ fix_dup_alleles <-function(variants, allele_column) {
 }
 
 #' correct alt alleles which have been encoded as an IUPAC ambiguous base
-#' 
+#'
 #' Sometimes the de novo variants from studies provide alt alleles as "R", or
 #' "Y", which indicate ambigous bases. We can identify the correct alt base by
 #' comparison with the reference allele.
-#' 
+#'
 #' @param variants data frame of variants
-#' 
+#'
 #' @export
 #' @return a data frame with chrom, start_pos, end_pos and allele columns.
 fix_het_alleles <- function(variants) {
@@ -134,7 +134,7 @@ fix_het_alleles <- function(variants) {
         alt = variants$alt_allele[row_num]
         ref = variants$ref_allele[row_num]
         
-        # figure the correct base from the ambigous base which is not the 
+        # figure the correct base from the ambigous base which is not the
         # reference allele.
         if (alt %in% names(iupac)) {
             alt = setdiff(iupac[[alt]], ref)
@@ -144,4 +144,3 @@ fix_het_alleles <- function(variants) {
     
     return(variants)
 }
-
