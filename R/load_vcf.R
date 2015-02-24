@@ -1,10 +1,10 @@
 # functions to help loading VCFs
 
 #' open all the variants found within a single-sample VCF
-#' 
+#'
 #' @param path path to VCF
 #' @export
-#' 
+#'
 #' @return dataframe of all variants in the VCF, modified so that the sample ID
 #'     is an additional column
 load_vcf <- function(path) {
@@ -15,7 +15,7 @@ load_vcf <- function(path) {
     vcf = gsub("#", "", vcf)
     
     # load the variants as a dataframe
-    vcf = read.table(textConnection(vcf), sep="\t", header=TRUE, 
+    vcf = read.table(textConnection(vcf), sep="\t", header=TRUE,
         colClasses="character")
     
     if (ncol(vcf) != 10) { stop("only opens single-sample VCFs, check columns") }
@@ -34,10 +34,10 @@ load_vcf <- function(path) {
 }
 
 #' open all the variants found within a set of single-sample VCFs
-#' 
+#'
 #' @param vcf_paths vector of paths to VCFs
 #' @export
-#' 
+#'
 #' @return dataframe of all variants in the VCFs
 get_variants <- function(vcf_paths) {
     variants = vector("list", length=length(vcf_paths))
@@ -57,15 +57,16 @@ get_variants <- function(vcf_paths) {
     close(pb)
     
     variants = dplyr::rbind_all(variants)
+    variants = as.data.frame(variants)
     
     return(variants)
 }
 
 #' get HGNC symbols from the INFO field of VCF variants
-#' 
+#'
 #' @param info vector of VCF INFO entries for different variants
 #' @export
-#' 
+#'
 #' @return vector of HGNC symbols, in same order as the INFO vector
 get_hgnc_from_vcf_info <- function(info) {
     
