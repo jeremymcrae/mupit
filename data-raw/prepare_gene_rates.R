@@ -1,4 +1,4 @@
-# Gene mutation rates from Nature Genetics 46:944–950 (2014) doi:10.1038/ng.3050
+# Gene mutation rates from Nature Genetics 46:944-950 (2014) doi:10.1038/ng.3050
 
 # read-in length of coding sequence of each gene, from Ensembl biomart
 url = "http://www.nature.com/ng/journal/v46/n9/extref/ng.3050-S2.xls"
