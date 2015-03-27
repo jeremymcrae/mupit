@@ -189,14 +189,14 @@ get_ddd_de_novos <- function(diagnosed=NULL, subset=NULL) {
     }
     
     # remove diagnosed patients, if maximising power
-    if (!is.null(diagnosed)[1]) {
+    if (!is.null(diagnosed)) {
         variants = variants[!(variants$person_id %in% diagnosed$id), ]
     }
     
     # sometimes we only want to use a subset of the DDD, such as when we are
     # investigating a single disease type, e.g. seizures. Then we will have
     # specified the DDD sample IDs that we wish to restrict to.
-    if (!is.null(subset)[1]) {
+    if (!is.null(subset)) {
         variants = variants[variants$person_id %in% subset, ]
     }
     

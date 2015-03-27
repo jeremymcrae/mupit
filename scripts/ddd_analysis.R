@@ -48,7 +48,7 @@ get_de_novos <- function(diagnosed, meta=FALSE) {
 
 get_rates_dataset <- function(rates_path) {
     rates = read.table(rates_path, header=TRUE, sep="\t", stringsAsFactors=FALSE)
-    names(rates) = c("hgnc", "chrom", "length", "mis", "non", "css", "syn", "frameshift")
+    names(rates) = c("hgnc", "chrom", "length", "mis", "non", "css", "splice_region", "syn", "frameshift")
     
     return(rates)
 }
