@@ -12,12 +12,12 @@
 #'
 #' @param trios list of male and female proband counts in the dataset
 #' @param rates optionally specify a dataframe containing per-gene mutation
-#'    rates, or NA
+#'    rates, or NULL
 #' @export
 #'
 #' @return a dataframe of mutation rates for genes under different mutation
 #'     classes.
-get_gene_based_mutation_rates <- function(trios, rates=NA) {
+get_gene_based_mutation_rates <- function(trios, rates=NULL) {
     
     # Get the number of autosomal transmissions, so we can estimate the expected
     # number of mutations given the number of potential transmissions.
@@ -25,38 +25,41 @@ get_gene_based_mutation_rates <- function(trios, rates=NA) {
     
     # if we haven't passed in a rates dataset, default to the gene rates from
     # Samocha et al., Nature Genetics 46:944-950.
-    if (length(rates) == 1 && is.na(rates)) { rates = mupit::gene_rates }
+    if (is.null(rates)) { rates = mupit::gene_rates }
     
     # add chromosome annotation to the rates, if it isn't already included,
     # so that we can later correct for chrX transmission differences
     if (!("chrom" %in% names(rates))) {
-        merged = merge(rates, mupit::gene_info, by="hgnc", all.x=TRUE)
-    } else {
-        merged = rates
+        rates = merge(rates, mupit::gene_info, by="hgnc", all.x=TRUE)
+        rates$chrom = as.character(rates$chrom)
+        rates$chrom[is.na(rates$chrom)] = "UNKNOWN"
     }
+    
+    # convert rates from log-scaled values, so we can multiply by the number of
+    # transmissions
+    columns = c("syn", "mis", "non", "splice_site", "frameshift")
+    rates[, columns] = 10 ** rates[, columns]
+    
+    # Some genes lack splice site mutation rates (they have NA instead). This
+    # impedes estimating the snv.lof.rate, which is estimated from the nonsense
+    # and splice_site rates. Convert these NA splice_site values to zero.
+    rates$splice_site[is.na(rates$splice_site)] = 0
     
     # get the number of expected mutations, given the number of transmissions
-    rates = data.frame(hgnc = merged$hgnc, chrom = merged$chrom)
-    rates$snv.silent.rate = (10^merged$syn) * autosomal
-    if ("rdt" %in% names(merged)) {
-        rates$snv.missense.rate = (10^merged$mis + 10^merged$rdt) * autosomal
-    } else {
-        rates$snv.missense.rate = (10^merged$mis) * autosomal
-    }
-        
-    rates$snv.lof.rate = (10^merged$non + 10^merged$css) * autosomal
-    rates$indel.missense.rate = ((10^merged$frameshift) / 9) * autosomal
-    rates$indel.lof.rate = (10^merged$frameshift) * autosomal
+    rates$snv.silent.rate = rates$syn * autosomal
+    rates$snv.missense.rate = rates$mis * autosomal
+    rates$snv.lof.rate = (rates$non + rates$splice_site) * autosomal
+    rates$indel.missense.rate = (rates$frameshift / 9) * autosomal
+    rates$indel.lof.rate = rates$frameshift * autosomal
     
+    # correct for the known ratio of indels to nonsense, and for transmissions
+    # on the X-chromosome
     rates = adjust_indel_rates(rates)
-    
-    # catch cases where there is no rdt or css mutation rate, resulting in an
-    # NA for composite rates
-    rates$snv.missense.rate[is.na(rates$snv.missense.rate)] = (10^merged$mis[is.na(rates$snv.missense.rate)]) * autosomal
-    rates$snv.lof.rate[is.na(rates$snv.lof.rate)] = (10^merged$non[is.na(rates$snv.lof.rate)]) * autosomal
-    
-    # and correct for the X-chromosome rates
     rates = correct_for_x_chrom(rates, trios$male, trios$female)
+    
+    # subset to the columns we need to estimate enrichment probabilities
+    rates = rates[, c("hgnc", "chrom", "snv.silent.rate", "snv.missense.rate",
+        "snv.lof.rate", "indel.missense.rate", "indel.lof.rate")]
     
     return(rates)
 }
@@ -113,21 +116,21 @@ get_length_based_rates <- function(trios) {
 #'
 #' @param rates gene-based data frame, containing rates for different mutation
 #'     classes.
-#' @param males number of trios with male offspring
-#' @param females number of trios with female offspring
+#' @param male_n number of trios with male offspring
+#' @param female_n number of trios with female offspring
 #' @export
 #'
 #' @return a dataframe of mutation rates for genes under different mutation
 #'     classes.
-correct_for_x_chrom <- function(rates, males, females) {
+correct_for_x_chrom <- function(rates, male_n, female_n) {
     
     # figure out the number of transmissions for autosomal, male and female
     # transmissions
     # TODO: why is male.transmissions equal to the number of females? Why is it
     # TODO: not equal to the number of males?
-    autosomal = 2 * (males + females)
-    female = males + females
-    male = females
+    autosomal = 2 * (male_n + female_n)
+    female = male_n + female_n
+    male = female_n
     
     # get scaling factors using the alpha from the most recent SFHS (Scottish
     # Family Health Study) phased de novo data.
@@ -167,11 +170,11 @@ adjust_indel_rates <- function(rates) {
     # I think the following numbers were derived from the DDD dataset
     valid_nonsense = 102
     valid_frameshift = 95
-    ratio = valid_frameshift / valid_nonsense
-    samocha_factor = 1.25  # Nature Genetics 46:944-950 frameshift to nonsense ratio
+    ddd_ratio = valid_frameshift / valid_nonsense
+    samocha_ratio = 1.25  # Nature Genetics 46:944-950 frameshift to nonsense ratio
     
-    rates$indel.missense.rate = (rates$indel.missense.rate / samocha_factor) * ratio
-    rates$indel.lof.rate = (rates$indel.lof.rate / samocha_factor) * ratio
+    rates$indel.missense.rate = (rates$indel.missense.rate / samocha_ratio) * ddd_ratio
+    rates$indel.lof.rate = (rates$indel.lof.rate / samocha_ratio) * ddd_ratio
     
     return(rates)
 }
