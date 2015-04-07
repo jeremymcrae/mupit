@@ -117,7 +117,7 @@ test_enrichment <- function(rates, counts, all_genes=FALSE) {
 #'
 #' @return data frame containing results from testiong for enrichment of de
 #'     in each gene with de novos in it.
-analyse_gene_enrichment <- function(de_novos, trios, plot_path=NA, all_genes=FALSE, rates=NA) {
+analyse_gene_enrichment <- function(de_novos, trios, plot_path=NA, all_genes=FALSE, rates=NULL) {
     
     # tally the de novos by consequence and variant type
     de_novo_counts = get_de_novo_counts(de_novos)
