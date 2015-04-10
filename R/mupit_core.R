@@ -40,12 +40,9 @@ get_de_novo_counts <- function(de_novos) {
     de_novo_counts = reshape::cast(de_novos, hgnc ~ consequence + type, value = "person_id", length)
     
     # include the positions of the de novos at the minimum position for each gene
-    de_novos$min_pos = "min_pos"
-    de_novos$temp = "chrom"
-    pos = reshape::cast(de_novos, hgnc ~ min_pos, value = "start_pos", min)
-    chrom = reshape::cast(de_novos, hgnc ~ temp, value = "chrom", min)
-    de_novo_counts = merge(pos, de_novo_counts, by = "hgnc")
-    de_novo_counts = merge(chrom, de_novo_counts, by = "hgnc")
+    by_hgnc = split(de_novos[, c("hgnc", "chrom", "start_pos")], de_novos$hgnc)
+    de_novo_counts$chrom = sapply(by_hgnc, function(x) x[["chrom"]][1])
+    de_novo_counts$min_pos = sapply(by_hgnc, function(x) min(x[["start_pos"]]))
     
     # ensure all the required mutation categories are available as columns
     if (!("lof_indel" %in% names(de_novo_counts))) { de_novo_counts$lof_indel = 0 }
