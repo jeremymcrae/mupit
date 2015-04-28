@@ -46,7 +46,6 @@ get_gene_based_mutation_rates <- function(trios, rates=NULL) {
     rates$splice_site[is.na(rates$splice_site)] = 0
     
     # get the number of expected mutations, given the number of transmissions
-    rates$snv.silent.rate = rates$syn * autosomal
     rates$snv.missense.rate = rates$mis * autosomal
     rates$snv.lof.rate = (rates$non + rates$splice_site) * autosomal
     rates$indel.missense.rate = (rates$frameshift / 9) * autosomal
@@ -58,8 +57,8 @@ get_gene_based_mutation_rates <- function(trios, rates=NULL) {
     rates = correct_for_x_chrom(rates, trios$male, trios$female)
     
     # subset to the columns we need to estimate enrichment probabilities
-    rates = rates[, c("hgnc", "chrom", "snv.silent.rate", "snv.missense.rate",
-        "snv.lof.rate", "indel.missense.rate", "indel.lof.rate")]
+    rates = rates[, c("hgnc", "chrom", "snv.missense.rate", "snv.lof.rate",
+        "indel.missense.rate", "indel.lof.rate")]
     
     return(rates)
 }
@@ -101,7 +100,6 @@ get_length_based_rates <- function(trios) {
     # calculate rates of missense and lof mutations, multiply by 2 for two
     # transmissions per child and number of trios
     rates = data.frame(hgnc = mupit::gene_info$hgnc, chrom = mupit::gene_info$chrom)
-    rates$snv.silent.rate = cds.length * snv_rate * props$snv.silent * autosomal
     rates$snv.missense.rate = cds.length * snv_rate * props$snv.missense * autosomal
     rates$snv.lof.rate = cds.length * snv_rate * props$snv.lof * autosomal
     rates$indel.missense.rate = cds.length * indel_rate * props$indel.missense * autosomal
@@ -141,9 +139,8 @@ correct_for_x_chrom <- function(rates, male_n, female_n) {
     # correct the non-PAR chrX genes for fewer transmissions and lower rate
     # (dependent on alpha)
     chrX = rates$chrom == "X"
-    x_factor = ((male * male_factor) + (female * female_factor))/autosomal
+    x_factor = ((male * male_factor) + (female * female_factor)) / autosomal
     
-    rates$snv.silent.rate[chrX] = rates$snv.silent.rate[chrX] * x_factor
     rates$snv.missense.rate[chrX] = rates$snv.missense.rate[chrX] * x_factor
     rates$snv.lof.rate[chrX] = rates$snv.lof.rate[chrX] * x_factor
     rates$indel.missense.rate[chrX] = rates$indel.missense.rate[chrX] * x_factor
