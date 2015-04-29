@@ -42,7 +42,7 @@ get_de_novo_counts <- function(de_novos) {
     # include the positions of the de novos at the minimum position for each gene
     by_hgnc = split(de_novos[, c("hgnc", "chrom", "start_pos")], de_novos$hgnc)
     de_novo_counts$chrom = sapply(by_hgnc, function(x) x[["chrom"]][1])
-    de_novo_counts$min_pos = sapply(by_hgnc, function(x) min(x[["start_pos"]]))
+    de_novo_counts$min_pos = sapply(by_hgnc, function(x) (sort(as.numeric(x[["start_pos"]])))[1])
     
     # ensure all the required mutation categories are available as columns
     if (!("lof_indel" %in% names(de_novo_counts))) { de_novo_counts$lof_indel = 0 }
