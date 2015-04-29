@@ -83,13 +83,13 @@ load_ddd_de_novos <- function(path, diagnosed=NULL) {
 #'
 #' @param mutation_rates rates of mutation for each of the genes in the genome
 #' @param num.sims number of simulations to perform
-#' @param num.DNM.func number of genes observed with at least one functional
+#' @param func_n number of genes observed with at least one functional
 #'     mutation
 #' @param max.obs highest number of recurrences in a gene that we expect
 #'
 #' @return matrix with the tallies of how many genes had one de novo, two de
 #'     novos, three de novos etc at each simulation
-simulate_recurrent_mutations <- function(mutation_rates, num.sims, num.DNM.func, max.obs) {
+simulate_recurrent_mutations <- function(mutation_rates, num.sims, func_n, max.obs) {
     
     # get the cumulative distribution of mutation rates for the genes
     summed.rates = cumsum(mutation_rates)
@@ -102,7 +102,7 @@ simulate_recurrent_mutations <- function(mutation_rates, num.sims, num.DNM.func,
     simulated = matrix(nrow=num.sims, ncol=max.obs)
     for (i in 1:num.sims) {
         # get as many random numbers as ther are genes with functional mutations
-        x = runif(num.DNM.func)
+        x = runif(func_n)
         # select genes, weighted by their mutation rate
         genes_selected = findInterval(x, scaled.summed.rates)
         
@@ -131,7 +131,7 @@ plot_recurrent_distribution <- function(recurrent, func_n, observed_n) {
 main <- function() {
     # could calculate mean analytically using mutation rate scaled to fit
     # observed number of genes
-    # sum(ppois(1, gene_func_rate*num.DNM.func/sum(gene_func_rate), lower.tail=F))
+    # sum(ppois(1, gene_func_rate*func_n/sum(gene_func_rate), lower.tail=F))
     # but how to calculate variance without simulation?
     
     # define the diagnosed probands
