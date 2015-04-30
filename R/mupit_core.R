@@ -10,12 +10,19 @@
 #' tallies the mutation types observed for each gene
 #'
 #' @param de_novos data frame listing all the de novo mutations, with columns
-#'     for HGNC symbol, consequence type (VEP style predictions), and a column
-#'     indicating SNV, or indel.
+#'        for HGNC symbol, consequence type (VEP style predictions), and a
+#'        column indicating SNV, or indel.
 #' @export
 #'
 #' @return data frame with tally of de novo mutations for each of the mutation
-#'     types
+#'         types
+#'
+#' @examples
+#' vars = read.table(header=TRUE, text="
+#'    person_id   hgnc     chrom   start_pos   consequence        type
+#'    person_1    ARID1B   6       157431695   missense_variant   snv
+#'    person_2    ARID1B   6       157502190   stop_gained        snv")
+#' get_de_novo_counts(vars)
 get_de_novo_counts <- function(de_novos) {
     
     de_novos$hgnc = as.character(de_novos$hgnc)
@@ -25,16 +32,13 @@ get_de_novo_counts <- function(de_novos) {
     lof_cq = c("stop_gained", "splice_acceptor_variant", "splice_donor_variant",
         "frameshift_variant")
     missense_cq = c("missense_variant", "initiator_codon_variant", "stop_lost",
-        "inframe_deletion", "inframe_insertion", "splice_region_variant")
-    
-    lof_regex = paste(lof_cq, collapse = "|")
-    missense_regex = paste(missense_cq, collapse = "|")
+        "inframe_deletion", "inframe_insertion", "coding_sequence_variant")
     
     # group the lof and missence consequence strings, and drop all the
     # non-functional de novos
-    de_novos$consequence[grepl(lof_regex, de_novos$consequence)] = "lof"
-    de_novos$consequence[grepl(missense_regex, de_novos$consequence)] = "missense"
-    de_novos = de_novos[grepl("missense|lof", de_novos$consequence), ]
+    de_novos$consequence[de_novos$consequence %in% lof_cq] = "lof"
+    de_novos$consequence[de_novos$consequence %in% missense_cq] = "missense"
+    de_novos = de_novos[de_novos$consequence %in% c("missense", "lof"), ]
     
     # count the number of de novos for each type/consequence combination
     de_novo_counts = reshape::cast(de_novos, hgnc ~ consequence + type, value = "person_id", length)
@@ -45,12 +49,11 @@ get_de_novo_counts <- function(de_novos) {
     de_novo_counts$min_pos = sapply(by_hgnc, function(x) (sort(as.numeric(x[["start_pos"]])))[1])
     
     # ensure all the required mutation categories are available as columns
-    if (!("lof_indel" %in% names(de_novo_counts))) { de_novo_counts$lof_indel = 0 }
-    if (!("missense_indel" %in% names(de_novo_counts))) { de_novo_counts$missense_indel = 0 }
-    if (!("lof_snv" %in% names(de_novo_counts))) { de_novo_counts$lof_snv = 0 }
-    if (!("missense_snv" %in% names(de_novo_counts))) { de_novo_counts$missense_snv = 0 }
+    for (column in c("lof_indel", "missense_indel", "lof_snv", "missense_snv")) {
+        if (!column %in% names(de_novo_counts)) { de_novo_counts[[column]] = 0 }
+    }
     
-    return(de_novo_counts)
+    return(data.frame(de_novo_counts))
 }
 
 #' tests whether genes are enriched with de novo mutations
@@ -64,14 +67,26 @@ get_de_novo_counts <- function(de_novos) {
 #' @export
 #' @return data frame with gene info, mutation rates and P values from testing
 #'     for enrichment.
+#'
+#' @examples
+#' counts = read.table(header=TRUE, text="
+#'     hgnc   lof_indel lof_snv missense_indel missense_snv chrom min_pos
+#'     ARID1B 1       1            1         1              6     157150547
+#'     KMT2A  0       0            0         1              11    118367083")
+#'
+#' rates = read.table(header=TRUE, text="
+#'     hgnc   chrom snv.lof.rate indel.lof.rate snv.missense.rate indel.missense.rate
+#'     ARID1B 6     0.01        0.005          0.05             0.005
+#'     KMT2A  11    0.01        0.005          0.05             0.005")
+#'
+#' test_enrichment(rates, counts)
 test_enrichment <- function(rates, counts, all_genes=FALSE) {
     
     observed = merge(counts, rates, by = c("hgnc", "chrom"), all.x=TRUE)
     
     # occasionally we want results for all genes, not just the ones we have
     # observed de novos at (basically just testing the probably observing 0
-    # de novos in the absent genes). We use this full set for plotting QQ plots,
-    # since
+    # de novos in the absent genes). We use this full set for plotting QQ plots
     if (all_genes) {
         observed = merge(counts, rates, by = c("hgnc", "chrom"), all=TRUE)
         observed[is.na(observed)] = 0

@@ -17,6 +17,16 @@
 #'
 #' @return a dataframe of mutation rates for genes under different mutation
 #'     classes.
+#'
+#' @examples
+#' trios = list(male=1000, female=1000)
+#' rates = read.table(header=TRUE, text="
+#'     hgnc    chrom  syn  mis  non   splice_site  frameshift
+#'     ARID1B  6      -5   -6   -6.5  -5           -7
+#'     KMT2A   11     -5   -6   -6.5  -5           -7
+#'     AMELX   X      -5   -6   -6.5  -5           -7")
+#' get_gene_based_mutation_rates(trios)
+#' get_gene_based_mutation_rates(trios, rates)
 get_gene_based_mutation_rates <- function(trios, rates=NULL) {
     
     # Get the number of autosomal transmissions, so we can estimate the expected

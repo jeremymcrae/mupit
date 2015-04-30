@@ -1,0 +1,53 @@
+# unit testing for the mupit functions
+
+library(mupit)
+library(testthat)
+
+context("Mutation rate checks")
+
+test_that("get_gene_based_mutation_rates output is correct", {
+    trios = list(male=1000, female=1000)
+    rates = read.table(header=TRUE, text="
+        hgnc    chrom  syn  mis  non   splice_site  frameshift
+        ARID1B  6      -5   -6   -6.5  -5           -7
+        KMT2A   11     -5   -6   -6.5  -5           -7
+        AMELX   X      -5   -6   -6.5  -5           -7")
+    
+    # define the expected output, including the exact rates expected from the
+    # submitted data frame inputs
+    output = read.table(header=TRUE, text="
+        hgnc    chrom  snv.missense.rate  snv.lof.rate   indel.missense.rate  indel.lof.rate
+        ARID1B  6      0.004000000000     0.04126491106  3.311546841e-05      0.0002980392157
+        KMT2A   11     0.004000000000     0.04126491106  3.311546841e-05      0.0002980392157
+        AMELX   X      0.002454545455     0.02532164997  2.032085561e-05      0.0001828877005")
+    
+    expect_equal(get_gene_based_mutation_rates(trios, rates), output)
+})
+
+test_that("get_gene_based_mutation_rates output is correct for the default gene rates", {
+    trios = list(male=1000, female=1000)
+    
+    # define the expected output, including the exact rates expected from the
+    # submitted data frame inputs
+    output = read.table(header=TRUE, text="
+        hgnc   chrom snv.missense.rate  snv.lof.rate    indel.missense.rate  indel.lof.rate
+        A1BG   19    0.06229597556      0.003251732050  0.0003121266868      0.002809140181
+        A1CF   10    0.06142709700      0.007483523281  0.0003794293330      0.003414863997
+        A2M    12    0.15705797416      0.008708833575  0.0009281772135      0.008353594922
+        A2ML1  12    0.15774659415      0.014581549019  0.0009156529573      0.008240876616
+        A4GALT 22    0.06354186994      0.001624112908  0.0002227567651      0.002004810886
+        A4GNT  3     0.03749384601      0.002070752842  0.0002146005854      0.001931405269",
+        colClasses=c("factor", "character", "numeric", "numeric", "numeric",
+            "numeric"))
+    
+    result = get_gene_based_mutation_rates(trios)
+    # make sure that we get the correct number of rows
+    expect_equal(nrow(result), 18271)
+    
+    # restrict the gene rates to the top few rows of the table, and only check
+    # that those values come out exactly correct
+    result = head(result)
+    result$hgnc = factor(result$hgnc)
+    expect_equal(result, output)
+    
+})
