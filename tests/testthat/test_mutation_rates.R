@@ -49,5 +49,42 @@ test_that("get_gene_based_mutation_rates output is correct for the default gene 
     result = head(result)
     result$hgnc = factor(result$hgnc)
     expect_equal(result, output)
+})
+
+test_that("correct_for_x_chrom output is correct", {
+    trios = list(male=1000, female=1000)
+    rates = read.table(header=TRUE, text="
+        hgnc    chrom  snv.missense.rate  snv.lof.rate  indel.missense.rate  indel.lof.rate
+        ARID1B  6      0.001              0.001         0.001                0.001
+        KMT2A   11     0.001              0.001         0.001                0.001
+        AMELX   X      0.001              0.001         0.001                0.001")
     
+    # define the expected output, including the exact rates expected from the
+    # submitted data frame inputs
+    output = read.table(header=TRUE, text="
+        hgnc    chrom  snv.missense.rate  snv.lof.rate     indel.missense.rate  indel.lof.rate
+        ARID1B  6      0.001              0.001            0.001                0.001
+        KMT2A   11     0.001              0.001            0.001                0.001
+        AMELX   X      0.0006136363636    0.0006136363636  0.0006136363636      0.0006136363636")
+    
+    expect_equal(correct_for_x_chrom(rates, trios$male, trios$female), output, label="balanced group of males and females")
+    expect_equal(correct_for_x_chrom(rates, 0, trios$female), rates, label="chrX adjustment with no males")
+})
+
+test_that("adjust_indel_rates output is correct", {
+    rates = read.table(header=TRUE, text="
+        hgnc    chrom  snv.missense.rate  snv.lof.rate  indel.missense.rate  indel.lof.rate
+        ARID1B  6      0.001              0.001         0.001                0.001
+        KMT2A   11     0.001              0.001         0.001                0.001
+        AMELX   X      0.001              0.001         0.001                0.001")
+    
+    # define the expected output, including the exact rates expected from the
+    # submitted data frame inputs
+    output = read.table(header=TRUE, text="
+        hgnc    chrom  snv.missense.rate  snv.lof.rate     indel.missense.rate  indel.lof.rate
+        ARID1B  6      0.001              0.001            0.0007450980392      0.0007450980392
+        KMT2A   11     0.001              0.001            0.0007450980392      0.0007450980392
+        AMELX   X      0.001              0.001            0.0007450980392      0.0007450980392")
+    
+    expect_equal(adjust_indel_rates(rates), output, label="adjusting indel rates")
 })

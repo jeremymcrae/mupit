@@ -130,6 +130,14 @@ get_length_based_rates <- function(trios) {
 #'
 #' @return a dataframe of mutation rates for genes under different mutation
 #'     classes.
+#'
+#' @examples
+#' rates = read.table(header=TRUE, text="
+#'      hgnc    chrom  snv.missense.rate  snv.lof.rate  indel.missense.rate  indel.lof.rate
+#'      ARID1B  6      0.001              0.001         0.001                0.001
+#'      KMT2A   11     0.001              0.001         0.001                0.001
+#'      AMELX   X      0.001              0.001         0.001                0.001")
+#' correct_for_x_chrom(rates, 1000, 1000)
 correct_for_x_chrom <- function(rates, male_n, female_n) {
     
     # figure out the number of transmissions for autosomal, male and female
@@ -172,6 +180,14 @@ correct_for_x_chrom <- function(rates, male_n, female_n) {
 #' @export
 #'
 #' @return the rates data frame, with adjusted indel rates.
+#'
+#' @examples
+#' rates = read.table(header=TRUE, text="
+#'     hgnc    chrom  snv.missense.rate  snv.lof.rate  indel.missense.rate  indel.lof.rate
+#'     ARID1B  6      0.001              0.001         0.001                0.001
+#'     KMT2A   11     0.001              0.001         0.001                0.001
+#'     AMELX   X      0.001              0.001         0.001                0.001")
+#' adjust_indel_rates(rates)
 adjust_indel_rates <- function(rates) {
     
     # I think the following numbers were derived from the DDD dataset
