@@ -129,6 +129,21 @@ test_enrichment <- function(rates, counts, all_genes=FALSE) {
 #'
 #' @return data frame containing results from testiong for enrichment of de
 #'     in each gene with de novos in it.
+#'
+#' @examples
+#' trios = list(male=1000, female=1000)
+#' vars = read.table(header=TRUE, text="
+#'      person_id hgnc chrom start_pos consequence type
+#'      person_1 ARID1B 6 157150547 inframe_deletion indel
+#'      person_2 ARID1B 6 157431695 missense_variant snv
+#'      person_3 ARID1B 6 157454186 frameshift_variant indel
+#'      person_4 ARID1B 6 157502190 stop_gained snv
+#'      person_4 KMT2A 11 118367083 missense_variant snv")
+#' rates = read.table(header=TRUE, text="
+#'      hgnc    chrom  syn  mis  non   splice_site  frameshift
+#'      ARID1B  6      -5   -6   -6.5  -5           -7
+#'      KMT2A   11     -5   -6   -6.5  -5           -7")
+#' analyse_gene_enrichment(vars, trios, rates=rates)
 analyse_gene_enrichment <- function(de_novos, trios, plot_path=NA, all_genes=FALSE, rates=NULL) {
     
     # tally the de novos by consequence and variant type
