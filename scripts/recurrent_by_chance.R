@@ -9,7 +9,7 @@ library(mupit)
 library(plyr)
 
 DE_NOVOS_PATH = "/nfs/users/nfs_j/jm33/apps/mupit/data-raw/de_novo_datasets/de_novos.ddd_4k.ddd_only.txt"
-RATES_PATH = "/nfs/users/nfs_j/jm33/apps/de_novo_clustering/results/de_novo_gene_rates.ddd_4k.meta-analysis.txt"
+RATES_PATH = "/nfs/users/nfs_j/jm33/apps/denovonear/results/de_novo_gene_rates.ddd_4k.meta-analysis.txt"
 
 #' defines the cohort sizes, used to get the overall population size
 #'
@@ -82,14 +82,14 @@ load_ddd_de_novos <- function(path, diagnosed=NULL) {
 #' simulate the counts of recurrent mutations using the mutation rates
 #'
 #' @param mutation_rates rates of mutation for each of the genes in the genome
-#' @param num.sims number of simulations to perform
+#' @param iterations number of simulations to perform
 #' @param func_n number of genes observed with at least one functional
 #'     mutation
-#' @param max.obs highest number of recurrences in a gene that we expect
+#' @param expected_max highest number of recurrences in a gene that we expect
 #'
 #' @return matrix with the tallies of how many genes had one de novo, two de
 #'     novos, three de novos etc at each simulation
-simulate_recurrent_mutations <- function(mutation_rates, num.sims, func_n, max.obs) {
+simulate_recurrent_mutations <- function(mutation_rates, iterations, func_n, expected_max) {
     
     # get the cumulative distribution of mutation rates for the genes
     summed.rates = cumsum(mutation_rates)
@@ -99,8 +99,8 @@ simulate_recurrent_mutations <- function(mutation_rates, num.sims, func_n, max.o
     scaled.summed.rates = as.double(summed.rates/max(summed.rates))
     
     # randomly simulate de novos in genes, to count recurrently mutated genes
-    simulated = matrix(nrow=num.sims, ncol=max.obs)
-    for (i in 1:num.sims) {
+    simulated = matrix(nrow=iterations, ncol=expected_max)
+    for (i in 1:iterations) {
         # get as many random numbers as ther are genes with functional mutations
         x = runif(func_n)
         # select genes, weighted by their mutation rate
@@ -136,19 +136,22 @@ main <- function() {
     
     # define the diagnosed probands
     diagnosed_path = "/nfs/ddd0/Data/datafreeze/1133trios_20131218/Diagnosis_Summary_1133_20140328.xlsx"
-    diagnosed = get_likely_diagnosed(diagnosed_path)
-    # diagnosed = NULL
+    # diagnosed = get_likely_diagnosed(diagnosed_path)
+    diagnosed = NULL
     
     de_novos = load_ddd_de_novos(DE_NOVOS_PATH, diagnosed)
     trios = get_trio_counts(diagnosed)
     counts = get_de_novo_counts(de_novos)
-    counts$func = apply(counts[, c("lof_indel", "lof_snv", "missense_indel", "missense_snv")], 1, sum)
+    counts$func = rowSums(counts[, c("lof_indel", "lof_snv", "missense_indel", "missense_snv")])
     
-    # set number of functional DNMs and number of genes with >1 functional DNMs
-    func_n = sum(counts$func > 0) # de novos from 4k trios cover 3774 genes
-    observed_n = sum(counts$func > 1) # de novos from 4k trios are recurrent in 919 genes
-    num.sims = 10000 # number of simulations to perform
-    max.obs = as.integer(func_n/60) # max times a gene might be expected to be mutated
+    # set number of functional DNMs and number of recurrently mutated genes
+    func_n = sum(counts$func)
+    observed_n = sum(counts$func > 1)
+    
+    # define the number of simulations to run, and put a cap on the number of
+    # times we expect a gene to be mutated (which cuts down the simulation)
+    iterations = 10000
+    expected_max = as.integer(func_n/60)
     
     # ddd_rates = get_rates_dataset(RATES_PATH)
     # rates = get_gene_based_mutation_rates(trios, ddd_rates)
@@ -156,10 +159,10 @@ main <- function() {
     gene_func_rate = rates$snv.missense.rate + rates$snv.lof.rate +
         rates$indel.missense.rate + rates$indel.lof.rate
     
-    store = simulate_recurrent_mutations(gene_func_rate, num.sims, func_n, max.obs)
-    recurrent = rowSums(store[, 2:max.obs], na.rm=TRUE)
+    store = simulate_recurrent_mutations(gene_func_rate, iterations, func_n, expected_max)
+    recurrent = rowSums(store[, 2:expected_max], na.rm=TRUE)
     
-    if(any(!is.na(store[, max.obs]))) {
+    if(any(!is.na(store[, expected_max]))) {
         stop("warning maximum observations reached, extend max obs")
     }
     
