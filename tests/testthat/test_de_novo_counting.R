@@ -113,6 +113,43 @@ test_that("get_de_novo_counts output is correct for LoF consequence types", {
         colClasses=c("character", "numeric", "character", "numeric", "numeric",
             "numeric", "numeric"))
     expect_equal(get_de_novo_counts(vars), output, label="check frameshift_variant")
+    
+    # check initiator_codon_variant
+    vars = read.table(header=TRUE, colClasses="character", text="
+        person_id hgnc chrom start_pos consequence type
+        person_3 ARID1B 6 157150547 initiator_codon_variant snv")
+    
+    output = read.table(header=TRUE, text="
+        hgnc   lof_snv chrom min_pos   lof_indel missense_indel missense_snv
+        ARID1B 1       6     157150547 0         0              0",
+        colClasses=c("character", "numeric", "character", "numeric", "numeric",
+            "numeric", "numeric"))
+    expect_equal(get_de_novo_counts(vars), output, label="check initiator_codon_variant")
+    
+    # check start_lost
+    vars = read.table(header=TRUE, colClasses="character", text="
+        person_id hgnc chrom start_pos consequence type
+        person_3 ARID1B 6 157150547 start_lost snv")
+    
+    output = read.table(header=TRUE, text="
+        hgnc   lof_snv chrom min_pos   lof_indel missense_indel missense_snv
+        ARID1B 1       6     157150547 0         0              0",
+        colClasses=c("character", "numeric", "character", "numeric", "numeric",
+            "numeric", "numeric"))
+    expect_equal(get_de_novo_counts(vars), output, label="check start_lost")
+    
+    # check conserved_exon_terminus_variant
+    vars = read.table(header=TRUE, colClasses="character", text="
+        person_id hgnc chrom start_pos consequence type
+        person_3 ARID1B 6 157150547 conserved_exon_terminus_variant snv")
+    
+    output = read.table(header=TRUE, text="
+        hgnc   lof_snv chrom min_pos   lof_indel missense_indel missense_snv
+        ARID1B 1       6     157150547 0         0              0",
+        colClasses=c("character", "numeric", "character", "numeric", "numeric",
+            "numeric", "numeric"))
+    expect_equal(get_de_novo_counts(vars), output, label="check conserved_exon_terminus_variant")
+    
 })
 
 test_that("get_de_novo_counts output is correct for functional consequence types", {
@@ -127,18 +164,6 @@ test_that("get_de_novo_counts output is correct for functional consequence types
         colClasses=c("character", "numeric", "character", "numeric", "numeric",
             "numeric", "numeric"))
     expect_equal(get_de_novo_counts(vars), output, label="check missense_variant")
-    
-    # check initiator_codon_variant
-    vars = read.table(header=TRUE, colClasses="character", text="
-        person_id hgnc chrom start_pos consequence type
-        person_3 ARID1B 6 157150547 initiator_codon_variant snv")
-    
-    output = read.table(header=TRUE, text="
-        hgnc   missense_snv chrom min_pos   lof_indel missense_indel lof_snv
-        ARID1B 1            6     157150547 0         0              0",
-        colClasses=c("character", "numeric", "character", "numeric", "numeric",
-            "numeric", "numeric"))
-    expect_equal(get_de_novo_counts(vars), output, label="check initiator_codon_variant")
     
     # check stop_lost
     vars = read.table(header=TRUE, colClasses="character", text="
@@ -187,4 +212,16 @@ test_that("get_de_novo_counts output is correct for functional consequence types
         colClasses=c("character", "numeric", "character", "numeric", "numeric",
             "numeric", "numeric"))
     expect_equal(get_de_novo_counts(vars), output, label="check inframe_insertion")
+    
+    # check inframe_insertion
+    vars = read.table(header=TRUE, colClasses="character", text="
+        person_id hgnc chrom start_pos consequence type
+        person_3 ARID1B 6 157150547 protein_altering_variant indel")
+    
+    output = read.table(header=TRUE, text="
+        hgnc   missense_indel chrom min_pos   lof_indel lof_snv missense_snv
+        ARID1B 1              6     157150547 0         0       0",
+        colClasses=c("character", "numeric", "character", "numeric", "numeric",
+            "numeric", "numeric"))
+    expect_equal(get_de_novo_counts(vars), output, label="check protein_altering_variant")
 })

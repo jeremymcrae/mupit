@@ -30,9 +30,10 @@ get_de_novo_counts <- function(de_novos) {
     
     # define the VEP consequence types for loss of function and missense variants
     lof_cq = c("stop_gained", "splice_acceptor_variant", "splice_donor_variant",
-        "frameshift_variant")
-    missense_cq = c("missense_variant", "initiator_codon_variant", "stop_lost",
-        "inframe_deletion", "inframe_insertion", "coding_sequence_variant")
+        "frameshift_variant", "initiator_codon_variant", "start_lost",
+        "conserved_exon_terminus_variant")
+    missense_cq = c("missense_variant", "stop_lost", "inframe_deletion",
+        "inframe_insertion", "coding_sequence_variant", "protein_altering_variant")
     
     # group the lof and missence consequence strings, and drop all the
     # non-functional de novos
