@@ -157,8 +157,9 @@ standardise_ddd_de_novos <- function() {
     variants$study_code = "ddd_unpublished"
     variants$publication_doi = NA
     variants$study_phenotype = "developmental_disorders"
+    variants$sex = variants$gender
     
-    variants = subset(variants, select=c("person_id", "chrom", "start_pos",
+    variants = subset(variants, select=c("person_id", "sex", "chrom", "start_pos",
         "end_pos", "ref_allele", "alt_allele", "hgnc", "consequence",
         "study_code", "publication_doi", "study_phenotype", "type"))
     

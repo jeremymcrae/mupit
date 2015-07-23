@@ -129,7 +129,7 @@ deligt_de_novos <- function() {
     # find the sex of each proband
     text = test$content[174:1160]
     text = gsub("^[ \t\f]+", "", text)
-    gender = data.frame(text=text[grepl("^Trio", gender)], sex=NA)
+    gender = data.frame(text=text[grepl("^Trio", text)], sex=NA)
     gender$text = as.character(gender$text)
     gender$sex[grepl("[Tt]his (boy|male)+", gender$text)] = "male"
     gender$sex[grepl("[Tt]his (girl|female)+", gender$text)] = "female"
@@ -275,13 +275,13 @@ gilissen_de_novos <- function(deligt, gender) {
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
 epi4k_de_novos <- function() {
     
-    system("wget https://catalog.coriell.org/0/Excel/NINDS/Epilepsy_affected_clinicaldata.xlsx")
-    clinical_data = gdata::read.xls("Epilepsy_affected_clinicaldata.xlsx", sheet="Epilepsy Clinical Data", stringsAsFactors=FALSE)
+    system("wget http://catalog.coriell.org/0/Excel/7235051.xls")
+    clinical_data = read.table("7235051.xls", sep="\t", header=TRUE, stringsAsFactors=FALSE, quote="")
     clinical_data$sex = NA
-    clinical_data$sex[clinical_data$Gender == "F"] = "female"
-    clinical_data$sex[clinical_data$Gender == "M"] = "male"
-    clinical_data = clinical_data[, c("Catalog_ID", "sex")]
-    unlink("Epilepsy_affected_clinicaldata.xlsx")
+    clinical_data$sex[clinical_data$Gender == "Female"] = "female"
+    clinical_data$sex[clinical_data$Gender == "Male"] = "male"
+    clinical_data = clinical_data[, c("Ref", "sex")]
+    unlink("7235051.xls")
     
     # obtain the supplementary material
     url = "http://www.nature.com/nature/journal/v501/n7466/extref/nature12439-s1.pdf"
@@ -304,13 +304,13 @@ epi4k_de_novos <- function() {
     table_s1 = data.frame(t(data.frame(table_s1)))
     row.names(table_s1) = 1:nrow(table_s1)
     part1 = table_s1[, 1:4]
-    names(part1) = c("person_id", "proband", "father", "mother")
+    names(part1) = c("TRIO.ID", "proband", "father", "mother")
     part2 = table_s1[, 5:8]
-    names(part2) = c("person_id", "proband", "father", "mother")
+    names(part2) = c("TRIO.ID", "proband", "father", "mother")
     
     samples = rbind(part1, part2)
-    samples = merge(samples, clinical_data, by.x="proband", by.y="Catalog_ID")
-    gender = samples[, c("person_id", "sex")]
+    samples = merge(samples, clinical_data, by.x="proband", by.y="Ref", all.y=TRUE)
+    gender = samples[, c("proband", "TRIO.ID", "sex")]
     
     # now get the supplementary material from the AJHG paper, for the probands
     # who do not have sex info in the Nature paper supplementary material
@@ -332,11 +332,20 @@ epi4k_de_novos <- function() {
     table_s2 = sapply(table_s2, function(x) x[c(1, 3)])
     
     table_s2 = data.frame(t(table_s2))
-    names(table_s2) = c("person_id", "sex")
-    table_s2$person_id = gsub("(LGS|IS)", "", table_s2$person_id)
+    names(table_s2) = c("TRIO.ID", "sex")
+    table_s2$TRIO.ID = gsub("(LGS|IS)", "", table_s2$TRIO.ID)
     table_s2$sex = sapply(strsplit(as.character(table_s2$sex), "/"), "[", 1)
     table_s2$sex[table_s2$sex == "F"] = "female"
     table_s2$sex[table_s2$sex == "M"] = "male"
+    table_s2$proband = NA
+    table_s2 = table_s2[, c("proband", "TRIO.ID", "sex")]
+    
+    # One of the probands from the supplementary table is mislabelled, this
+    # would give the wrong gender to the child. Checking against the excel
+    # table from the American Journal of Human Genetics (2014) 95:360-370
+    # identifies the correct proband, offset by one, which has the matching de
+    # novo in the correct gene.
+    table_s2$TRIO.ID[table_s2$TRIO.ID == "ci"] = "cj"
     
     gender = rbind(gender, table_s2)
     
@@ -349,6 +358,9 @@ epi4k_de_novos <- function() {
     variants = fix_coordinates_with_allele(variants,
         "hg19.coordinates..chr.position.", "Ref.Alt.alleles")
     
+    variants$TRIO.ID = gsub("\\*", "", variants$TRIO.ID)
+    variants$Child.ID = gsub("\\*", "", variants$Child.ID)
+    
     # get the hgnc symbol, and clean any anomalies
     vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
     variants$consequence = sapply(vep, "[", 1)
@@ -359,7 +371,21 @@ epi4k_de_novos <- function() {
     variants$publication_doi = "10.1016/j.ajhg.2014.08.013"
     variants$study_phenotype = "epilepsy"
     
-    variants = merge(variants, gender, by="person_id", all.x=TRUE)
+    # get a set of IDs that match the Coriell IDs
+    matches = regexpr("ND[0-9]*", toupper(variants$Child.ID))
+    start = as.vector(matches)
+    stop = start + attributes(matches)$match.length - 1
+    variants$altered_id = substr(toupper(variants$Child.ID), start, stop)
+    variants$altered_id[variants$altered_id == ""] = toupper(variants$Child.ID)[variants$altered_id == ""]
+    
+    # get the sex code, using the different types of ID
+    variants = merge(variants, gender[, c("TRIO.ID", "sex")], by="TRIO.ID", all.x=TRUE)
+    variants = merge(variants, gender[, c("proband", "sex")], by.x="altered_id", by.y="proband", all.x=TRUE)
+    
+    # collapse the sex codes into a single value
+    variants$sex = apply(variants[, c("sex.x", "sex.y")], 1, function(x) unique(na.omit(x)))
+    variants$sex[sapply(variants$sex, function(x) identical(x, character(0)))] = NA
+    variants$sex = unlist(variants$sex)
     
     variants = subset(variants, select=c("person_id", "sex", "chrom", "start_pos",
         "end_pos", "ref_allele", "alt_allele", "hgnc", "consequence",
@@ -418,7 +444,7 @@ sanders_de_novos <- function() {
     
     variants = merge(variants, gender, by="person_id", all.x=TRUE)
     
-    variants = subset(variants, select=c("person_id", "chrom", "start_pos",
+    variants = subset(variants, select=c("person_id", "sex", "chrom", "start_pos",
         "end_pos", "ref_allele", "alt_allele", "hgnc", "consequence",
         "study_code", "publication_doi", "study_phenotype"))
     
@@ -488,7 +514,7 @@ oroak_de_novos <- function() {
     
     variants = merge(variants, gender, by="person_id", all.x=TRUE)
     
-    variants = subset(variants, select=c("person_id", "chrom", "start_pos",
+    variants = subset(variants, select=c("person_id", "sex", "chrom", "start_pos",
         "end_pos", "ref_allele", "alt_allele", "hgnc", "consequence",
         "study_code", "publication_doi", "study_phenotype"))
     
@@ -538,7 +564,7 @@ iossifov_neuron_de_novos <- function() {
     variants$sex[variants$sex == "M"] = "male"
     variants$sex[variants$sex == "F"] = "female"
     
-    variants = subset(variants, select=c("person_id", "chrom", "start_pos",
+    variants = subset(variants, select=c("person_id", "sex", "chrom", "start_pos",
         "end_pos", "ref_allele", "alt_allele", "hgnc", "consequence",
         "study_code", "publication_doi", "study_phenotype"))
     
@@ -782,7 +808,16 @@ zaidi_de_novos <- function() {
     variants$study_code = "zaidi_nature_2013"
     variants$publication_doi = "10.1038/nature12141"
     variants$study_phenotype = "congenital_heart_disease"
-    variants$sex = NA
+    
+    # make up sex for Zaiidi samples, in proportion to the sexes in their cases.
+    # That way when we exclude samples who are likely diagnostic, we will remove
+    # samples in proportion to the study sex ratio.
+    person_ids = unique(variants$person_id)
+    sex = runif(length(person_ids))
+    male_fraction = 220/(220+142)
+    sex[sex < male_fraction] = "male"
+    sex[sex != "male"] = "female"
+    variants$sex = sex[match(variants$person_id, person_ids)]
     
     variants = subset(variants, select=c("person_id", "sex", "chrom", "start_pos",
         "end_pos", "ref_allele", "alt_allele", "hgnc", "consequence",
@@ -808,7 +843,7 @@ published_de_novos$type[nchar(published_de_novos$ref_allele) != 1 | nchar(publis
 # make sure all the columns are character
 published_de_novos[] = lapply(published_de_novos, as.character)
 
-save(published_de_novos, file="data/published_de_novos.rda", compress="xz")
+save(published_de_novos, file="data/test_published_de_novos.rda", compress="xz")
 # check that the gene names are fine
 
 # Check that all the frameshifts are indels ()
