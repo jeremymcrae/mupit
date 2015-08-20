@@ -1,5 +1,7 @@
 language: r
 sudo: required
 warnings_are_errors: true
+r_github_packages:
+ - jeremymcrae/publishedDeNovos
 r_binary_packages:
  - testthat

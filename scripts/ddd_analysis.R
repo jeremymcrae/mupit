@@ -41,7 +41,7 @@ get_de_novos <- function(diagnosed, meta=FALSE) {
     variants = get_ddd_de_novos(diagnosed)
     
     if (meta) {
-        variants = rbind(variants, published_de_novos)
+        variants = rbind(variants, publishedDeNovos::variants)
     }
     
     return(variants)
