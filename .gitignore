@@ -1,2 +1,4 @@
 *.pdf
 results/
+data-raw/de_novo_datasets/
+data-raw/*.json
