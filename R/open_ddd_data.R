@@ -47,7 +47,6 @@ get_likely_diagnosed <- function(path) {
     
     DATAFREEZE = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2014-11-04/"
     INDIVIDUALS = file.path(DATAFREEZE, "family_relationships.txt")
-    KNOWN_GENES = file.path(DATAFREEZE, "DDG2P_freeze_with_gencode19_genomic_coordinates_20141118_fixed.txt")
     
     probands = read.table(INDIVIDUALS, header=TRUE, stringsAsFactors=FALSE)
     probands = probands[probands$dad_id != 0, ]
@@ -150,9 +149,6 @@ standardise_ddd_de_novos <- function() {
     variants$end_pos = as.character(as.numeric(variants$start_pos) + nchar(variants$ref_allele) - 1)
     
     variants$hgnc = variants$symbol
-    # vep = apply(variants, 1, get_vep_consequence, verbose=TRUE)
-    # variants$consequence = sapply(vep, "[", 1)
-    # variants$hgnc = sapply(vep, "[", 2)
     
     variants$study_code = "ddd_unpublished"
     variants$publication_doi = NA

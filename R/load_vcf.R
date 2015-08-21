@@ -61,36 +61,3 @@ get_variants <- function(vcf_paths) {
     
     return(variants)
 }
-
-#' get HGNC symbols from the INFO field of VCF variants
-#'
-#' @param info vector of VCF INFO entries for different variants
-#' @export
-#'
-#' @return vector of HGNC symbols, in same order as the INFO vector
-get_hgnc_from_vcf_info <- function(info) {
-    
-    if (length(info) == 0) { return(rep(NA, length(info))) }
-        
-    # sometimes the variants have HGNC info fields, while other times they
-    # lack HGNC, but do have HGNC_ALL. We prioritise the HGNC field.
-    hgnc_info = rep(NA, length(info))
-    hgnc_info[grepl("HGNC_ALL=", info)] = "HGNC_ALL"
-    hgnc_info[grepl("HGNC=", info)] = "HGNC"
-    hgnc_pattern = paste(hgnc_info, "=[a-zA-Z0-9&-]+;", sep="")
-    
-    # get the start and end positions of the HGNC in the INFO field
-    hgnc_pos = stringr::str_locate_all(info, hgnc_pattern)
-    temp = data.frame("start"=numeric(0), end=numeric(0))
-    hgnc_pos = data.frame(t(sapply(hgnc_pos, rbind, temp)))
-    
-    # trim down to the HGNC symbol
-    start_pos = unlist(hgnc_pos$start) + nchar("HGNC=")
-    hgnc_all = hgnc_info == "HGNC_ALL"
-    start_pos[hgnc_all] = unlist(hgnc_pos$start[hgnc_all]) + nchar("HGNC_ALL=")
-    end_pos = unlist(hgnc_pos$end) - 1
-    
-    hgnc = substr(info, start_pos, end_pos)
-    
-    return(hgnc)
-}
