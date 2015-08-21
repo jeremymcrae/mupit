@@ -16,8 +16,8 @@ Imports:
     stringr (>= 0.6.2),
     dplyr (>= 0.2),
     jsonlite,
-    publishedDeNovos (>= 0.1.0)
 Suggests:
+    publishedDeNovos (>= 0.1.0),
     tm (>= 0.6),
     qqman (>= 0.1.2),
     testthat
