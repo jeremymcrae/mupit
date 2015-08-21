@@ -1,8 +1,10 @@
 Package: mupit
-Title: Enrichment of de novo mutations within genes
+Title: Enrichment of De Novo Mutations Within Genes
 Version: 0.2.0
-Authors@R: "Matt Hurles <meh@sanger.ac.uk> [aut], Jeremy McRae
-    <jeremy.mcrae@sanger.ac.uk> [aut, cre]"
+Authors@R: c(person(given="Matt", family="Hurles", email="meh@sanger.ac.uk",
+        role=c("aut")),
+    person(given="Jeremy", family="McRae", email="jeremy.mcrae@sanger.ac.uk",
+        role=c("aut", "cre")))
 Description: Tests for enrichment of de novo mutations within genes. Uses
     consequence specific mutation rates.
 Depends:
@@ -13,7 +15,6 @@ Imports:
     Cairo (>= 1.5.6),
     reshape (>= 0.8.5),
     gdata (>= 2.13.3),
-    stringr (>= 0.6.2),
     dplyr (>= 0.2),
     jsonlite,
 Suggests:
