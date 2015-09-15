@@ -55,13 +55,7 @@ get_ddd_de_novos <- function(diagnosed=NULL, subset=NULL) {
     
     # try and use the data from the package, if it is available, otherwise
     # generate the dataset
-    if (exists("ddd_de_novos") & nrow(ddd_de_novos) > 0) {
-        variants = ddd_de_novos
-     } else {
-        variants = standardise_ddd_de_novos()
-        ddd_de_novos = variants
-        save(ddd_de_novos, file="data/ddd_de_novos.rda", compress="xz")
-    }
+    variants = standardise_ddd_de_novos()
     
     # remove diagnosed patients, if maximising power
     if (!is.null(diagnosed)) {
