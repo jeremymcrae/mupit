@@ -14,11 +14,8 @@ LazyData: true
 Imports:
     Cairo (>= 1.5.6),
     reshape (>= 0.8.5),
-    gdata (>= 2.13.3),
-    dplyr (>= 0.2),
     jsonlite,
 Suggests:
     publishedDeNovos (>= 0.1.0),
-    tm (>= 0.6),
     qqman (>= 0.1.2),
     testthat
