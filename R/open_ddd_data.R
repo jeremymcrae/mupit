@@ -3,27 +3,26 @@
 
 #' get standardised de novo data for DDD study.
 #'
+#' @param path path to DDD de novo dataset
+#'
 #' @export
 #' @return data frame of de novos, including gene symbol, functional consequence
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
-standardise_ddd_de_novos <- function() {
+standardise_ddd_de_novos <- function(path) {
     
     # load a set of DDD de novos, that are the independent event (ie duplicate
     # de novos within families have been removed).
-    variants = read.table(file.path("data-raw", "de_novo_datasets",
-        "de_novos.ddd_4k.ddd_only.txt"), header=TRUE,
-        sep="\t", stringsAsFactors=FALSE, comment.char="")
+    variants = read.table(path, header=TRUE, sep="\t", stringsAsFactors=FALSE)
     
     # standardise the SNV or INDEL flag
     variants$type = "indel"
     variants$type[variants$var_type == "DENOVO-SNP"] = "snv"
     
     # standardise the columns, and column names
-    variants$person_id = gsub(" ", "", variants$person_stable_id)
-    variants$chrom = gsub(" ", "", variants$chrom)
-    variants$start_pos = gsub(" ", "", variants$pos)
-    variants$ref_allele = gsub(" ", "", variants$ref)
-    variants$alt_allele = gsub(" ", "", variants$alt)
+    variants$person_id = variants$person_stable_id
+    variants$start_pos = variants$pos
+    variants$ref_allele = variants$ref
+    variants$alt_allele = variants$alt
     variants$end_pos = as.character(as.numeric(variants$start_pos) + nchar(variants$ref_allele) - 1)
     
     variants$hgnc = variants$symbol
@@ -31,7 +30,6 @@ standardise_ddd_de_novos <- function() {
     variants$study_code = "ddd_unpublished"
     variants$publication_doi = NA
     variants$study_phenotype = "developmental_disorders"
-    variants$sex = variants$gender
     
     variants = subset(variants, select=c("person_id", "sex", "chrom", "start_pos",
         "end_pos", "ref_allele", "alt_allele", "hgnc", "consequence",
@@ -42,6 +40,8 @@ standardise_ddd_de_novos <- function() {
 
 #' get de novo data for DDD study.
 #'
+#' @param path path to DDD de novo dataset
+#'
 #' @param diagnosed dataframe of samples in DDD with a diagnosis, who should be
 #'     excluded from analyses
 #' @param subset vector of sample IDs, if we want to restrict to a specific
@@ -51,11 +51,11 @@ standardise_ddd_de_novos <- function() {
 #' @export
 #' @return data frame of de novos, including gene symbol, functional consequence
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
-get_ddd_de_novos <- function(diagnosed=NULL, subset=NULL) {
+get_ddd_de_novos <- function(path, diagnosed=NULL, subset=NULL) {
     
     # try and use the data from the package, if it is available, otherwise
     # generate the dataset
-    variants = standardise_ddd_de_novos()
+    variants = standardise_ddd_de_novos(path)
     
     # remove diagnosed patients, if maximising power
     if (!is.null(diagnosed)) {

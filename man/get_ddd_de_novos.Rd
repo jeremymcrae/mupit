@@ -4,9 +4,11 @@
 \alias{get_ddd_de_novos}
 \title{get de novo data for DDD study.}
 \usage{
-get_ddd_de_novos(diagnosed = NULL, subset = NULL)
+get_ddd_de_novos(path, diagnosed = NULL, subset = NULL)
 }
 \arguments{
+\item{path}{path to DDD de novo dataset}
+
 \item{diagnosed}{dataframe of samples in DDD with a diagnosis, who should be
 excluded from analyses}
 

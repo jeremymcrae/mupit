@@ -4,7 +4,10 @@
 \alias{standardise_ddd_de_novos}
 \title{get standardised de novo data for DDD study.}
 \usage{
-standardise_ddd_de_novos()
+standardise_ddd_de_novos(path)
+}
+\arguments{
+\item{path}{path to DDD de novo dataset}
 }
 \value{
 data frame of de novos, including gene symbol, functional consequence
