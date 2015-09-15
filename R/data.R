@@ -1,15 +1,3 @@
-#' De novos found in the DDD study.
-#'
-#' De novo variants found within participants in the DDD study. As this is an
-#' unpblished dataset, the dataset in the package will be a blank dataframe,
-#' and only be complete for DDD researchers.
-#'
-#' @format A data frame with twelve variables: \code{person_id}, \code{chrom},
-#'     \code{start_pos}, \code{end_pos}, \code{ref_allele}, \code{alt_allele},
-#'     \code{hgnc}, \code{consequence}, \code{study_code},
-#'     \code{publication_doi}, \code{study_phenotype} and \code{type}
-"ddd_de_novos"
-
 #' Gene information.
 #'
 #' Table of all genes in the genome with HGNC symbol, chromosome and coding
@@ -22,7 +10,7 @@
 
 #' Mutation rates for each mutation category for each gene.
 #'
-#' Table of all genes in the genome with refseq traanscript ID, HGNC symbol,
+#' Table of all genes in the genome with refseq transcript ID, HGNC symbol,
 #' length, then columns of mutation rates for different consequence types:
 #'   a) log10-scaled mutuation rate for all consequence types
 #'   b) log10-scaled mutuation rate for synonymous mutations
@@ -36,6 +24,7 @@
 #' column to "hgnc".
 #'
 #' @source url(http://www.nature.com/ng/journal/v46/n9/extref/ng.3050-S2.xls)
-#' @format A data frame with three variables: \code{hgnc}, \code{chrom},
-#'     and \code{cds_length}
+#' @format A data frame with three variables: \code{transcript}, \code{hgnc},
+#'         \code{bp}, \code{}, \code{syn}, \code{mis}, \code{non},
+#'         \code{splice_site} and \code{frameshift}.
 "gene_rates"

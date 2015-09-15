@@ -4,8 +4,9 @@
 \name{gene_rates}
 \alias{gene_rates}
 \title{Mutation rates for each mutation category for each gene.}
-\format{A data frame with three variables: \code{hgnc}, \code{chrom},
-    and \code{cds_length}}
+\format{A data frame with three variables: \code{transcript}, \code{hgnc},
+        \code{bp}, \code{}, \code{syn}, \code{mis}, \code{non},
+        \code{splice_site} and \code{frameshift}.}
 \source{
 url(http://www.nature.com/ng/journal/v46/n9/extref/ng.3050-S2.xls)
 }
@@ -13,7 +14,7 @@ url(http://www.nature.com/ng/journal/v46/n9/extref/ng.3050-S2.xls)
 gene_rates
 }
 \description{
-Table of all genes in the genome with refseq traanscript ID, HGNC symbol,
+Table of all genes in the genome with refseq transcript ID, HGNC symbol,
 length, then columns of mutation rates for different consequence types:
   a) log10-scaled mutuation rate for all consequence types
   b) log10-scaled mutuation rate for synonymous mutations
