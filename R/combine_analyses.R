@@ -93,15 +93,3 @@ combine_tests <- function(meta_clust, meta_enrich, clust, enrich, phenotype) {
     
     return(merged)
 }
-
-#' example of analysis using the above functions
-main <- function() {
-    CODE_DIR = "/nfs/users/nfs_j/jm33/apps/mupit"
-    RESULTS_DIR = file.path(CODE_DIR, "results")
-    clustering_path = file.path(RESULTS_DIR, "de_novos.ddd_4k.meta-analysis.clustering_results.txt")
-    enrichment_path = file.path(RESULTS_DIR, "de_novos.ddd_4k.meta-analysis.enrichment_results.txt")
-    output_path = file.path(RESULTS_DIR, "de_novos.ddd_4k.meta-analysis.combined.txt")
-    
-    merged = combine_enrichment_and_clustering(enrichment_path, clustering_path)
-    write.table(merged, file=output_path, row.names=FALSE, quote=FALSE, sep="\t")
-}
