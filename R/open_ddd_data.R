@@ -12,6 +12,7 @@ standardise_ddd_de_novos <- function(path) {
     
     # load a set of DDD de novos, that are the independent event (ie duplicate
     # de novos within families have been removed).
+    # variants = read.table(path, header=TRUE, sep="\t", stringsAsFactors=FALSE, strip.white=TRUE, quote="")
     variants = read.table(path, header=TRUE, sep="\t", stringsAsFactors=FALSE)
     
     # standardise the SNV or INDEL flag
@@ -23,7 +24,7 @@ standardise_ddd_de_novos <- function(path) {
     variants$start_pos = variants$pos
     variants$ref_allele = variants$ref
     variants$alt_allele = variants$alt
-    variants$end_pos = as.character(as.numeric(variants$start_pos) + nchar(variants$ref_allele) - 1)
+    variants$end_pos = variants$start_pos + nchar(variants$ref_allele) - 1
     
     variants$hgnc = variants$symbol
     
