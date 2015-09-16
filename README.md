@@ -74,7 +74,7 @@ combination of DNMs.
 #### Input data
 validated de novo mutations in TSV format:
 
-proband ID | chrom | start | stop | ref | alt | HGNC symbol | VEP consequence | study | DOI | phenotype | SNV or indel
+proband ID | sex | chrom | start | stop | ref | alt | HGNC symbol | VEP consequence | study | DOI | phenotype | SNV or indel
 
 note: current test input file is numbers of mutations, not number of families,
 some families have >1 mutation in the same gene
