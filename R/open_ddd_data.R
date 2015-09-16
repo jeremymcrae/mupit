@@ -59,7 +59,7 @@ get_ddd_de_novos <- function(path, diagnosed=NULL, subset=NULL) {
     
     # remove diagnosed patients, if maximising power
     if (!is.null(diagnosed)) {
-        variants = variants[!(variants$person_id %in% diagnosed$id), ]
+        variants = variants[!(variants$person_id %in% diagnosed$person_id), ]
     }
     
     # sometimes we only want to use a subset of the DDD, such as when we are
