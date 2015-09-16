@@ -4,6 +4,12 @@ library(mupit)
 
 PROBANDS_JSON_PREFIX = "/nfs/users/nfs_j/jm33/apps/mupit/data-raw/probands_by_gene"
 RATES_PATH = "/nfs/users/nfs_j/jm33/apps/denovonear/results/de_novo_gene_rates.ddd_4k.meta-analysis.txt"
+DE_NOVOS_PATH = "/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_4k.ddd_only.2015-09-02.txt"
+VALIDATIONS_PATH = "/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_4k.ddd_only.validation_results.2015-09-03.txt"
+DIAGNOSED_PATH = "/lustre/scratch113/projects/ddd/users/jm33/ddd_4k.diagnosed.2015-09-15.txt"
+DDG2P_PATH = "/lustre/scratch113/projects/ddd/resources/ddd_data_releases/2015-04-13/DDG2P/dd_genes_for_clinical_filter"
+FAMILIES_PATH = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/family_relationships.txt"
+TRIOS_PATH = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/trios.txt"
 
 #' defines the cohort sizes, used to get the overall population size
 #'
@@ -11,22 +17,64 @@ RATES_PATH = "/nfs/users/nfs_j/jm33/apps/denovonear/results/de_novo_gene_rates.d
 #' @param meta true/false for whether to include meta-analysis populations
 #'
 #' @return list with total counts of trios with male and female offspring
-get_trio_counts <- function(diagnosed, meta=FALSE) {
+get_trio_counts <- function(families_path, trios_path, diagnosed_path, ddg2p_path, meta=FALSE) {
     
-    # number of trios studied in our data
-    male = 2408 # male probands
-    female = 1887 # female probands
+    families = read.table(families_path, sep="\t", header=TRUE, stringsAsFactors=FALSE)
+    families$is_proband = families$dad_id != "0" | families$mum_id != "0"
     
-    # remove diagnosed patients, if maximising power
-    male = male - sum(diagnosed$sex %in% c("Male", "male", "M", "m"))
-    female = female - sum(diagnosed$sex %in% c("Female", "female", "F", "f"))
+    # determine the trios with exome data available
+    trios = read.table(trios_path, sep="\t", header=TRUE, stringsAsFactors=FALSE)
+    families$has_parental_data = families$individual_id %in% trios$proband_stable_id
+    probands = families[families$is_proband & families$has_parental_data, ]
+    
+    # get the number of trios studied in our data for each sex
+    sex = table(probands$sex)
+    male = sex[["M"]]
+    female = sex[["F"]] # female probands
     
     if (meta) {
-        male = male + sum(cohorts$unique_male)
-        female = female + sum(cohorts$unique_female)
+        male = male + sum(publishedDeNovos::cohorts$unique_male)
+        female = female + sum(publishedDeNovos::cohorts$unique_female)
+    }
+    
+    # remove diagnosed patients, if maximising power
+    if (!is.null(diagnosed_path)) {
+        ddd_diagnosed = read.table(diagnosed_path, sep="\t", header=TRUE, stringsAsFactors=FALSE)
+        ddd_diagnosed = ddd_diagnosed[!duplicated(ddd_diagnosed[, c("person_id", "sex")]), ]
+        
+        dominant = load_dominant_ddg2p(ddg2p_path)
+        external = publishedDeNovos::variants
+        external_diagnosed = external[external$hgnc %in% dominant$gene, ]
+        external_diagnosed = external_diagnosed[!duplicated(external_diagnosed[, c("person_id", "sex")]), ]
+        
+        # decrement for the diagnosed DDD individuals of each sex
+        male = male - sum(ddd_diagnosed$sex %in% c("Male", "male", "M", "m"))
+        female = female - sum(ddd_diagnosed$sex %in% c("Female", "female", "F", "f"))
+        
+        # decrement for the diagnosed external individuals of each sex
+        male = male - sum(external_diagnosed$sex == "male", na.rm=TRUE)
+        female = female - sum(external_diagnosed$sex == "female", na.rm=TRUE)
     }
     
     return(list(male=male, female=female))
+}
+
+load_dominant_ddg2p <- function(path) {
+    # load the current DDG2P dataset, which is missing a field from the header
+    ddg2p = read.table(path, sep="\t", header=FALSE, stringsAsFactors=FALSE, fill=TRUE)
+    
+    # fix the header problem
+    cols = ddg2p[1, ]
+    cols[8] = "description"
+    names(ddg2p) = as.character(cols)
+    ddg2p = ddg2p[-1, ]
+    
+    # restrict outrselves to the high-confidence genes with a dominant mode of
+    # inheritance
+    ddg2p = ddg2p[ddg2p$type != "Possible DD Gene", ]
+    dominant = ddg2p[ddg2p$mode %in% c("Monoallelic", "X-linked dominant"), ]
+    
+    return(dominant)
 }
 
 #' combine datasets listing de novo mutations into a single data frame
@@ -36,12 +84,32 @@ get_trio_counts <- function(diagnosed, meta=FALSE) {
 #'
 #' @return data frame containing HGNC, chrom, position, consequence, SNV or
 #'    INDEL type, and study ID.
-get_de_novos <- function(diagnosed, meta=FALSE) {
+get_de_novos <- function(de_novos_path, validations_path, diagnosed_path, ddg2p_path, meta=FALSE) {
     
-    variants = get_ddd_de_novos(diagnosed)
+    diagnosed = NULL
+    if (!is.null(diagnosed_path)) {
+        diagnosed = read.table(diagnosed_path, sep="\t", header=TRUE, stringsAsFactors=FALSE)
+    }
+    variants = get_ddd_de_novos(de_novos_path, diagnosed)
+    
+    validations = read.table(validations_path, sep="\t", header=TRUE, stringsAsFactors=FALSE)
+    variants = merge(variants, validations, by=c("person_id", "chrom",
+        "start_pos", "end_pos", "ref_allele", "alt_allele", "hgnc",
+        "consequence"), all.x=TRUE)
+    
+    # drop out the variants that failed to validate (i.e. were false positives,
+    # or inherited)
+    variants = variants[!variants$status %in% c("false_positive", "inherited"), ]
+    variants$status = NULL
     
     if (meta) {
-        variants = rbind(variants, publishedDeNovos::variants)
+        external = publishedDeNovos::variants
+        if (!is.null(diagnosed_path)) {
+            dominant = load_dominant_ddg2p(ddg2p_path)
+            external = external[!external$hgnc %in% dominant$gene, ]
+        }
+        
+        variants = rbind(variants, external)
     }
     
     return(variants)
@@ -69,10 +137,10 @@ get_rates_dataset <- function(rates_path) {
 #'
 #' @param diagnosed list of sample IDs and sexes for diagnosed individuals
 #' @param meta boolean for whether to include data for meta-analysis
-run_tests <- function(rates, diagnosed, meta) {
+run_tests <- function(de_novo_path, validations_path, families_path, trios_path, rates, diagnosed_path, ddg2p_path, meta) {
     prefix = "de_novos.ddd_4k.with_diagnosed"
     json_path = paste(PROBANDS_JSON_PREFIX, ".with_diagnosed.json", sep="")
-    if (length(diagnosed$id) > 0) {
+    if (!is.null(diagnosed_path)) {
         prefix = "de_novos.ddd_4k.without_diagnosed"
         json_path = paste(PROBANDS_JSON_PREFIX, ".without_diagnosed.json", sep="")
     }
@@ -83,16 +151,16 @@ run_tests <- function(rates, diagnosed, meta) {
     if (meta) { mid_string = "meta-analysis" }
     
     # analyse the de novos
-    trios = get_trio_counts(diagnosed, meta)
-    de_novos = get_de_novos(diagnosed, meta)
+    trios = get_trio_counts(families_path, trios_path, diagnosed_path, ddg2p_path, meta)
+    de_novos = get_de_novos(de_novo_path, validations_path, diagnosed_path, ddg2p_path, meta)
     enriched = mupit::analyse_gene_enrichment(de_novos, trios,
-        plot_path=file.path("results", paste(prefix, mid_string, "manhattan.pdf", sep=".")),
-        rates=rates)
+        plot_path=file.path("results", paste(prefix, mid_string, "manhattan.",
+        Sys.Date(), ".pdf", sep=".")), rates=rates)
     
     # write the enrichment results to a table
     write.table(enriched, file=file.path("results",
-        paste(prefix, mid_string, "enrichment_results.txt", sep=".")), sep="\t",
-        row.names=FALSE, quote=FALSE)
+        paste(prefix, mid_string, "enrichment_results.", Sys.Date(), ".txt",
+        sep=".")), sep="\t", row.names=FALSE, quote=FALSE)
     
     # and write a list of probands with de novos per gene to a file. This is
     # for HPO similarity testing, so can only be used with DDD samples, since we
@@ -108,15 +176,12 @@ run_tests <- function(rates, diagnosed, meta) {
 main <- function() {
     rates = get_rates_dataset(RATES_PATH)
     
-    # here's an example of how to use the functions in this script
-    diagnosed_path = "/nfs/ddd0/Data/datafreeze/1133trios_20131218/Diagnosis_Summary_1133_20140328.xlsx"
-    diagnosed = get_likely_diagnosed(diagnosed_path)
-    run_tests(rates, diagnosed, meta=FALSE)
-    run_tests(rates, diagnosed, meta=TRUE)
+    run_tests(DE_NOVOS_PATH, VALIDATIONS_PATH, FAMILIES_PATH, TRIOS_PATH, rates, DIAGNOSED_PATH, DDG2P_PATH, meta=FALSE)
+    run_tests(DE_NOVOS_PATH, VALIDATIONS_PATH, FAMILIES_PATH, TRIOS_PATH, rates, DIAGNOSED_PATH, DDG2P_PATH, meta=TRUE)
     
-    diagnosed = NULL
-    run_tests(rates, diagnosed, meta=FALSE)
-    run_tests(rates, diagnosed, meta=TRUE)
+    DIAGNOSED_PATH = NULL
+    run_tests(DE_NOVOS_PATH, VALIDATIONS_PATH, FAMILIES_PATH, TRIOS_PATH, rates, DIAGNOSED_PATH, DDG2P_PATH, meta=FALSE)
+    run_tests(DE_NOVOS_PATH, VALIDATIONS_PATH, FAMILIES_PATH, TRIOS_PATH, rates, DIAGNOSED_PATH, DDG2P_PATH, meta=TRUE)
     
     # # Plot QQ plots for the meta-analysis de novos (requires statistics for
     # # all genes).
