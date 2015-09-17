@@ -136,6 +136,14 @@ get_current_de_novos <- function(path) {
     return(variants)
 }
 
+#' checks if a sites has a match in a previous dataset
+#'
+#' Some de novos in the current dataset were also present in a previous
+#' datafreeze. We need to remove these so as to not double count diagnostic
+#' variants. Unfortunately, som sites have shifted location slightly such as
+#' indels, which can be difficult to locate.
+#'
+#'
 check_for_match <- function(site, initial) {
     
     vars = initial[initial[["person_id"]] == site[["person_id"]], ]
@@ -152,7 +160,7 @@ check_for_match <- function(site, initial) {
     return(sum(close) == 1)
 }
 
-load_dominant_ddg2p <- function(path) {
+load_ddg2p <- function(path) {
     # load the current DDG2P dataset, which is missing a field from the header
     ddg2p = read.table(path, sep="\t", header=FALSE, stringsAsFactors=FALSE, fill=TRUE)
     
@@ -165,9 +173,10 @@ load_dominant_ddg2p <- function(path) {
     # restrict outrselves to the high-confidence genes with a dominant mode of
     # inheritance
     ddg2p = ddg2p[ddg2p$type != "Possible DD Gene", ]
-    dominant = ddg2p[ddg2p$mode %in% c("Monoallelic", "X-linked dominant"), ]
+    ddg2p$dominant = ddg2p$mode %in% c("Monoallelic", "X-linked dominant")
+    ddg2p$hemizygous = ddg2p$mode == "Hemizygous"
     
-    return(dominant)
+    return(ddg2p)
 }
 
 #' find probands likely to have diagnoses, to exclude them from our data
@@ -183,14 +192,17 @@ get_ddd_diagnosed <- function(diagnosed_path, de_novo_path, ddg2p_path, families
     
     initial_diagnosed = get_previous(diagnosed_path, families_path)
     
-    dominant = load_dominant_ddg2p(ddg2p_path)
+    ddg2p = load_ddg2p(ddg2p_path)
     variants = get_current_de_novos(de_novo_path)
     
     # get the set of de novos from the current dataset that are likely to be
     # diagnostic. These are de novos in genes with dominant modes of inheritance,
+    # or chrX de novos in males in genes with hemizygous mode of inheritance,
     # and where the site is high confidence (as determined by having a high
     # pp_dnm, or a missing pp_dnm)
-    likely_diagnostic = variants[variants$hgnc %in% dominant$gene & (variants$pp_dnm > 0.1 | is.na(variants$pp_dnm)), ]
+    likely_diagnostic = variants[(variants$hgnc %in% ddg2p$gene[ddg2p$dominant] |
+        (variants$hgnc %in% ddg2p$gene[ddg2p$hemizygous] & variants$sex == "male"))
+        & (variants$pp_dnm > 0.1 | is.na(variants$pp_dnm)), ]
     likely_diagnostic = likely_diagnostic[, c("person_id", "chrom", "start_pos",
         "end_pos", "ref_allele", "alt_allele", "hgnc", "inheritance", "type",
         "sex")]
