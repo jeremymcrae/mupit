@@ -42,9 +42,10 @@ get_trio_counts <- function(families_path, trios_path, diagnosed_path, ddg2p_pat
         ddd_diagnosed = read.table(diagnosed_path, sep="\t", header=TRUE, stringsAsFactors=FALSE)
         ddd_diagnosed = ddd_diagnosed[!duplicated(ddd_diagnosed[, c("person_id", "sex")]), ]
         
-        dominant = load_dominant_ddg2p(ddg2p_path)
+        ddg2p = load_ddg2p(ddg2p_path)
         external = publishedDeNovos::variants
-        external_diagnosed = external[external$hgnc %in% dominant$gene, ]
+        external_diagnosed = external[external$hgnc %in% ddg2p$gene[ddg2p$dominant] |
+            (external$sex == "male" & external$hgnc %in% ddg2p$gene[ddg2p$hemizygous]), ]
         external_diagnosed = external_diagnosed[!duplicated(external_diagnosed[, c("person_id", "sex")]), ]
         
         # decrement for the diagnosed DDD individuals of each sex
@@ -59,7 +60,7 @@ get_trio_counts <- function(families_path, trios_path, diagnosed_path, ddg2p_pat
     return(list(male=male, female=female))
 }
 
-load_dominant_ddg2p <- function(path) {
+load_ddg2p <- function(path) {
     # load the current DDG2P dataset, which is missing a field from the header
     ddg2p = read.table(path, sep="\t", header=FALSE, stringsAsFactors=FALSE, fill=TRUE)
     
@@ -72,9 +73,10 @@ load_dominant_ddg2p <- function(path) {
     # restrict outrselves to the high-confidence genes with a dominant mode of
     # inheritance
     ddg2p = ddg2p[ddg2p$type != "Possible DD Gene", ]
-    dominant = ddg2p[ddg2p$mode %in% c("Monoallelic", "X-linked dominant"), ]
+    ddg2p$dominant = ddg2p$mode %in% c("Monoallelic", "X-linked dominant")
+    ddg2p$hemizygous = ddg2p$mode == "Hemizygous"
     
-    return(dominant)
+    return(ddg2p)
 }
 
 #' combine datasets listing de novo mutations into a single data frame
@@ -105,8 +107,9 @@ get_de_novos <- function(de_novos_path, validations_path, diagnosed_path, ddg2p_
     if (meta) {
         external = publishedDeNovos::variants
         if (!is.null(diagnosed_path)) {
-            dominant = load_dominant_ddg2p(ddg2p_path)
-            external = external[!external$hgnc %in% dominant$gene, ]
+            ddg2p = load_ddg2p(ddg2p_path)
+            external = external[!(external$hgnc %in% ddg2p$gene[ddg2p$dominant] |
+                (external$sex == "male" & external$hgnc %in% ddg2p$gene[ddg2p$hemizygous])), ]
         }
         
         variants = rbind(variants, external)
