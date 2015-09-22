@@ -5,7 +5,7 @@ library(mupit)
 PROBANDS_JSON_PREFIX = "/nfs/users/nfs_j/jm33/apps/mupit/data-raw/probands_by_gene"
 RATES_PATH = "/nfs/users/nfs_j/jm33/apps/denovonear/results/de_novo_gene_rates.ddd_4k.meta-analysis.txt"
 DE_NOVOS_PATH = "/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_4k.ddd_only.2015-09-02.txt"
-VALIDATIONS_PATH = "/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_4k.ddd_only.validation_results.2015-09-03.txt"
+VALIDATIONS_PATH = "/lustre/scratch113/projects/ddd/users/jm33/de_novos.validation_results.2015-09-22.txt"
 DIAGNOSED_PATH = "/lustre/scratch113/projects/ddd/users/jm33/ddd_4k.diagnosed.2015-09-15.txt"
 DDG2P_PATH = "/lustre/scratch113/projects/ddd/resources/ddd_data_releases/2015-04-13/DDG2P/dd_genes_for_clinical_filter"
 FAMILIES_PATH = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/family_relationships.txt"
