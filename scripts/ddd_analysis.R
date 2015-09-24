@@ -157,12 +157,12 @@ run_tests <- function(de_novo_path, validations_path, families_path, trios_path,
     trios = get_trio_counts(families_path, trios_path, diagnosed_path, ddg2p_path, meta)
     de_novos = get_de_novos(de_novo_path, validations_path, diagnosed_path, ddg2p_path, meta)
     enriched = mupit::analyse_gene_enrichment(de_novos, trios,
-        plot_path=file.path("results", paste(prefix, mid_string, "manhattan.",
-        Sys.Date(), ".pdf", sep=".")), rates=rates)
+        plot_path=file.path("results", paste(prefix, mid_string, "manhattan",
+        Sys.Date(), "pdf", sep=".")), rates=rates)
     
     # write the enrichment results to a table
     write.table(enriched, file=file.path("results",
-        paste(prefix, mid_string, "enrichment_results.", Sys.Date(), ".txt",
+        paste(prefix, mid_string, "enrichment_results", Sys.Date(), "txt",
         sep=".")), sep="\t", row.names=FALSE, quote=FALSE)
     
     # and write a list of probands with de novos per gene to a file. This is
