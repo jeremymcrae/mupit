@@ -23,7 +23,12 @@ test_that("test_enrichment output is correct", {
         ARID1B 6     1         1       1              1            157150547 0.0001108251 9.327823173e-07
         KMT2A  11    0         0       0              1            118367083 0.9851119396 6.526756739e-02")
     
-    expect_equal(test_enrichment(rates, counts), output)
+expect_equal(test_enrichment(rates, counts), output)
+    # and check that it can also pick up the other gene in the rate table
+    counts = read.table(header=TRUE, text="
+        hgnc   lof_indel lof_snv missense_indel missense_snv chrom min_pos
+        KMT2A  0       0            0         1              11    118367083")
+    expect_equal(gene_enrichment(counts, rates), 0.0535148520465161)
 })
 
 test_that("analyse_gene_enrichment output is correct", {
