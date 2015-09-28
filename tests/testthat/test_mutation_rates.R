@@ -51,6 +51,33 @@ test_that("get_gene_based_mutation_rates output is correct for the default gene 
     expect_equal(result, output)
 })
 
+test_that("get_gene_based_mutation_rates output is correct for the default gene rates", {
+    trios = list(male=1000, female=1000)
+    
+    # define the expected output, including the exact rates expected from the
+    # submitted data frame inputs
+    output = read.table(header=TRUE, text="
+    hgnc     chrom snv.missense.rate snv.lof.rate indel.missense.rate indel.lof.rate
+    TSPAN6   X     0.017925248       0.0013178331 9.6007090e-05       0.0008640638
+    TNMD     X     0.023171662       0.0017035404 0.00012410672       0.0011169605
+    DPM1     20    0.035069652       0.002578260  1.878320e-04        0.0016904880
+    SCYL3    1     0.088228278       0.006486390  4.725480e-04        0.0042529320
+    C1orf112 1     0.101409084       0.007455420  5.431440e-04        0.0048882960
+    FGR      1     0.06293538        0.004626900  3.370800e-04        0.0030337200",
+        colClasses=c("factor", "character", "numeric", "numeric", "numeric",
+            "numeric"))
+    
+    result = get_length_based_rates(trios)
+    # make sure that we get the correct number of rows
+    expect_equal(nrow(result), 20823)
+    
+    # restrict the gene rates to the top few rows of the table, and only check
+    # that those values come out exactly correct
+    result = head(result)
+    result$hgnc = factor(result$hgnc)
+    expect_equal(result, output)
+})
+
 test_that("correct_for_x_chrom output is correct", {
     trios = list(male=1000, female=1000)
     rates = read.table(header=TRUE, text="

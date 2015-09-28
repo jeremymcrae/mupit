@@ -110,6 +110,8 @@ get_length_based_rates <- function(trios) {
     # calculate rates of missense and lof mutations, multiply by 2 for two
     # transmissions per child and number of trios
     rates = data.frame(hgnc = mupit::gene_info$hgnc, chrom = mupit::gene_info$chrom)
+    rates$hgnc = as.character(rates$hgnc)
+    rates$chrom = as.character(rates$chrom)
     rates$snv.missense.rate = cds.length * snv_rate * props$snv.missense * autosomal
     rates$snv.lof.rate = cds.length * snv_rate * props$snv.lof * autosomal
     rates$indel.missense.rate = cds.length * indel_rate * props$indel.missense * autosomal
