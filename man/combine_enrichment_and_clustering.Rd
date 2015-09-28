@@ -19,4 +19,17 @@ a merged dataset where the P values have been combined
 \description{
 combine P values from enrichment and clustering tests into a single P value
 }
+\examples{
+enriched = read.table(header=TRUE, text="
+    hgnc  enrichment_p_value
+    GENE1 0.01
+    GENE2 0.0001")
+clust = read.table(header=TRUE, text="
+    gene_id mutation_category probability
+    GENE1   missense          0.1
+    GENE1   nonsense          0.1
+    GENE2   missense          0.001
+    GENE2   nonsense          0.001")
+combine_enrichment_and_clustering(enriched, clust)
+}
 

@@ -7,6 +7,11 @@
 #' @export
 #'
 #' @return single P value for gene
+#' @examples
+#' fishersMethod(c(0.01, 0.001))
+#' fishersMethod(c(0.01, NA))
+#' fishersMethod(c(NA, NA))
+#' fishersMethod(c(0.01))
 fishersMethod <- function(x) {
     x = x[!is.na(x)]
     if (length(x) == 0) { return(NA) }
@@ -24,6 +29,18 @@ fishersMethod <- function(x) {
 #' @export
 #'
 #' @return a merged dataset where the P values have been combined
+#' @examples
+#' enriched = read.table(header=TRUE, text="
+#'     hgnc  enrichment_p_value
+#'     GENE1 0.01
+#'     GENE2 0.0001")
+#' clust = read.table(header=TRUE, text="
+#'     gene_id mutation_category probability
+#'     GENE1   missense          0.1
+#'     GENE1   nonsense          0.1
+#'     GENE2   missense          0.001
+#'     GENE2   nonsense          0.001")
+#' combine_enrichment_and_clustering(enriched, clust)
 combine_enrichment_and_clustering <- function(enriched, clust, num_tests=18500) {
     # read in p values from clustering analysis, only for genes with >1 mutation
     clust = reshape::cast(clust, gene_id ~ mutation_category, value="probability", mean)

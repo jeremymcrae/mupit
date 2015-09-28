@@ -15,4 +15,10 @@ single P value for gene
 \description{
 function to combine p values, using Fisher's method
 }
+\examples{
+fishersMethod(c(0.01, 0.001))
+fishersMethod(c(0.01, NA))
+fishersMethod(c(NA, NA))
+fishersMethod(c(0.01))
+}
 
