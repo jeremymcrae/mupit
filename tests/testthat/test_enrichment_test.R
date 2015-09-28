@@ -56,4 +56,11 @@ test_that("analyse_gene_enrichment output is correct", {
             "numeric", "numeric", "numeric"))
     
     expect_equal(analyse_gene_enrichment(vars, trios, rates=rates), output)
+    
+    # and check that we can generate a Manhattan-style plot. This just checks
+    # that we don't get any errors, it doesn't check if the plot is correct
+    pdf_path = tempfile(fileext=".pdf")
+    out = analyse_gene_enrichment(vars, trios, plot_path=pdf_path, rates=rates)
+    expect_true(file.exists(pdf_path))
+    unlink(pdf_path)
 })
