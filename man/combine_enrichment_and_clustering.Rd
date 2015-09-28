@@ -4,12 +4,14 @@
 \alias{combine_enrichment_and_clustering}
 \title{combine P values from enrichment and clustering tests into a single P value}
 \usage{
-combine_enrichment_and_clustering(enrichment_path, clustering_path)
+combine_enrichment_and_clustering(enriched, clust, num_tests = 18500)
 }
 \arguments{
-\item{enrichment_path}{path to enrichment testing results}
+\item{enriched}{dataframe of de novo enrichment results}
 
-\item{clustering_path}{path to clustering testing results}
+\item{clust}{dataframe of de novo clustering results}
+
+\item{num_tests}{number of tests to correct for multiple testing}
 }
 \value{
 a merged dataset where the P values have been combined
