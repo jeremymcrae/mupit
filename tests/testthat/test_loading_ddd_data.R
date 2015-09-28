@@ -21,7 +21,9 @@ test_that("standardise_ddd_de_novos output is correct", {
         person_1  F   1     1000      1000    A          G          GENE1 missense_variant  ddd_unpublished  NA  developmental_disorders snv
         person_2  M   1     1010      1010    C          GGG        GENE2 frameshift_variant ddd_unpublished  NA  developmental_disorders indel
         person_3  F   X     2000      2002    CCC        G          GENE3 frameshift_variant ddd_unpublished  NA  developmental_disorders indel",
-        colClasses=c("character", "character", "character", "numeric", "numeric", "character", "character", "character", "character", "character", "logical", "character", "character"))
+        colClasses=c("character", "character", "character", "numeric",
+            "numeric", "character", "character", "character", "character",
+            "character", "logical", "character", "character"))
     
     expect_equal(standardise_ddd_de_novos(path), output)
     unlink(path)
@@ -43,7 +45,9 @@ test_that("get_ddd_de_novos output is correct", {
         person_1  F   1     1000      1000    A          G          GENE1 missense_variant  ddd_unpublished  NA  developmental_disorders snv
         person_2  M   1     1010      1010    C          GGG        GENE2 frameshift_variant ddd_unpublished  NA  developmental_disorders indel
         person_3  F   X     2000      2002    CCC        G          GENE3 frameshift_variant ddd_unpublished  NA  developmental_disorders indel",
-        colClasses=c("character", "character", "character", "numeric", "numeric", "character", "character", "character", "character", "character", "logical", "character", "character"))
+        colClasses=c("character", "character", "character", "numeric",
+            "numeric", "character", "character", "character", "character",
+            "character", "logical", "character", "character"))
     
     expect_equal(get_ddd_de_novos(path), output)
     unlink(path)
@@ -65,7 +69,9 @@ test_that("get_ddd_de_novos output is correct when removing the diagnosed set", 
     output = read.table(header=TRUE, text="
         person_id sex chrom start_pos end_pos ref_allele alt_allele hgnc  consequence       study_code  publication_doi study_phenotype type
         person_3  F   X     2000      2002    CCC        G          GENE3 frameshift_variant ddd_unpublished  NA  developmental_disorders indel",
-        colClasses=c("character", "character", "character", "numeric", "numeric", "character", "character", "character", "character", "character", "logical", "character", "character"))
+        colClasses=c("character", "character", "character", "numeric",
+            "numeric", "character", "character", "character", "character",
+            "character", "logical", "character", "character"))
     
     # set the row names for the output, taking into account the saples that have
     # been removed.
@@ -91,7 +97,9 @@ test_that("get_ddd_de_novos output is correct when selecting a subset", {
     output = read.table(header=TRUE, text="
         person_id sex chrom start_pos end_pos ref_allele alt_allele hgnc  consequence       study_code  publication_doi study_phenotype type
         person_1  F   1     1000      1000    A          G          GENE1 missense_variant  ddd_unpublished  NA  developmental_disorders snv",
-        colClasses=c("character", "character", "character", "numeric", "numeric", "character", "character", "character", "character", "character", "logical", "character", "character"))
+        colClasses=c("character", "character", "character", "numeric",
+            "numeric", "character", "character", "character", "character",
+            "character", "logical", "character", "character"))
     
     expect_equal(get_ddd_de_novos(path, subset=include), output)
     unlink(path)
