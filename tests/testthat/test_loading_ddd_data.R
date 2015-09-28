@@ -75,7 +75,7 @@ test_that("get_ddd_de_novos output is correct when removing the diagnosed set", 
     unlink(path)
 })
 
-test_that("get_ddd_de_novos output is correct when removing the diagnosed set", {
+test_that("get_ddd_de_novos output is correct when selecting a subset", {
     
     # define a text file for loading, and write it to a file
     text = c("person_stable_id\tsex\tchrom\tpos\tref\talt\tsymbol\tconsequence\tvar_type",
