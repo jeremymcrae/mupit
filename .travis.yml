@@ -6,6 +6,8 @@ r_packages:
  - testthat
 r_github_packages:
  - jeremymcrae/publishedDeNovos
+ # install the latest version of qqman, which isn't available on CRAN yet
+ - stephenturner/qqman
 r_binary_packages:
  - testthat
 after_success:
