@@ -71,3 +71,28 @@ get_ddd_de_novos <- function(path, diagnosed=NULL, subset=NULL) {
     
     return(variants)
 }
+
+#' load the current DDG2P dataset.
+#'
+#' @param path path to DDD de novo dataset
+#'
+#' @export
+#' @return data frame of DDG2P genes
+load_ddg2p <- function(path) {
+    # the current file is missing a field from the header
+    ddg2p = read.table(path, sep="\t", header=FALSE, stringsAsFactors=FALSE, fill=TRUE)
+    
+    # fix the header problem
+    cols = ddg2p[1, ]
+    cols[8] = "description"
+    names(ddg2p) = as.character(cols)
+    ddg2p = ddg2p[-1, ]
+    
+    # restrict outrselves to the high-confidence genes with a dominant mode of
+    # inheritance
+    ddg2p = ddg2p[ddg2p$type != "Possible DD Gene", ]
+    ddg2p$dominant = ddg2p$mode %in% c("Monoallelic", "X-linked dominant")
+    ddg2p$hemizygous = ddg2p$mode == "Hemizygous"
+    
+    return(ddg2p)
+}

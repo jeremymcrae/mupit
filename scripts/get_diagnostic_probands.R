@@ -160,25 +160,6 @@ check_for_match <- function(site, initial) {
     return(sum(close) == 1)
 }
 
-load_ddg2p <- function(path) {
-    # load the current DDG2P dataset, which is missing a field from the header
-    ddg2p = read.table(path, sep="\t", header=FALSE, stringsAsFactors=FALSE, fill=TRUE)
-    
-    # fix the header problem
-    cols = ddg2p[1, ]
-    cols[8] = "description"
-    names(ddg2p) = as.character(cols)
-    ddg2p = ddg2p[-1, ]
-    
-    # restrict outrselves to the high-confidence genes with a dominant mode of
-    # inheritance
-    ddg2p = ddg2p[ddg2p$type != "Possible DD Gene", ]
-    ddg2p$dominant = ddg2p$mode %in% c("Monoallelic", "X-linked dominant")
-    ddg2p$hemizygous = ddg2p$mode == "Hemizygous"
-    
-    return(ddg2p)
-}
-
 #' find probands likely to have diagnoses, to exclude them from our data
 #'
 #' We assume DDD samples that have
