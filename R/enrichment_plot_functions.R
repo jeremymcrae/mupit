@@ -11,6 +11,7 @@
 #' @export
 plot_enrichment_graphs <- function(enriched, num_tests, path) {
     
+    Cairo::CairoFonts(regular="Arial")
     Cairo::Cairo(file=path, type="pdf", width=20, height=15, units = "cm")
     
     colors = c("lightblue3", "darkblue")
@@ -21,16 +22,12 @@ plot_enrichment_graphs <- function(enriched, num_tests, path) {
     enriched$chrom[enriched$chrom == "X"] = "23"
     enriched$chrom = as.numeric(enriched$chrom)
     
-    # get the p-value to a FDR threshold of 0.05, below which
-    # we will plot gene labels
-    p_values = enriched$enrichment_p_value
-    fdr = p.adjust(p_values, method="BH", n=num_tests)
-    threshold = min(p_values[fdr >= 0.05])
+    threshold = 0.05/num_tests
     
     qqman::manhattan(enriched,
         chr="chrom", bp="min_pos", snp="hgnc", p="enrichment_p_value",
         chrlabs=c(1:22, "X"), annotatePval=threshold, annotateTop=FALSE,
-        suggestiveline=FALSE, genomewideline=-log10(0.05/num_tests),
+        suggestiveline=FALSE, genomewideline=-log10(threshold),
         col=colors, las=2)
     
     dev.off()
