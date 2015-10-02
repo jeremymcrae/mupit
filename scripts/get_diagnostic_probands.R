@@ -1,12 +1,12 @@
 
 library(mupit)
-library(gdata)
 
 DIAGNOSED_PATH = "/nfs/ddd0/Data/datafreeze/1133trios_20131218/Diagnosis_Summary_1133_20140328.xlsx"
 DE_NOVO_PATH = "/nfs/users/nfs_j/jm33/apps/mupit/data-raw/de_novo_datasets/de_novos.ddd_4k.ddd_only.2015-09-15.txt"
+LOW_PP_DNM_VALIDATIONS_PATH = "/nfs/users/nfs_j/jm33/de_novos.ddd_4k.validation_results.low_pp_dnm.2015-10-02.xlsx"
 FAMILIES_PATH = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/family_relationships.txt"
 DDG2P_PATH = "/lustre/scratch113/projects/ddd/resources/ddd_data_releases/2015-04-13/DDG2P/dd_genes_for_clinical_filter"
-OUTPUT_PATH = "/lustre/scratch113/projects/ddd/users/jm33/ddd_4k.diagnosed.2015-09-15.txt"
+OUTPUT_PATH = "/lustre/scratch113/projects/ddd/users/jm33/ddd_4k.diagnosed.2015-10-02.txt"
 
 get_ddd_diagnostic_cnvs <- function(path) {
     # load the CNVs
@@ -57,7 +57,7 @@ get_ddd_diagnostic_snvs <- function(path) {
 
 get_other_diagnostic_variants <- function(path) {
     # now load the diagnostic SNVs
-    other = gdata::read.xls(path, sheet="UPD&amp;Mosaicism", header=FALSE, stringsAsFactors=FALSE)
+    other = gdata::read.xls(path, sheet="UPD&Mosaicism", header=FALSE, stringsAsFactors=FALSE)
     names(other) = c("person_id", "type")
     other$chrom = NA
     other$start_pos = NA
@@ -113,6 +113,31 @@ get_previous <- function(path, families_path) {
     return(diagnosed)
 }
 
+get_low_pp_dnm_validations <- function(path) {
+    low_pp_dnm = gdata::read.xls(path, sheet="Summary_Final_forDB", stringsAsFactors=FALSE)
+    
+    # only select the most useful columns
+    low_pp_dnm = low_pp_dnm[, c("ID", "CHR", "POS", "REF", "ALT", "TYPE",
+        "manual_score")]
+        
+    names(low_pp_dnm) = c("person_id", "chrom", "start_pos", "ref_allele",
+        "alt_allele", "type", "status")
+    
+    # recode the validation status codes to more understandable codes
+    low_pp_dnm$status[low_pp_dnm$status == "dnm"] = "de_novo"
+    low_pp_dnm$status[low_pp_dnm$status == "dnm_low_alt"] = "de_novo"
+    low_pp_dnm$status[low_pp_dnm$status == "fp"] = "false_positive"
+    low_pp_dnm$status[low_pp_dnm$status == "inherited_pat"] = "inherited"
+    low_pp_dnm$status[low_pp_dnm$status == "p/u"] = "uncertain"
+    low_pp_dnm$status[low_pp_dnm$status == "unclear"] = "uncertain"
+    low_pp_dnm$status[low_pp_dnm$status == "parental_mosaic"] = "de_novo"
+    
+    low_pp_dnm$type[low_pp_dnm$type == "DENOVO-SNP"] = "snv"
+    low_pp_dnm$type[low_pp_dnm$type == "DENOVO-INDEL"] = "indel"
+    
+    return(low_pp_dnm)
+}
+
 get_current_de_novos <- function(path) {
     # load the current set of de novos to be analysed
     variants = read.table(path, header=TRUE, sep="\t", stringsAsFactors=FALSE)
@@ -144,20 +169,26 @@ get_current_de_novos <- function(path) {
 #' indels, which can be difficult to locate.
 #'
 #'
-check_for_match <- function(site, initial) {
+check_for_match <- function(site, initial, pos=FALSE) {
+    
+    # set the missing match type dependent on whether we are looking for whether
+    # we have a match, or the matching position.
+    if (pos) {no_match = NA} else {no_match = FALSE}
     
     vars = initial[initial[["person_id"]] == site[["person_id"]], ]
     vars = vars[vars[["chrom"]] == site[["chrom"]] & !is.na(vars[["chrom"]]), ]
     
-    if (nrow(vars) == 0) { return(FALSE) }
+    if (nrow(vars) == 0) { return(no_match) }
     
     delta = abs(vars[["start_pos"]] - as.integer(site[["start_pos"]]))
     
-    if (min(delta) > 20) { return(FALSE) }
+    if (min(delta) > 20) { return(no_match) }
     
     close = delta == min(delta)
     
-    return(sum(close) == 1)
+    if (sum(close) == 1) {
+        if (!pos) { return(TRUE) } else { return(vars[["start_pos"]][close]) }
+    } else { return(no_match) }
 }
 
 #' find probands likely to have diagnoses, to exclude them from our data
@@ -169,12 +200,20 @@ check_for_match <- function(site, initial) {
 #'
 #' @return A list containing vectors with DDD IDs, and sex of the diagnosed
 #'     probands
-get_ddd_diagnosed <- function(diagnosed_path, de_novo_path, ddg2p_path, families_path) {
+get_ddd_diagnosed <- function(diagnosed_path, de_novo_path, low_pp_dnm_validations_path, ddg2p_path, families_path) {
     
     initial_diagnosed = get_previous(diagnosed_path, families_path)
     
     ddg2p = load_ddg2p(ddg2p_path)
     variants = get_current_de_novos(de_novo_path)
+    
+    # the candidates with low pp_dnm (< 0.9) in DDG2P genes were attempted to
+    # validate. Those that did, we can swap the pp_dnm to 1, since these are now
+    # high confidence de novos
+    low_pp_dnm = get_low_pp_dnm_validations(low_pp_dnm_validations_path)
+    variants = merge(variants, low_pp_dnm[, c("person_id", "chrom", "start_pos", "status")],
+        by=c("person_id", "chrom", "start_pos"), all.x=TRUE)
+    variants$pp_dnm[variants$status == "de_novo"] = 1
     
     # get the set of de novos from the current dataset that are likely to be
     # diagnostic. These are de novos in genes with dominant modes of inheritance,
@@ -199,7 +238,7 @@ get_ddd_diagnosed <- function(diagnosed_path, de_novo_path, ddg2p_path, families
 }
 
 main <- function() {
-    diagnosed = get_ddd_diagnosed(DIAGNOSED_PATH, DE_NOVO_PATH, DDG2P_PATH, FAMILIES_PATH)
+    diagnosed = get_ddd_diagnosed(DIAGNOSED_PATH, DE_NOVO_PATH, LOW_PP_DNM_VALIDATIONS_PATH, DDG2P_PATH, FAMILIES_PATH)
     
     write.table(diagnosed, file=OUTPUT_PATH, sep="\t", quote=FALSE, row.names=FALSE)
 }
