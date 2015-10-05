@@ -104,3 +104,33 @@ test_that("get_ddd_de_novos output is correct when selecting a subset", {
     expect_equal(get_ddd_de_novos(path, subset=include), output)
     unlink(path)
 })
+
+test_that("load_ddg2p output is correct", {
+    
+    text = c("chr\tstart\tstop\tgene\ttype\tmode\tmech",
+        "1\t100\t150\tGENE1\tProbable DD gene\tBiallelic\tLoss of function\tSyndromeZ",
+        "1\t200\t250\tGENE2\tConfirmed DD Gene\tBiallelic\tLoss of function\tSyndromeZ",
+        "1\t300\t350\tGENE3\tPossible DD Gene\tMonoallelic\tLoss of function\tSyndromeZ",
+        "1\t400\t450\tGENE4\tBoth DD and IF\tMonoallelic\tLoss of function\tSyndromeZ",
+        "1\t500\t550\tGENE5\tBoth DD and IF\tBialleic\tLoss of function\tSyndromeZ",
+        "X\t600\t650\tGENE6\tBoth DD and IF\tX-linked dominant\tLoss of function\tSyndromeZ",
+        "X\t700\t750\tGENE7\tBoth DD and IF\tHemizygous\tLoss of function\tSyndromeZ")
+    
+    path = tempfile()
+    writeLines(text, path, sep="\n")
+    
+    # define the expected output
+    output = read.table(sep="\t", strip.white=TRUE, header=TRUE, text="
+        chr\tstart\tstop\tgene \ttype             \tmode             \tmech            \tdescription\tdominant\themizygous
+        1  \t100  \t150 \tGENE1\tProbable DD gene \tBiallelic        \tLoss of function\tSyndromeZ  \tFALSE   \tFALSE
+        1  \t200  \t250 \tGENE2\tConfirmed DD Gene\tBiallelic        \tLoss of function\tSyndromeZ  \tFALSE   \tFALSE
+        1  \t400  \t450 \tGENE4\tBoth DD and IF   \tMonoallelic      \tLoss of function\tSyndromeZ  \tTRUE    \tFALSE
+        1  \t500  \t550 \tGENE5\tBoth DD and IF   \tBialleic         \tLoss of function\tSyndromeZ  \tFALSE   \tFALSE
+        X  \t600  \t650 \tGENE6\tBoth DD and IF   \tX-linked dominant\tLoss of function\tSyndromeZ  \tTRUE    \tFALSE
+        X  \t700  \t750 \tGENE7\tBoth DD and IF   \tHemizygous       \tLoss of function\tSyndromeZ  \tFALSE   \tTRUE",
+        colClasses=c("character", "numeric", "numeric", "character",
+            "character", "character", "character", "character", "logical", "logical"))
+    
+    expect_equal(load_ddg2p(path), output)
+    unlink(path)
+})

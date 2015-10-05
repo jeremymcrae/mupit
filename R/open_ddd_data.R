@@ -94,5 +94,11 @@ load_ddg2p <- function(path) {
     ddg2p$dominant = ddg2p$mode %in% c("Monoallelic", "X-linked dominant")
     ddg2p$hemizygous = ddg2p$mode == "Hemizygous"
     
+    # make sure the position columns are as numbers and clean the row numbers
+    # after removing less confident genes
+    ddg2p$start = as.numeric(ddg2p$start)
+    ddg2p$stop = as.numeric(ddg2p$stop)
+    row.names(ddg2p) = 1:nrow(ddg2p)
+    
     return(ddg2p)
 }
