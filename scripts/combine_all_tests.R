@@ -24,9 +24,9 @@ for (diagnosed_string in diagnosed) {
 
     # define the normal de novo analysis result files
     meta_clust = file.path(RESULTS_DIR, paste(prefix, ".meta-analysis.clustering_results.txt", sep=""))
-    meta_enrich = file.path(RESULTS_DIR, paste(prefix, ".meta-analysis.enrichment_results.2015-10-01.txt", sep=""))
+    meta_enrich = file.path(RESULTS_DIR, paste(prefix, ".meta-analysis.enrichment_results.2015-10-02.txt", sep=""))
     clust = file.path(RESULTS_DIR, paste(prefix, ".ddd_only.clustering_results.txt", sep=""))
-    enrich = file.path(RESULTS_DIR, paste(prefix, ".ddd_only.enrichment_results.2015-10-01.txt", sep=""))
+    enrich = file.path(RESULTS_DIR, paste(prefix, ".ddd_only.enrichment_results.2015-10-02.txt", sep=""))
     pheno = file.path(RESULTS_DIR, paste(prefix, ".ddd_only.phenotype_similarity_results.txt", sep=""))
 
     merged = combine_tests(meta_clust, meta_enrich, clust, enrich, pheno)
