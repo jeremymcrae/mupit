@@ -1,12 +1,22 @@
 
+library(argparse)
 library(mupit)
 
-DIAGNOSED_PATH = "/nfs/ddd0/Data/datafreeze/1133trios_20131218/Diagnosis_Summary_1133_20140328.xlsx"
-DE_NOVO_PATH = "/nfs/users/nfs_j/jm33/apps/mupit/data-raw/de_novo_datasets/de_novos.ddd_4k.ddd_only.2015-09-15.txt"
-LOW_PP_DNM_VALIDATIONS_PATH = "/nfs/users/nfs_j/jm33/de_novos.ddd_4k.validation_results.low_pp_dnm.2015-10-02.xlsx"
-FAMILIES_PATH = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/family_relationships.txt"
-DDG2P_PATH = "/lustre/scratch113/projects/ddd/resources/ddd_data_releases/2015-04-13/DDG2P/dd_genes_for_clinical_filter"
-OUTPUT_PATH = "/lustre/scratch113/projects/ddd/users/jm33/ddd_4k.diagnosed.2015-10-02.txt"
+parser = ArgumentParser()
+parser$add_argument("--ddd-1k-diagnoses", help="Path to DDD 1K diagnoses.",
+    default="/nfs/ddd0/Data/datafreeze/1133trios_20131218/Diagnosis_Summary_1133_20140328.xlsx")
+parser$add_argument("--de-novos", help="Path to DDD de novo dataset.",
+    default="/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_4k.ddd_only.2015-10-12.txt")
+parser$add_argument("--low-pp-dnm", help="Path to low PP_DNM validations.",
+    default="/nfs/users/nfs_j/jm33/de_novos.ddd_4k.validation_results.low_pp_dnm.2015-10-02.xlsx")
+parser$add_argument("--families", help="Path to families PED file.",
+    default="/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/family_relationships.txt")
+parser$add_argument("--ddg2p", help="Path to DDG2P file.",
+    default="/lustre/scratch113/projects/ddd/resources/ddd_data_releases/2015-04-13/DDG2P/dd_genes_for_clinical_filter")
+parser$add_argument("--out", help="Path to output file.",
+    default=paste("/lustre/scratch113/projects/ddd/users/jm33/ddd_4k.diagnosed", Sys.Date(), "txt", sep="."))
+
+args = parser$parse_args()
 
 get_ddd_diagnostic_cnvs <- function(path) {
     # load the CNVs
@@ -238,9 +248,9 @@ get_ddd_diagnosed <- function(diagnosed_path, de_novo_path, low_pp_dnm_validatio
 }
 
 main <- function() {
-    diagnosed = get_ddd_diagnosed(DIAGNOSED_PATH, DE_NOVO_PATH, LOW_PP_DNM_VALIDATIONS_PATH, DDG2P_PATH, FAMILIES_PATH)
+    diagnosed = get_ddd_diagnosed(args$ddd_1k_diagnoses, args$de_novos, args$low_pp_dnm, args$ddg2p, args$families)
     
-    write.table(diagnosed, file=OUTPUT_PATH, sep="\t", quote=FALSE, row.names=FALSE)
+    write.table(diagnosed, file=args$out, sep="\t", quote=FALSE, row.names=FALSE)
 }
 
 main()
