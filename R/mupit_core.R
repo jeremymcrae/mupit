@@ -145,7 +145,7 @@ test_enrichment <- function(rates, counts, all_genes=FALSE) {
 #'      ARID1B  6      -5   -6   -6.5  -5           -7
 #'      KMT2A   11     -5   -6   -6.5  -5           -7")
 #' analyse_gene_enrichment(vars, trios, rates=rates)
-analyse_gene_enrichment <- function(de_novos, trios, plot_path=NA, all_genes=FALSE, rates=NULL) {
+analyse_gene_enrichment <- function(de_novos, trios, plot_path=NULL, all_genes=FALSE, rates=NULL) {
     
     # tally the de novos by consequence and variant type
     de_novo_counts = get_de_novo_counts(de_novos)
@@ -154,11 +154,11 @@ analyse_gene_enrichment <- function(de_novos, trios, plot_path=NA, all_genes=FAL
     mutation_rates = get_gene_based_mutation_rates(trios, rates)
     
     # calculate p values for each gene using the mutation rates
-    num_tests = 18500
     enriched = test_enrichment(mutation_rates, de_novo_counts, all_genes)
     
     # make a manhattan plot of enrichment P values
-    if (!is.na(plot_path)) {
+    if (!is.null(plot_path)) {
+        num_tests = 18500
         plot_enrichment_graphs(enriched, num_tests, plot_path)
     }
     
