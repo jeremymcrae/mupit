@@ -16,8 +16,7 @@ parser$add_argument("--trios", help="Path to file listing complete trios.",
     default="/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/trios.txt")
 parser$add_argument("--ddg2p", help="Path to DDG2P file.",
     default="/lustre/scratch113/projects/ddd/resources/ddd_data_releases/2015-04-13/DDG2P/dd_genes_for_clinical_filter")
-parser$add_argument("--diagnosed", help="Path to diagnosed probands file.",
-    default=NULL)
+parser$add_argument("--diagnosed", help="Path to diagnosed probands file.")
 parser$add_argument("--meta-analysis", default=FALSE, action="store_true",
     help="Whether to run meta-analysis that includes other published de novo datasets.")
 parser$add_argument("--out-manhattan", help="Path to put PDF of manhattan plot.")
@@ -145,16 +144,20 @@ run_tests <- function(de_novo_path, validations_path, families_path, trios_path,
     enriched = mupit::analyse_gene_enrichment(de_novos, trios, plot_path=plot_path, rates=rates)
     
     # write the enrichment results to a table
-    write.table(enriched, file=enrichment_path, sep="\t", row.names=FALSE, quote=FALSE)
+    if (!is.null(enrichment_path)) {
+        write.table(enriched, file=enrichment_path, sep="\t", row.names=FALSE, quote=FALSE)
+    }
     
     # and write a list of probands with de novos per gene to a file. This is
     # for HPO similarity testing, so can only be used with DDD samples, since we
     # only have HPO phenotypes available for those individuals.
-    if (!meta) { mupit::write_probands_by_gene(de_novos, json_path) }
+    if (!meta & !is.null(json_path)) { mupit::write_probands_by_gene(de_novos, json_path) }
     
-    # write the set of de novos for clustering analysis
-    write.table(de_novos[, c("hgnc", "chrom", "start_pos", "consequence", "type")],
-        file=clustering_path, sep="\t", row.names=FALSE, quote=FALSE)
+    if (!is.null(clustering_path)) {
+        # write the set of de novos for clustering analysis
+        write.table(de_novos[, c("hgnc", "chrom", "start_pos", "consequence", "type")],
+            file=clustering_path, sep="\t", row.names=FALSE, quote=FALSE)
+    }
 }
 
 main <- function() {
