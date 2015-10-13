@@ -4,8 +4,8 @@
 \alias{analyse_gene_enrichment}
 \title{analyse whether de novo mutations are enriched in genes}
 \usage{
-analyse_gene_enrichment(de_novos, trios, plot_path = NA, all_genes = FALSE,
-  rates = NULL)
+analyse_gene_enrichment(de_novos, trios, plot_path = NULL,
+  all_genes = FALSE, rates = NULL)
 }
 \arguments{
 \item{de_novos}{data frame containing all the observed de novos for all the
