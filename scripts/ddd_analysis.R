@@ -1,15 +1,29 @@
 # script to analyse enrichment of de novo mutations in genes in probands
 
+library(argparse)
 library(mupit)
 
-PROBANDS_JSON_PREFIX = "/nfs/users/nfs_j/jm33/apps/mupit/data-raw/probands_by_gene"
-RATES_PATH = "/nfs/users/nfs_j/jm33/apps/denovonear/results/de_novo_gene_rates.ddd_4k.meta-analysis.txt"
-DE_NOVOS_PATH = "/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_4k.ddd_only.2015-09-02.txt"
-VALIDATIONS_PATH = "/lustre/scratch113/projects/ddd/users/jm33/de_novos.validation_results.2015-09-22.txt"
-DIAGNOSED_PATH = "/lustre/scratch113/projects/ddd/users/jm33/ddd_4k.diagnosed.2015-10-02.txt"
-DDG2P_PATH = "/lustre/scratch113/projects/ddd/resources/ddd_data_releases/2015-04-13/DDG2P/dd_genes_for_clinical_filter"
-FAMILIES_PATH = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/family_relationships.txt"
-TRIOS_PATH = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/trios.txt"
+parser = ArgumentParser()
+parser$add_argument("--rates", help="Path to table of mutation rates.",
+    default="/nfs/users/nfs_j/jm33/apps/denovonear/results/de_novo_gene_rates.ddd_4k.meta-analysis.txt")
+parser$add_argument("--de-novos", help="Path to DDD de novo dataset.",
+    default="/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_4k.ddd_only.2015-10-12.txt")
+parser$add_argument("--validations", help="Path to validation results.",
+    default="/lustre/scratch113/projects/ddd/users/jm33/de_novos.validation_results.2015-10-12.txt")
+parser$add_argument("--families", help="Path to families PED file.",
+    default="/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/family_relationships.txt")
+parser$add_argument("--trios", help="Path to file listing complete trios.",
+    default="/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/trios.txt")
+parser$add_argument("--ddg2p", help="Path to DDG2P file.",
+    default="/lustre/scratch113/projects/ddd/resources/ddd_data_releases/2015-04-13/DDG2P/dd_genes_for_clinical_filter")
+parser$add_argument("--diagnosed", help="Path to diagnosed probands file.",
+    default=NULL)
+parser$add_argument("--meta-analysis", default=FALSE, action="store_true",
+    help="Whether to run meta-analysis that includes other published de novo datasets.")
+parser$add_argument("--out-manhattan", help="Path to put PDF of manhattan plot.")
+parser$add_argument("--out-probands-by-gene", help="Path to put json file of probands per gene.")
+parser$add_argument("--out-enrichment", help="Path to put file of enrichment testing results.")
+parser$add_argument("--out-clustering", help="Path to put file of enrichment testing results.")
 
 #' defines the cohort sizes, used to get the overall population size
 #'
@@ -121,30 +135,17 @@ get_rates_dataset <- function(rates_path) {
 #'
 #' @param diagnosed list of sample IDs and sexes for diagnosed individuals
 #' @param meta boolean for whether to include data for meta-analysis
-run_tests <- function(de_novo_path, validations_path, families_path, trios_path, rates, diagnosed_path, ddg2p_path, meta) {
-    prefix = "de_novos.ddd_4k.with_diagnosed"
-    json_path = paste(PROBANDS_JSON_PREFIX, ".with_diagnosed.json", sep="")
-    if (!is.null(diagnosed_path)) {
-        prefix = "de_novos.ddd_4k.without_diagnosed"
-        json_path = paste(PROBANDS_JSON_PREFIX, ".without_diagnosed.json", sep="")
-    }
-    
-    # sometimes we run with DDD only samples, othertimes we want to include
-    # the data from other cohorts for a meta-analaysis.
-    mid_string = "ddd_only"
-    if (meta) { mid_string = "meta-analysis" }
+run_tests <- function(de_novo_path, validations_path, families_path, trios_path,
+    rates, diagnosed_path, ddg2p_path, meta, plot_path, json_path,
+    enrichment_path, clustering_path) {
     
     # analyse the de novos
     trios = get_trio_counts(families_path, trios_path, diagnosed_path, ddg2p_path, meta)
     de_novos = get_de_novos(de_novo_path, validations_path, diagnosed_path, ddg2p_path, meta)
-    enriched = mupit::analyse_gene_enrichment(de_novos, trios,
-        plot_path=file.path("results", paste(prefix, mid_string, "manhattan",
-        Sys.Date(), "pdf", sep=".")), rates=rates)
+    enriched = mupit::analyse_gene_enrichment(de_novos, trios, plot_path=plot_path, rates=rates)
     
     # write the enrichment results to a table
-    write.table(enriched, file=file.path("results",
-        paste(prefix, mid_string, "enrichment_results", Sys.Date(), "txt",
-        sep=".")), sep="\t", row.names=FALSE, quote=FALSE)
+    write.table(enriched, file=enrichment_path, sep="\t", row.names=FALSE, quote=FALSE)
     
     # and write a list of probands with de novos per gene to a file. This is
     # for HPO similarity testing, so can only be used with DDD samples, since we
@@ -153,27 +154,16 @@ run_tests <- function(de_novo_path, validations_path, families_path, trios_path,
     
     # write the set of de novos for clustering analysis
     write.table(de_novos[, c("hgnc", "chrom", "start_pos", "consequence", "type")],
-        file=file.path("data-raw", paste(prefix, mid_string, "txt", sep=".")),
-        sep="\t", row.names=FALSE, quote=FALSE)
+        file=clustering_path, sep="\t", row.names=FALSE, quote=FALSE)
 }
 
 main <- function() {
-    rates = get_rates_dataset(RATES_PATH)
+    args = parser$parse_args()
+    rates = get_rates_dataset(args$rates)
     
-    run_tests(DE_NOVOS_PATH, VALIDATIONS_PATH, FAMILIES_PATH, TRIOS_PATH, rates, DIAGNOSED_PATH, DDG2P_PATH, meta=FALSE)
-    run_tests(DE_NOVOS_PATH, VALIDATIONS_PATH, FAMILIES_PATH, TRIOS_PATH, rates, DIAGNOSED_PATH, DDG2P_PATH, meta=TRUE)
-    
-    DIAGNOSED_PATH = NULL
-    run_tests(DE_NOVOS_PATH, VALIDATIONS_PATH, FAMILIES_PATH, TRIOS_PATH, rates, DIAGNOSED_PATH, DDG2P_PATH, meta=FALSE)
-    run_tests(DE_NOVOS_PATH, VALIDATIONS_PATH, FAMILIES_PATH, TRIOS_PATH, rates, DIAGNOSED_PATH, DDG2P_PATH, meta=TRUE)
-    
-    # # Plot QQ plots for the meta-analysis de novos (requires statistics for
-    # # all genes).
-    # all_genes = analyse_gene_enrichment(de_novos_meta, trios, all_genes=TRUE)
-    # qqman::qq(all_genes$p_func, main="Functional P values", las=1, cex.lab=1.4, cex.axis=1.4)
-    # qqman::qq(all_genes$p_lof, main="LoF P values", las=1, cex.lab=1.4, cex.axis=1.4)
-    # qqman::qq(all_genes$p_synonymous, main="Synomymous P values", las=1, cex.lab=1.4, cex.axis=1.4)
-    # dev.off()
+    run_tests(args$de_novos, args$validations, args$families, args$trios, rates,
+        args$diagnosed, args$ddg2p, args$meta_analysis, args$plot_path,
+        args$json_path, args$enrichment_path, args$clustering)
 }
 
 
