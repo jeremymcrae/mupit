@@ -129,45 +129,32 @@ get_rates_dataset <- function(rates_path) {
     return(rates)
 }
 
-
-#' run enrichment testing, and writes results as appropriate
-#'
-#' @param diagnosed list of sample IDs and sexes for diagnosed individuals
-#' @param meta boolean for whether to include data for meta-analysis
-run_tests <- function(de_novo_path, validations_path, families_path, trios_path,
-    rates, diagnosed_path, ddg2p_path, meta, plot_path, json_path,
-    enrichment_path, clustering_path) {
+main <- function() {
+    args = parser$parse_args()
+    rates = get_rates_dataset(args$rates)
     
     # analyse the de novos
-    trios = get_trio_counts(families_path, trios_path, diagnosed_path, ddg2p_path, meta)
-    de_novos = get_de_novos(de_novo_path, validations_path, diagnosed_path, ddg2p_path, meta)
-    enriched = mupit::analyse_gene_enrichment(de_novos, trios, plot_path=plot_path, rates=rates)
+    trios = get_trio_counts(args$families, args$trios, args$diagnosed, args$ddg2p, args$meta_analysis)
+    de_novos = get_de_novos(args$de_novos, args$validations, args$diagnosed, args$ddg2p, args$meta_analysis)
+    enriched = mupit::analyse_gene_enrichment(de_novos, trios, plot_path=args$out_manhattan, rates=rates)
     
     # write the enrichment results to a table
-    if (!is.null(enrichment_path)) {
-        write.table(enriched, file=enrichment_path, sep="\t", row.names=FALSE, quote=FALSE)
+    if (!is.null(args$out_enrichment)) {
+        write.table(enriched, file=args$out_enrichment, sep="\t", row.names=FALSE, quote=FALSE)
     }
     
     # and write a list of probands with de novos per gene to a file. This is
     # for HPO similarity testing, so can only be used with DDD samples, since we
     # only have HPO phenotypes available for those individuals.
-    if (!meta & !is.null(json_path)) { mupit::write_probands_by_gene(de_novos, json_path) }
+    if (!args$meta_analysis & !is.null(args$out_probands_by_gene)) {
+        mupit::write_probands_by_gene(de_novos, args$out_probands_by_gene)
+    }
     
-    if (!is.null(clustering_path)) {
+    if (!is.null(args$out_clustering)) {
         # write the set of de novos for clustering analysis
         write.table(de_novos[, c("hgnc", "chrom", "start_pos", "consequence", "type")],
-            file=clustering_path, sep="\t", row.names=FALSE, quote=FALSE)
+            file=args$out_clustering, sep="\t", row.names=FALSE, quote=FALSE)
     }
 }
-
-main <- function() {
-    args = parser$parse_args()
-    rates = get_rates_dataset(args$rates)
-    
-    run_tests(args$de_novos, args$validations, args$families, args$trios, rates,
-        args$diagnosed, args$ddg2p, args$meta_analysis, args$plot_path,
-        args$json_path, args$enrichment_path, args$clustering)
-}
-
 
 main()
