@@ -3,26 +3,32 @@
 library(argparse)
 library(mupit)
 
-parser = ArgumentParser()
-parser$add_argument("--rates", help="Path to table of mutation rates.",
-    default="/nfs/users/nfs_j/jm33/apps/denovonear/results/de_novo_gene_rates.ddd_4k.meta-analysis.txt")
-parser$add_argument("--de-novos", help="Path to DDD de novo dataset.",
-    default="/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_4k.ddd_only.2015-10-12.txt")
-parser$add_argument("--validations", help="Path to validation results.",
-    default="/lustre/scratch113/projects/ddd/users/jm33/de_novos.validation_results.2015-10-12.txt")
-parser$add_argument("--families", help="Path to families PED file.",
-    default="/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/family_relationships.txt")
-parser$add_argument("--trios", help="Path to file listing complete trios.",
-    default="/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/trios.txt")
-parser$add_argument("--ddg2p", help="Path to DDG2P file.",
-    default="/lustre/scratch113/projects/ddd/resources/ddd_data_releases/2015-04-13/DDG2P/dd_genes_for_clinical_filter")
-parser$add_argument("--diagnosed", help="Path to diagnosed probands file.")
-parser$add_argument("--meta-analysis", default=FALSE, action="store_true",
-    help="Whether to run meta-analysis that includes other published de novo datasets.")
-parser$add_argument("--out-manhattan", help="Path to put PDF of manhattan plot.")
-parser$add_argument("--out-probands-by-gene", help="Path to put json file of probands per gene.")
-parser$add_argument("--out-enrichment", help="Path to put file of enrichment testing results.")
-parser$add_argument("--out-clustering", help="Path to put file of enrichment testing results.")
+get_options <- function() {
+    parser = ArgumentParser()
+    parser$add_argument("--rates", help="Path to table of mutation rates.",
+        default="/nfs/users/nfs_j/jm33/apps/denovonear/results/de_novo_gene_rates.ddd_4k.meta-analysis.txt")
+    parser$add_argument("--de-novos", help="Path to DDD de novo dataset.",
+        default="/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_4k.ddd_only.2015-10-12.txt")
+    parser$add_argument("--validations", help="Path to validation results.",
+        default="/lustre/scratch113/projects/ddd/users/jm33/de_novos.validation_results.2015-10-12.txt")
+    parser$add_argument("--families", help="Path to families PED file.",
+        default="/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/family_relationships.txt")
+    parser$add_argument("--trios", help="Path to file listing complete trios.",
+        default="/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/trios.txt")
+    parser$add_argument("--ddg2p", help="Path to DDG2P file.",
+        default="/lustre/scratch113/projects/ddd/resources/ddd_data_releases/2015-04-13/DDG2P/dd_genes_for_clinical_filter")
+    parser$add_argument("--diagnosed", help="Path to diagnosed probands file.")
+    parser$add_argument("--meta-analysis", default=FALSE, action="store_true",
+        help="Whether to run meta-analysis that includes other published de novo datasets.")
+    parser$add_argument("--out-manhattan", help="Path to put PDF of manhattan plot.")
+    parser$add_argument("--out-probands-by-gene", help="Path to put json file of probands per gene.")
+    parser$add_argument("--out-enrichment", help="Path to put file of enrichment testing results.")
+    parser$add_argument("--out-clustering", help="Path to put file of enrichment testing results.")
+    
+    args = parser$parse_args()
+    
+    return(args)
+}
 
 #' defines the cohort sizes, used to get the overall population size
 #'
@@ -130,7 +136,7 @@ get_rates_dataset <- function(rates_path) {
 }
 
 main <- function() {
-    args = parser$parse_args()
+    args = get_options()
     rates = get_rates_dataset(args$rates)
     
     # analyse the de novos
