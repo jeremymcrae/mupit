@@ -1,11 +1,28 @@
-# code to combine the different tests statistics together into a single table
+# script to combine different test statistics together into a single table
 
+library(argparse)
 library(mupit)
 
-CODE_DIR = "/nfs/users/nfs_j/jm33/apps/mupit"
-RESULTS_DIR = file.path(CODE_DIR, "results")
-
-DDG2P_PATH = "/lustre/scratch113/projects/ddd/resources/ddd_data_releases/2015-04-13/DDG2P/dd_genes_for_clinical_filter"
+get_options <- function() {
+    parser = ArgumentParser()
+    parser$add_argument("--ddg2p", help="Path to DDG2P file.")
+    parser$add_argument("--ddd-enrichment",
+        help="Path to results from enrichment testing of DDD de novos.")
+    parser$add_argument("--meta-enrichment",
+        help="Path to results from enrichment testing of meta-analysis de novos.")
+    parser$add_argument("--ddd-clustering",
+        help="Path to results from proximity clustering testing of DDD de novos.")
+    parser$add_argument("--meta-clustering",
+        help="Path to results from proximity clustering testing of meta-analysis de novos.")
+    parser$add_argument("--ddd-phenotype",
+        help="Path to file of DDD HPO similarity testing results.")
+    parser$add_argument("--output",
+        help="Path to write output file for combined testing results.")
+    
+    args = parser$parse_args()
+    
+    return(args)
+}
 
 include_ddg2p_status <- function(merged, ddg2p_path) {
     # load the DDG2P, so that we can annotated the genes with their DDG2P status
@@ -18,18 +35,13 @@ include_ddg2p_status <- function(merged, ddg2p_path) {
     return(merged)
 }
 
-diagnosed = c("with_diagnosed", "without_diagnosed")
-for (diagnosed_string in diagnosed) {
-    prefix = paste("de_novos.ddd_4k.", diagnosed_string, sep="")
-
-    # define the normal de novo analysis result files
-    meta_clust = file.path(RESULTS_DIR, paste(prefix, ".meta-analysis.clustering_results.txt", sep=""))
-    meta_enrich = file.path(RESULTS_DIR, paste(prefix, ".meta-analysis.enrichment_results.2015-10-02.txt", sep=""))
-    clust = file.path(RESULTS_DIR, paste(prefix, ".ddd_only.clustering_results.txt", sep=""))
-    enrich = file.path(RESULTS_DIR, paste(prefix, ".ddd_only.enrichment_results.2015-10-02.txt", sep=""))
-    pheno = file.path(RESULTS_DIR, paste(prefix, ".ddd_only.phenotype_similarity_results.txt", sep=""))
-
-    merged = combine_tests(meta_clust, meta_enrich, clust, enrich, pheno)
-    merged = include_ddg2p_status(merged, DDG2P_PATH)
-    write.table(merged, file=file.path(RESULTS_DIR, paste(prefix, "all", Sys.Date(), "txt", sep=".")), row.names=F, quote=F, sep="\t")
+main <- function() {
+    args = get_options()
+    
+    merged = combine_tests(args$meta_clustering, args$meta_enrichment,
+        args$ddd_clustering, args$ddd_enrichment, args$ddd_phenotype)
+    merged = include_ddg2p_status(merged, args$ddg2p)
+    write.table(merged, file=args$output, row.names=F, quote=F, sep="\t")
 }
+
+main()
