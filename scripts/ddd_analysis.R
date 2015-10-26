@@ -20,6 +20,11 @@ get_options <- function() {
     parser$add_argument("--diagnosed", help="Path to diagnosed probands file.")
     parser$add_argument("--meta-analysis", default=FALSE, action="store_true",
         help="Whether to run meta-analysis that includes other published de novo datasets.")
+    parser$add_argument("--meta-subset",
+        help=paste("Comma-separated list of phenotypes eg",
+            "intellectual_disability,autism. This list determines the subset of",
+            "external studies to include. (defaults to using all subsets, if",
+            "the meta-analysis flag is also used).", sep=" "))
     parser$add_argument("--out-manhattan", help="Path to put PDF of manhattan plot.")
     parser$add_argument("--out-probands-by-gene", help="Path to put json file of probands per gene.")
     parser$add_argument("--out-enrichment", help="Path to put file of enrichment testing results.")
@@ -36,7 +41,7 @@ get_options <- function() {
 #' @param meta true/false for whether to include meta-analysis populations
 #'
 #' @return list with total counts of trios with male and female offspring
-get_trio_counts <- function(families_path, trios_path, diagnosed_path, ddg2p_path, meta=FALSE) {
+get_trio_counts <- function(families_path, trios_path, diagnosed_path, ddg2p_path, meta=FALSE, meta_subset=NULL) {
     
     families = read.table(families_path, sep="\t", header=TRUE, stringsAsFactors=FALSE)
     families$is_proband = families$dad_id != "0" | families$mum_id != "0"
@@ -52,8 +57,13 @@ get_trio_counts <- function(families_path, trios_path, diagnosed_path, ddg2p_pat
     female = sex[["F"]] # female probands
     
     if (meta) {
-        male = male + sum(publishedDeNovos::cohorts$unique_male)
-        female = female + sum(publishedDeNovos::cohorts$unique_female)
+        cohorts = publishedDeNovos::cohorts
+        if (!is.null(meta_subset)) {
+            cohorts = cohorts[cohorts$study_phenotype %in% strsplit(meta_subset, ",")[[1]], ]
+        }
+        
+        male = male + sum(cohorts$unique_male)
+        female = female + sum(cohorts$unique_female)
     }
     
     # remove diagnosed patients, if maximising power
@@ -63,6 +73,10 @@ get_trio_counts <- function(families_path, trios_path, diagnosed_path, ddg2p_pat
         
         ddg2p = load_ddg2p(ddg2p_path)
         external = publishedDeNovos::variants
+        if (!is.null(meta_subset)) {
+            external = external[external$study_phenotype %in% strsplit(meta_subset, ",")[[1]], ]
+        }
+        
         external_diagnosed = external[external$hgnc %in% ddg2p$gene[ddg2p$dominant] |
             (external$sex == "male" & external$hgnc %in% ddg2p$gene[ddg2p$hemizygous]), ]
         external_diagnosed = external_diagnosed[!duplicated(external_diagnosed[, c("person_id", "sex")]), ]
@@ -86,7 +100,7 @@ get_trio_counts <- function(families_path, trios_path, diagnosed_path, ddg2p_pat
 #'
 #' @return data frame containing HGNC, chrom, position, consequence, SNV or
 #'    INDEL type, and study ID.
-get_de_novos <- function(de_novos_path, validations_path, diagnosed_path, ddg2p_path, meta=FALSE) {
+get_de_novos <- function(de_novos_path, validations_path, diagnosed_path, ddg2p_path, meta=FALSE, meta_subset=NULL) {
     
     diagnosed = NULL
     if (!is.null(diagnosed_path)) {
@@ -106,6 +120,10 @@ get_de_novos <- function(de_novos_path, validations_path, diagnosed_path, ddg2p_
     
     if (meta) {
         external = publishedDeNovos::variants
+        if (!is.null(meta_subset)) {
+            external = external[external$study_phenotype %in% strsplit(meta_subset, ",")[[1]], ]
+        }
+        
         if (!is.null(diagnosed_path)) {
             ddg2p = load_ddg2p(ddg2p_path)
             external = external[!(external$hgnc %in% ddg2p$gene[ddg2p$dominant] |
@@ -140,8 +158,8 @@ main <- function() {
     rates = get_rates_dataset(args$rates)
     
     # analyse the de novos
-    trios = get_trio_counts(args$families, args$trios, args$diagnosed, args$ddg2p, args$meta_analysis)
-    de_novos = get_de_novos(args$de_novos, args$validations, args$diagnosed, args$ddg2p, args$meta_analysis)
+    trios = get_trio_counts(args$families, args$trios, args$diagnosed, args$ddg2p, args$meta_analysis, args$meta_subset)
+    de_novos = get_de_novos(args$de_novos, args$validations, args$diagnosed, args$ddg2p, args$meta_analysis, args$meta_subset)
     enriched = mupit::analyse_gene_enrichment(de_novos, trios, plot_path=args$out_manhattan, rates=rates)
     
     # write the enrichment results to a table
