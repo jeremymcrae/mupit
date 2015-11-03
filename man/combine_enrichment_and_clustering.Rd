@@ -21,9 +21,9 @@ combine P values from enrichment and clustering tests into a single P value
 }
 \examples{
 enriched = read.table(header=TRUE, text="
-    hgnc  enrichment_p_value
-    GENE1 0.01
-    GENE2 0.0001")
+    hgnc  p_lof  p_func
+    GENE1 0.01   0.01
+    GENE2 0.0001 0.0001")
 clust = read.table(header=TRUE, text="
     gene_id mutation_category probability
     GENE1   missense          0.1

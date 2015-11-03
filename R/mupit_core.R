@@ -80,8 +80,8 @@ get_de_novo_counts <- function(de_novos) {
 #'     ARID1B 6     0.01        0.005          0.05             0.005
 #'     KMT2A  11    0.01        0.005          0.05             0.005")
 #'
-#' test_enrichment(rates, counts)
-test_enrichment <- function(rates, counts, all_genes=FALSE) {
+#' gene_enrichment(rates, counts)
+gene_enrichment <- function(rates, counts, all_genes=FALSE) {
     
     observed = merge(counts, rates, by = c("hgnc", "chrom"), all.x=TRUE)
     
@@ -108,8 +108,8 @@ test_enrichment <- function(rates, counts, all_genes=FALSE) {
     
     # calculate the probably of getting the observed number of de novos, given
     # the mutation rate
-    observed$p_lof = dpois(lof_count, lambda=lof_rate)
-    observed$p_func = dpois(func_count, lambda=func_rate)
+    observed$p_lof = ppois(lof_count - 1, lambda=lof_rate, lower.tail=FALSE)
+    observed$p_func = ppois(func_count - 1, lambda=func_rate, lower.tail=FALSE)
     
     # remove the rate columns from the dataframe
     observed = observed[, !grepl("rate", names(observed))]
@@ -154,7 +154,7 @@ analyse_gene_enrichment <- function(de_novos, trios, plot_path=NULL, all_genes=F
     mutation_rates = get_gene_based_mutation_rates(trios, rates)
     
     # calculate p values for each gene using the mutation rates
-    enriched = test_enrichment(mutation_rates, de_novo_counts, all_genes)
+    enriched = gene_enrichment(mutation_rates, de_novo_counts, all_genes)
     
     # make a manhattan plot of enrichment P values
     if (!is.null(plot_path)) {

@@ -38,9 +38,9 @@ test_that("fishersMethod is correct for vector with zero", {
 
 test_that("combine_enrichment_and_clustering is correct for small table", {
     enriched = read.table(header=TRUE, text="
-        hgnc  enrichment_p_value
-        GENE1 0.01
-        GENE2 0.0001")
+        hgnc  lof_p  func_p
+        GENE1 0.01   0.01
+        GENE2 0.0001 0.001 ")
     
     clust = read.table(header=TRUE, text="
         gene_id mutation_category probability
@@ -50,17 +50,17 @@ test_that("combine_enrichment_and_clustering is correct for small table", {
         GENE2   nonsense          0.001")
     
     output = read.table(header=TRUE, text="
-    hgnc  enrichment_p_value p_missense_clust p_nonsense_clust p_combined    combined_fdr
-    GENE1 1e-02              0.100            0.100            7.9077553e-03 1.000000000
-    GENE2 1e-04              0.001            0.001            1.7118110e-06 0.031668477")
+    hgnc  lof_p func_p p_missense_clust p_nonsense_clust p_combined    combined_fdr
+    GENE1 1e-02 0.01   0.100            0.100            7.9077553e-03 1.000000000
+    GENE2 1e-04 0.001  0.001            0.001            1.7118110e-06 0.031668477")
     
     expect_equal(combine_enrichment_and_clustering(enriched, clust), output)
     
     # and check that the values are correct when we alter the num_tests variable
     output = read.table(header=TRUE, text="
-    hgnc  enrichment_p_value p_missense_clust p_nonsense_clust p_combined   combined_fdr
-    GENE1 1e-02              0.100            0.100            7.9077553e-03 0.015815510557
-    GENE2 1e-04              0.001            0.001            1.7118110e-06 6.84723826e-06")
+    hgnc  lof_p func_p p_missense_clust p_nonsense_clust p_combined   combined_fdr
+    GENE1 1e-02 0.01   0.100            0.100            7.9077553e-03 0.015815510557
+    GENE2 1e-04 0.001  0.001            0.001            1.7118110e-06 6.84723826e-06")
     
     expect_equal(combine_enrichment_and_clustering(enriched, clust, num_tests=4), output)
 })

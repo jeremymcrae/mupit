@@ -25,7 +25,13 @@ plot_enrichment_graphs <- function(enriched, num_tests, path) {
     threshold = 0.05/num_tests
     
     qqman::manhattan(enriched,
-        chr="chrom", bp="min_pos", snp="hgnc", p="enrichment_p_value",
+        chr="chrom", bp="min_pos", snp="hgnc", p="p_lof",
+        chrlabs=c(1:22, "X"), annotatePval=threshold, annotateTop=FALSE,
+        suggestiveline=FALSE, genomewideline=-log10(threshold),
+        col=colors, las=2)
+    
+    qqman::manhattan(enriched,
+        chr="chrom", bp="min_pos", snp="hgnc", p="p_func",
         chrlabs=c(1:22, "X"), annotatePval=threshold, annotateTop=FALSE,
         suggestiveline=FALSE, genomewideline=-log10(threshold),
         col=colors, las=2)
