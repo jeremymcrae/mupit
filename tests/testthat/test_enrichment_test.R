@@ -20,15 +20,20 @@ test_that("test_enrichment output is correct", {
     # submitted data frame inputs
     output = read.table(header=TRUE, text="
         hgnc   chrom lof_indel lof_snv missense_indel missense_snv min_pos   p_lof        p_func
-        ARID1B 6     1         1       1              1            157150547 0.0001108251 9.327823173e-07
-        KMT2A  11    0         0       0              1            118367083 0.9851119396 6.526756739e-02")
+        ARID1B 6     1         1       1              1            157150547 0.000111381302 9.459951611e-07
+        KMT2A  11    0         0       0              1            118367083 1.000000000000 6.760618009e-02")
     
     expect_equal(gene_enrichment(rates, counts), output)
+    
     # and check that it can also pick up the other gene in the rate table
     counts = read.table(header=TRUE, text="
         hgnc   lof_indel lof_snv missense_indel missense_snv chrom min_pos
         KMT2A  0       0            0         1              11    118367083")
-    expect_equal(gene_enrichment(counts, rates), 0.0535148520465161)
+    output = read.table(header=TRUE, text="
+        hgnc   chrom lof_indel lof_snv missense_indel missense_snv min_pos   p_lof p_func
+        ARID1B 6     NA        NA      NA             NA           NA        NA    NA
+        KMT2A  11    0         0       0              1            118367083 1     6.760618009e-02")
+    expect_equal(gene_enrichment(counts, rates), output)
 })
 
 test_that("analyse_gene_enrichment output is correct", {
@@ -49,9 +54,9 @@ test_that("analyse_gene_enrichment output is correct", {
     # define the expected output, including the exact P-values expected from the
     # submitted data frame inputs
     output = read.table(header=TRUE, text="
-        hgnc   chrom lof_indel lof_snv missense_indel missense_snv p_lof            p_func
-        ARID1B 6     1         1       1              1            0.0008285756758  1.720664202e-07
-        KMT2A  11    0         0       0              1            0.9592889459     4.356374944e-02",
+        hgnc   chrom lof_indel lof_snv missense_indel missense_snv p_lof         p_func
+        ARID1B 6     1         1       1              1            0.0008401753  1.7364753290e-07
+        KMT2A  11    0         0       0              1            1.0           4.4572185724e-02",
         colClasses=c("character", "numeric", "numeric", "numeric", "numeric",
             "numeric", "numeric", "numeric"))
     
