@@ -18,6 +18,9 @@ get_options <- function() {
     parser$add_argument("--ddg2p", help="Path to DDG2P file.",
         default="/lustre/scratch113/projects/ddd/resources/ddd_data_releases/2015-04-13/DDG2P/dd_genes_for_clinical_filter")
     parser$add_argument("--diagnosed", help="Path to diagnosed probands file.")
+    parser$add_argument("--no-ddd", default=FALSE, action="store_true",
+        help=paste("whether to remove all the DDD probands, and run with the",
+            "external subsets alone.", sep="\t")
     parser$add_argument("--meta-analysis", default=FALSE, action="store_true",
         help="Whether to run meta-analysis that includes other published de novo datasets.")
     parser$add_argument("--meta-subset",
@@ -41,7 +44,8 @@ get_options <- function() {
 #' @param meta true/false for whether to include meta-analysis populations
 #'
 #' @return list with total counts of trios with male and female offspring
-get_trio_counts <- function(families_path, trios_path, diagnosed_path, ddg2p_path, meta=FALSE, meta_subset=NULL) {
+get_trio_counts <- function(families_path, trios_path, diagnosed_path,
+    ddg2p_path, meta=FALSE, meta_subset=NULL, no_ddd=FALSE) {
     
     families = read.table(families_path, sep="\t", header=TRUE, stringsAsFactors=FALSE)
     families$is_proband = families$dad_id != "0" | families$mum_id != "0"
@@ -55,6 +59,8 @@ get_trio_counts <- function(families_path, trios_path, diagnosed_path, ddg2p_pat
     sex = table(probands$sex)
     male = sex[["M"]]
     female = sex[["F"]] # female probands
+    
+    if (no_ddd) { male=0; female=0 }
     
     if (meta) {
         cohorts = publishedDeNovos::cohorts
@@ -82,8 +88,10 @@ get_trio_counts <- function(families_path, trios_path, diagnosed_path, ddg2p_pat
         external_diagnosed = external_diagnosed[!duplicated(external_diagnosed[, c("person_id", "sex")]), ]
         
         # decrement for the diagnosed DDD individuals of each sex
-        male = male - sum(ddd_diagnosed$sex %in% c("Male", "male", "M", "m"))
-        female = female - sum(ddd_diagnosed$sex %in% c("Female", "female", "F", "f"))
+        if (!no_ddd) {
+            male = male - sum(ddd_diagnosed$sex %in% c("Male", "male", "M", "m"))
+            female = female - sum(ddd_diagnosed$sex %in% c("Female", "female", "F", "f"))
+        }
         
         # decrement for the diagnosed external individuals of each sex
         male = male - sum(external_diagnosed$sex == "male", na.rm=TRUE)
@@ -100,7 +108,8 @@ get_trio_counts <- function(families_path, trios_path, diagnosed_path, ddg2p_pat
 #'
 #' @return data frame containing HGNC, chrom, position, consequence, SNV or
 #'    INDEL type, and study ID.
-get_de_novos <- function(de_novos_path, validations_path, diagnosed_path, ddg2p_path, meta=FALSE, meta_subset=NULL) {
+get_de_novos <- function(de_novos_path, validations_path, diagnosed_path,
+    ddg2p_path, meta=FALSE, meta_subset=NULL, no_ddd=FALSE) {
     
     diagnosed = NULL
     if (!is.null(diagnosed_path)) {
@@ -117,6 +126,8 @@ get_de_novos <- function(de_novos_path, validations_path, diagnosed_path, ddg2p_
     # or inherited)
     variants = variants[!variants$status %in% c("false_positive", "inherited"), ]
     variants$status = NULL
+    
+    if (no_ddd) { variants = variants[0, ]}
     
     if (meta) {
         external = publishedDeNovos::variants
@@ -158,8 +169,10 @@ main <- function() {
     rates = get_rates_dataset(args$rates)
     
     # analyse the de novos
-    trios = get_trio_counts(args$families, args$trios, args$diagnosed, args$ddg2p, args$meta_analysis, args$meta_subset)
-    de_novos = get_de_novos(args$de_novos, args$validations, args$diagnosed, args$ddg2p, args$meta_analysis, args$meta_subset)
+    trios = get_trio_counts(args$families, args$trios, args$diagnosed,
+        args$ddg2p, args$meta_analysis, args$meta_subset, args$no_ddd)
+    de_novos = get_de_novos(args$de_novos, args$validations, args$diagnosed,
+        args$ddg2p, args$meta_analysis, args$meta_subset, args$no_ddd)
     enriched = mupit::analyse_gene_enrichment(de_novos, trios, plot_path=args$out_manhattan, rates=rates)
     
     # write the enrichment results to a table
