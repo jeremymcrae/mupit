@@ -10,6 +10,7 @@ get_options <- function() {
         default="/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_4k.ddd_only.2015-10-12.txt")
     parser$add_argument("--low-pp-dnm", help="Path to low PP_DNM validations.",
         default="/nfs/users/nfs_j/jm33/de_novos.ddd_4k.validation_results.low_pp_dnm.2015-10-02.xlsx")
+    parser$add_argument("--recessive-diagnoses", help="Path to additional recessive diagnoses.")
     parser$add_argument("--families", help="Path to families PED file.",
         default="/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/family_relationships.txt")
     parser$add_argument("--ddg2p", help="Path to DDG2P file.",
@@ -214,7 +215,8 @@ check_for_match <- function(site, initial, pos=FALSE) {
 #'
 #' @return A list containing vectors with DDD IDs, and sex of the diagnosed
 #'     probands
-get_ddd_diagnosed <- function(diagnosed_path, de_novo_path, low_pp_dnm_validations_path, ddg2p_path, families_path) {
+get_ddd_diagnosed <- function(diagnosed_path, de_novo_path,
+    low_pp_dnm_validations_path, ddg2p_path, families_path, recessive_path) {
     
     initial_diagnosed = get_previous(diagnosed_path, families_path)
     
@@ -248,13 +250,19 @@ get_ddd_diagnosed <- function(diagnosed_path, de_novo_path, low_pp_dnm_validatio
     
     diagnosed = rbind(initial_diagnosed, likely_diagnostic)
     
+    if (!is.null(recessive_path)) {
+        recessive = read.table(recessive_path, sep="\t", header=TRUE, stringsAsFactors=FALSE)
+        diagnosed = rbind(diagnosed, recessive)
+    }
+    
     return(diagnosed)
 }
 
 main <- function() {
     
     args = get_options()
-    diagnosed = get_ddd_diagnosed(args$ddd_1k_diagnoses, args$de_novos, args$low_pp_dnm, args$ddg2p, args$families)
+    diagnosed = get_ddd_diagnosed(args$ddd_1k_diagnoses, args$de_novos,
+        args$low_pp_dnm, args$ddg2p, args$families, args$recessive_diagnoses)
     
     write.table(diagnosed, file=args$out, sep="\t", quote=FALSE, row.names=FALSE)
 }
