@@ -20,7 +20,7 @@ get_options <- function() {
     parser$add_argument("--diagnosed", help="Path to diagnosed probands file.")
     parser$add_argument("--no-ddd", default=FALSE, action="store_true",
         help=paste("whether to remove all the DDD probands, and run with the",
-            "external subsets alone.", sep="\t")
+            "external subsets alone.", sep="\t"))
     parser$add_argument("--meta-analysis", default=FALSE, action="store_true",
         help="Whether to run meta-analysis that includes other published de novo datasets.")
     parser$add_argument("--meta-subset",
