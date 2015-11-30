@@ -5,7 +5,7 @@
 \title{find the most significant P value for each gene from the P values from
 different subsets and different tests}
 \usage{
-combine_tests(meta_clust, meta_enrich, clust, enrich, phenotype)
+combine_tests(meta_clust, meta_enrich, clust, enrich, pheno_path = NULL)
 }
 \arguments{
 \item{meta_clust}{path to clustering results for the meta-analysis subset}
@@ -16,7 +16,7 @@ combine_tests(meta_clust, meta_enrich, clust, enrich, phenotype)
 
 \item{enrich}{path to enrichment results for the ddd only subset}
 
-\item{phenotype}{path to phenotype similarity testing results}
+\item{pheno_path}{path to phenotype similarity testing results}
 }
 \value{
 data frame with the columns from all the datasets, as well as minimum

@@ -71,13 +71,13 @@ combine_enrichment_and_clustering <- function(enriched, clust, num_tests=18500) 
 #' @param meta_enrich path to enrichment results for the meta-analysis subset
 #' @param clust path to clustering results for the ddd only subset
 #' @param enrich path to enrichment results for the ddd only subset
-#' @param phenotype path to phenotype similarity testing results
+#' @param pheno_path path to phenotype similarity testing results
 #' @export
 #'
 #' @return data frame with the columns from all the datasets, as well as minimum
 #'     P values from each subset for each gene, and overall minimum P values for
 #'     each gene.
-combine_tests <- function(meta_clust, meta_enrich, clust, enrich, phenotype) {
+combine_tests <- function(meta_clust, meta_enrich, clust, enrich, pheno_path=NULL) {
     
     # load all the data files in
     clust = read.table(clust, header=TRUE, sep="\t")
@@ -88,11 +88,11 @@ combine_tests <- function(meta_clust, meta_enrich, clust, enrich, phenotype) {
     meta = combine_enrichment_and_clustering(meta_enrich, meta_clust)
     ddd = combine_enrichment_and_clustering(enrich, clust)
     
-    # read in p values from HPO similarity analyses
-    phenotypes = read.table(phenotype, header=TRUE, sep="\t")
-    
-    ddd = merge(ddd, phenotypes, by="hgnc", all.x=TRUE)
-    ddd$p_min_with_pheno = apply(ddd[, c("p_combined", "hpo_similarity_p_value")], 1, fishersMethod)
+    # if we have phenotypic similarity results, merge them with the other results
+    if (!is.null(pheno_path)) {
+        phenotypes = read.table(pheno_path, header=TRUE, sep="\t")
+        ddd = merge(ddd, phenotypes, by="hgnc", all.x=TRUE)
+    }
     
     # need names that are more informative as same across files, add prefix
     names(ddd)[3:length(names(ddd))] = paste("ddd", names(ddd)[3:length(names(ddd))], sep=".")
@@ -100,7 +100,7 @@ combine_tests <- function(meta_clust, meta_enrich, clust, enrich, phenotype) {
     
     # merge together files, focusing on genes with DNMs in DDD
     merged = merge(meta, ddd, by=c("hgnc", "chrom"), all.x=TRUE)
-    merged$p_min = apply(merged[, c("ddd.p_min", "ddd.p_min_with_pheno", "meta.p_min")], 1,
+    merged$p_min = apply(merged[, c("ddd.p_min", "meta.p_min")], 1,
         function(x) ifelse(length(x[!is.na(x)]) > 0, min(x[!is.na(x)]), NA))
     
     return(merged)
