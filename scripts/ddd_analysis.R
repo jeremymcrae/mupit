@@ -6,11 +6,11 @@ library(mupit)
 get_options <- function() {
     parser = ArgumentParser()
     parser$add_argument("--rates", help="Path to table of mutation rates.",
-        default="/nfs/users/nfs_j/jm33/apps/denovonear/results/de_novo_gene_rates.ddd_4k.meta-analysis.txt")
+        default="/lustre/scratch113/projects/ddd/users/jm33//de_novos.ddd_4k.mutation_rates.2015-11-24.txt")
     parser$add_argument("--de-novos", help="Path to DDD de novo dataset.",
-        default="/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_4k.ddd_only.2015-10-12.txt")
+        default="/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_4k.ddd_only.2015-11-24.txt")
     parser$add_argument("--validations", help="Path to validation results.",
-        default="/lustre/scratch113/projects/ddd/users/jm33/de_novos.validation_results.2015-10-12.txt")
+        default="/lustre/scratch113/projects/ddd/users/jm33/de_novos.validation_results.2015-11-24.txt")
     parser$add_argument("--families", help="Path to families PED file.",
         default="/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/family_relationships.txt")
     parser$add_argument("--trios", help="Path to file listing complete trios.",
