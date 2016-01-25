@@ -53,6 +53,8 @@ def test_enrich(expected, observed, columns):
         observed: pandas data frame with tally of de novo mutations per gene
             for each of the mutation types: lof_snv, lof_indel, missense_snv,
             missense_indel.
+        columns: list of ciolumns to use to calculate enrichment within, such as
+            the loss-of-fuinction columns ["lof_snv", "lof_indel"].
     
     Returns:
         pandas Series of P-values from testing for enrichment.
