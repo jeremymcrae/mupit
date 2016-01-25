@@ -22,6 +22,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import unittest
 import math
 
+import numpy
+
 class CompareTables(unittest.TestCase):
     def compare_tables(self, first, second):
         """ check if two Dataframes contain the same information.
@@ -54,7 +56,13 @@ class CompareTables(unittest.TestCase):
                     msg = "{:.20f} != {:.20f} at position {} in {}".format( \
                         first_val, second_val, pos, column)
                 
-                if type(first_val) == float and math.isnan(first_val):
+                if type(first_val) in [float, numpy.float64] and math.isnan(first_val):
+                    # if one is nan, check that the other is also nan, since
+                    # nan entries cannot be chacked for eqaulity.
                     self.assertTrue(math.isnan(second_val), msg)
+                elif type(first_val) in [float, numpy.float64]:
+                    # Only check if floats are nearly equal to get around float
+                    # precision issues.
+                    self.assertAlmostEqual(first_val, second_val, msg=msg)
                 else:
                     self.assertEqual(first_val, second_val, msg)

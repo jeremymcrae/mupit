@@ -56,13 +56,13 @@ def combine_enrichment_and_clustering(enriched, clust):
     # read in p values from clustering analysis, only for genes with >1 mutation
     clust = pandas.pivot_table(clust, rows=["gene_id"],
         cols=["mutation_category"], values="probability", aggfunc=numpy.mean)
-    clust["gene_id"] = list(clust.index)
+    clust["hgnc"] = list(clust.index)
     columns = ["missense", "nonsense"]
     rename = dict(zip(columns, [ "p_{}_clust".format(x) for x in columns ]))
     clust = clust.rename(columns=rename)
     
     # merge the datasets
-    merged = enriched.merge(clust, how="left", left_on="hgnc", right_on="gene_id")
+    merged = enriched.merge(clust, how="left", on="hgnc")
     
     # calculate a combined p-value for each gene. We don't expect the
     # loss-of-function de novos to be clustered, so we don't use that.
