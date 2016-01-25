@@ -1,13 +1,16 @@
 """
-Copyright (c) 2015 Genome Research Ltd.
+Copyright (c) 2016 Genome Research Ltd.
+
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
 the Software without restriction, including without limitation the rights to
 use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
 of the Software, and to permit persons to whom the Software is furnished to do
 so, subject to the following conditions:
+
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
+
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
 FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
@@ -17,13 +20,16 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
 import unittest
+import math
 
+import numpy
 from pandas import DataFrame, Series, pivot_table, MultiIndex
 
 from mupit.count_de_novos import get_de_novo_counts, get_var_type, \
     tidy_count_data
+from tests.compare_dataframes import CompareTables
 
-class TestCountDeNovosPy(unittest.TestCase):
+class TestCountDeNovosPy(CompareTables):
     """ unit test the de novo mutation counting functions
     """
     
@@ -50,23 +56,6 @@ class TestCountDeNovosPy(unittest.TestCase):
             "missense_indel": [0],
             "missense_snv": [0]
             })
-    
-    def compare_tables(self, first, second):
-        """ compare two pandas Dataframes to see if they contain the same Dataframes
-        
-        Note that the dataframes don't have to have the same column order.
-        
-        Args:
-            first: pandas DataFrame
-            second: pandas DataFrame
-        """
-        
-        # make sure the two tables have the same columns
-        self.assertEqual(set(first.columns), set(second.columns))
-        
-        # make sure the values in the columns are identical between tables
-        for column in first:
-            self.assertEqual(list(first[column]), list(second[column]))
     
     def test_get_de_novo_counts_missense(self):
         """ check the de novo counts for missense-equivalent consequences
@@ -187,6 +176,16 @@ class TestCountDeNovosPy(unittest.TestCase):
         computed = get_de_novo_counts(self.de_novos)
         self.compare_tables(computed, self.expected)
     
+    def test_get_de_novo_counts_type_included(self):
+        """ check the de novo counts when a type column is included
+        """
+        
+        # set the variant type before counting
+        self.de_novos["type"] = "snv"
+        self.expected["missense_snv"] = 1
+        computed = get_de_novo_counts(self.de_novos)
+        self.compare_tables(computed, self.expected)
+    
     def test_get_var_type(self):
         """ check that get_var_type works correctly
         """
@@ -214,10 +213,21 @@ class TestCountDeNovosPy(unittest.TestCase):
         """ make sure that standardising the count table works correctly
         """
         
-        arrays = [[1, 1, 2, 2], ['red', 'blue', 'red', 'blue']]
-        index = MultiIndex.from_arrays(arrays, names=['first', 'second'])
+        # make sure an empty table gets all the necessary columns filled in
+        counts = DataFrame({"hgnc": ["KMT2A"]}, index=["KMT2A"])
+        self.compare_tables(tidy_count_data(counts, self.de_novos), self.expected)
         
+        # construct a dataframe in the format which will be received by the
+        # tidy_count_data function.
+        arrays = [["lof", "lof", "missense", "missense"],
+            ["snv", "indel", "snv", "indel"]]
+        tuples = list(zip(*arrays))
+        index = MultiIndex.from_tuples(tuples, names=['consequence', 'type'])
+        counts = DataFrame({}, index=["KMT2A"], columns=index)
         
-        # counts = DataFrame({})
+        for col in ["lof_indel", "lof_snv", "missense_indel", "missense_snv"]:
+            self.expected[col] = numpy.nan
+        
+        self.compare_tables(tidy_count_data(counts, self.de_novos), self.expected)
         
         
