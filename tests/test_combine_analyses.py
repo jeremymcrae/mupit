@@ -31,6 +31,21 @@ from tests.compare_dataframes import CompareTables
 
 class TestCombineAnalyses(CompareTables):
     
+    def setUp(self):
+        
+        self.enriched = DataFrame({
+            "hgnc": ["GENE1", "GENE2"],
+            "chrom": ["1", "X"],
+            "p_lof": [0.01, 0.0001],
+            "p_func": [0.01, 0.001],
+            })
+        
+        self.clustered = DataFrame({
+            "gene_id": ["GENE1", "GENE1", "GENE2", "GENE2"],
+            "mutation_category": ["missense", "nonsense", "missense", "nonsense"],
+            "probability": [0.1, 0.1, 0.001, 0.001],
+            })
+    
     def test_fishersMethod(self):
         """ check that fishers combined method calculates correctly
         """
@@ -63,20 +78,9 @@ class TestCombineAnalyses(CompareTables):
         """ check that combine_enrichment_and_clustering datasets work correctly
         """
         
-        enriched = DataFrame({
-            "hgnc": ["GENE1", "GENE2"],
-            "p_lof": [0.01, 0.0001],
-            "p_func": [0.01, 0.001],
-            })
-        
-        clust = DataFrame({
-            "gene_id": ["GENE1", "GENE1", "GENE2", "GENE2"],
-            "mutation_category": ["missense", "nonsense", "missense", "nonsense"],
-            "probability": [0.1, 0.1, 0.001, 0.001],
-            })
-        
         expected = DataFrame({
             "hgnc": ["GENE1", "GENE2"],
+            "chrom": ["1", "X"],
             "p_lof": [1e-2, 1e-4],
             "p_func": [0.0100, 0.001],
             "p_missense_clust": [0.100, 0.001],
@@ -85,24 +89,12 @@ class TestCombineAnalyses(CompareTables):
             "p_min": [7.90775527898e-03, 1.48155105579e-05],
             })
         
-        self.compare_tables(combine_enrichment_and_clustering(enriched, clust), expected)
+        computed = combine_enrichment_and_clustering(self.enriched, self.clustered)
+        self.compare_tables(computed, expected)
     
     def test_combine_tests(self):
         """
         """
-        
-        enriched = DataFrame({
-            "hgnc": ["GENE1", "GENE2"],
-            "chrom": ["1", "X"],
-            "p_lof": [0.01, 0.0001],
-            "p_func": [0.01, 0.001],
-            })
-        
-        clustered = DataFrame({
-            "gene_id": ["GENE1", "GENE1", "GENE2", "GENE2"],
-            "mutation_category": ["missense", "nonsense", "missense", "nonsense"],
-            "probability": [0.1, 0.1, 0.001, 0.001],
-            })
         
         phenotype = DataFrame({
             "hgnc": ["GENE1", "GENE2", "GENE3"],
@@ -117,10 +109,10 @@ class TestCombineAnalyses(CompareTables):
         pheno = tempfile.NamedTemporaryFile()
         
         # write the dataframes to file
-        enriched.to_csv(meta_enrich, sep="\t", index=False)
-        enriched.to_csv(enrich, sep="\t", index=False)
-        clustered.to_csv(meta_clust, sep="\t", index=False)
-        clustered.to_csv(clust, sep="\t", index=False)
+        self.enriched.to_csv(meta_enrich, sep="\t", index=False)
+        self.enriched.to_csv(enrich, sep="\t", index=False)
+        self.clustered.to_csv(meta_clust, sep="\t", index=False)
+        self.clustered.to_csv(clust, sep="\t", index=False)
         phenotype.to_csv(pheno, sep="\t", index=False)
         
         # make sure all the files have finished writing
