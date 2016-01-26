@@ -29,7 +29,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib import pyplot
 
 def plot_enrichment(enriched, num_tests, path, chrom="chrom", symbol="hgnc",
-    position="min_pos", p_columns=None):
+    position="start_pos", p_columns=None):
     """ make Manhattan plots for loss-of-function and functional variants
     
     Args:
@@ -118,11 +118,11 @@ def make_figure(enriched, num_tests, test, pdf, chrom="chrom", symbol="hgnc"):
         text = ax.text(row["pos"], row["log10_p"], row[symbol],
             fontsize="xx-small", fontstyle="italic")
     
-    annotate_plot(ax, ticks, chrom)
+    annotate_plot(ax, ticks, sorted(set(enriched[chrom])))
     
     pdf.savefig()
 
-def annotate_plot(ax, ticks, chrom="chrom"):
+def annotate_plot(ax, ticks, chroms):
     """ annotate a manhattan plot with axis labels, tickmarks etc
     
     Args:
@@ -143,13 +143,13 @@ def annotate_plot(ax, ticks, chrom="chrom"):
     
     # add in the chromosome ticks and labels
     e = ax.set_xticks(ticks)
-    e = ax.set_xticklabels(sorted(set(enriched[chrom])))
+    e = ax.set_xticklabels(chroms)
     
     # define the axes labels
     e = ax.set_xlabel("Chromosome")
     e = ax.set_ylabel("-log10(P)")
 
-def adjust_coordinates(coords, chrom="chrom", position="min_pos"):
+def adjust_coordinates(coords, chrom="chrom", position="start_pos"):
     """ get sequential positions across successive chromosomes
     
     Manhattan plots have successive chromosomes plotted one after another. But

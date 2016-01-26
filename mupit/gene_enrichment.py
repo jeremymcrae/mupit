@@ -21,6 +21,42 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 from scipy.stats import poisson
 
+from mupit.count_de_novos import get_de_novo_counts
+from mupit.mutation_rates import get_expected_mutations
+from mupit.plot_enrichment import plot_enrichment
+
+def analyse_enrichment(de_novos, trios, plot_path=None, rates=None):
+    """ analyse whether de novo mutations are enriched in genes
+    
+    Args:
+        de_novos: data frame containing all the observed de novos for all the
+            genes
+        trios: dictionary of male and female proband counts in the population
+        plot_path: path to save enrichment plots to, or None
+        rates: gene-based mutation rates data frame, or None
+    
+    Returns:
+        data frame containing results from testing for enrichment of de
+        in each gene with de novos in it.
+    """
+    
+    observed = get_de_novo_counts(de_novos)
+    expected = get_expected_mutations(rates, trios["male"], trios["female"])
+    
+    # calculate p values for each gene using the mutation rates
+    enrichment = gene_enrichment(expected, observed)
+    
+    # make a manhattan plot of enrichment P values
+    if plot_path is not None:
+        num_tests = 18500
+        plot_enrichment(enrichment, num_tests, plot_path, p_columns=["p_lof", "p_func"])
+    
+    # remove the position column (which is only used to be able to locate the
+    # gene's position on a chromosome on a Manhattan plot).
+    del enrichment["start_pos"]
+    
+    return enrichment
+
 def gene_enrichment(expected, observed):
     """ tests whether genes are enriched with de novo mutations
     

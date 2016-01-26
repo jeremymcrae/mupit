@@ -37,6 +37,8 @@ def get_de_novo_counts(de_novos):
         types.
     """
     
+    de_novos = de_novos.copy()
+    
     # group the lof and missence consequence strings, and drop all the
     # non-functional de novos
     consequence = de_novos["consequence"]
@@ -47,7 +49,7 @@ def get_de_novo_counts(de_novos):
     de_novos["type"] = get_var_type(de_novos)
     
     # count the number of de novos for each type/consequence combination
-    counts = pivot_table(de_novos, values="person_stable_id", rows=["hgnc"],
+    counts = pivot_table(de_novos, values="person_id", rows=["hgnc"],
         cols=["consequence", "type"], aggfunc=len, fill_value=0)
     
     counts = tidy_count_data(counts, de_novos)
@@ -81,7 +83,7 @@ def tidy_count_data(counts, de_novos):
     
     Args:
         counts: a hierarchically indexed pandas DataFrame of de novo counts
-            across different consequence and varaint type categories.
+            across different consequence and variant type categories.
         de_novos: pandas dataframe of de novo variants.
     
     Returns:
