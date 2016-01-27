@@ -10,8 +10,6 @@
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
 standardise_ddd_de_novos <- function(path) {
     
-    # load a set of DDD de novos, that are the independent event (ie duplicate
-    # de novos within families have been removed).
     variants = read.table(path, header=TRUE, sep="\t", stringsAsFactors=FALSE)
     
     # standardise the SNV or INDEL flag
@@ -31,9 +29,13 @@ standardise_ddd_de_novos <- function(path) {
     variants$publication_doi = NA
     variants$study_phenotype = "developmental_disorders"
     
-    variants = subset(variants, select=c("person_id", "sex", "chrom", "start_pos",
+    # standardise the sex codes
+    variants$sex[variants$sex == "M"] = "male"
+    variants$sex[variants$sex == "F"] = "female"
+    
+    variants = variants[, c("person_id", "sex", "chrom", "start_pos",
         "end_pos", "ref_allele", "alt_allele", "hgnc", "consequence",
-        "study_code", "publication_doi", "study_phenotype", "type"))
+        "study_code", "publication_doi", "study_phenotype", "type")]
     
     return(variants)
 }
@@ -53,8 +55,6 @@ standardise_ddd_de_novos <- function(path) {
 #'     (VEP format), chromosome, nucleotide position and SNV or INDEL type
 get_ddd_de_novos <- function(path, diagnosed=NULL, subset=NULL) {
     
-    # try and use the data from the package, if it is available, otherwise
-    # generate the dataset
     variants = standardise_ddd_de_novos(path)
     
     # remove diagnosed patients, if maximising power
