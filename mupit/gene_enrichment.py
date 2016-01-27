@@ -25,7 +25,7 @@ from mupit.count_de_novos import get_de_novo_counts
 from mupit.mutation_rates import get_expected_mutations
 from mupit.plot_enrichment import plot_enrichment
 
-def analyse_enrichment(de_novos, trios, plot_path=None, rates=None):
+def analyse_enrichment(de_novos, trios, rates=None, plot_path=None):
     """ analyse whether de novo mutations are enriched in genes
     
     Args:
