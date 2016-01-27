@@ -77,25 +77,27 @@ get_trio_counts <- function(families_path, trios_path, diagnosed_path,
         ddd_diagnosed = read.table(diagnosed_path, sep="\t", header=TRUE, stringsAsFactors=FALSE)
         ddd_diagnosed = ddd_diagnosed[!duplicated(ddd_diagnosed[, c("person_id", "sex")]), ]
         
-        ddg2p = load_ddg2p(ddg2p_path)
-        external = publishedDeNovos::variants
-        if (!is.null(meta_subset)) {
-            external = external[external$study_phenotype %in% strsplit(meta_subset, ",")[[1]], ]
-        }
-        
-        external_diagnosed = external[external$hgnc %in% ddg2p$gene[ddg2p$dominant] |
-            (external$sex == "male" & external$hgnc %in% ddg2p$gene[ddg2p$hemizygous]), ]
-        external_diagnosed = external_diagnosed[!duplicated(external_diagnosed[, c("person_id", "sex")]), ]
-        
         # decrement for the diagnosed DDD individuals of each sex
         if (!no_ddd) {
             male = male - sum(ddd_diagnosed$sex %in% c("Male", "male", "M", "m"))
             female = female - sum(ddd_diagnosed$sex %in% c("Female", "female", "F", "f"))
         }
         
-        # decrement for the diagnosed external individuals of each sex
-        male = male - sum(external_diagnosed$sex == "male", na.rm=TRUE)
-        female = female - sum(external_diagnosed$sex == "female", na.rm=TRUE)
+        if (meta) {
+            ddg2p = load_ddg2p(ddg2p_path)
+            external = publishedDeNovos::variants
+            if (!is.null(meta_subset)) {
+                external = external[external$study_phenotype %in% strsplit(meta_subset, ",")[[1]], ]
+            }
+            
+            external_diagnosed = external[external$hgnc %in% ddg2p$gene[ddg2p$dominant] |
+                (external$sex == "male" & external$hgnc %in% ddg2p$gene[ddg2p$hemizygous]), ]
+            external_diagnosed = external_diagnosed[!duplicated(external_diagnosed[, c("person_id", "sex")]), ]
+            
+            # decrement for the diagnosed external individuals of each sex
+            male = male - sum(external_diagnosed$sex == "male", na.rm=TRUE)
+            female = female - sum(external_diagnosed$sex == "female", na.rm=TRUE)
+        }
     }
     
     return(list(male=male, female=female))
