@@ -141,7 +141,7 @@ class TestCountDeNovosPy(CompareTables):
         self.expected["missense_snv"] = 1
         
         for cq in snv:
-            self.de_novos["consequence"][0] = cq
+            self.de_novos.loc[0, "consequence"] = cq
             computed = get_de_novo_counts(self.de_novos)
             self.compare_tables(computed, self.expected)
     
@@ -162,17 +162,17 @@ class TestCountDeNovosPy(CompareTables):
         # counting two different variant types gives two counts of 1
         self.expected["missense_snv"] = 1
         self.expected["lof_snv"] = 1
-        self.de_novos["consequence"][0] = "stop_gained"
+        self.de_novos.loc[0, "consequence"] = "stop_gained"
         computed = get_de_novo_counts(self.de_novos)
         self.compare_tables(computed, self.expected)
         
         # now check when we have two variants in different genes
         new_row = self.expected.copy()
         self.expected = self.expected.append(new_row, ignore_index=True)
-        self.de_novos["hgnc"][0] = "ARID1B"
-        self.expected["hgnc"][0] = "ARID1B"
-        self.expected["missense_snv"][0] = 0
-        self.expected["lof_snv"][1] = 0
+        self.de_novos.loc[0, "hgnc"] = "ARID1B"
+        self.expected.loc[0, "hgnc"] = "ARID1B"
+        self.expected.loc[0, "missense_snv"] = 0
+        self.expected.loc[1, "lof_snv"] = 0
         computed = get_de_novo_counts(self.de_novos)
         self.compare_tables(computed, self.expected)
     

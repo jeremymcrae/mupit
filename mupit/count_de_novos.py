@@ -41,10 +41,11 @@ def get_de_novo_counts(de_novos):
     
     # group the lof and missence consequence strings, and drop all the
     # non-functional de novos
-    consequence = de_novos["consequence"]
+    consequence = de_novos["consequence"].copy()
     consequence[consequence.isin(LOF_CQ)] = "lof"
     consequence[consequence.isin(MISSENSE_CQ)] = "missense"
-    de_novos = de_novos[consequence.isin(["missense", "lof"])]
+    de_novos["consequence"] = consequence
+    de_novos = de_novos[de_novos["consequence"].isin(["missense", "lof"])]
     
     de_novos["type"] = get_var_type(de_novos)
     

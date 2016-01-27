@@ -109,11 +109,11 @@ class TestCombineAnalyses(CompareTables):
         pheno = tempfile.NamedTemporaryFile()
         
         # write the dataframes to file
-        self.enriched.to_csv(meta_enrich, sep="\t", index=False)
-        self.enriched.to_csv(enrich, sep="\t", index=False)
-        self.clustered.to_csv(meta_clust, sep="\t", index=False)
-        self.clustered.to_csv(clust, sep="\t", index=False)
-        phenotype.to_csv(pheno, sep="\t", index=False)
+        self.enriched.to_csv(meta_enrich.name, sep="\t", index=False)
+        self.enriched.to_csv(enrich.name, sep="\t", index=False)
+        self.clustered.to_csv(meta_clust.name, sep="\t", index=False)
+        self.clustered.to_csv(clust.name, sep="\t", index=False)
+        phenotype.to_csv(pheno.name, sep="\t", index=False)
         
         # make sure all the files have finished writing
         meta_clust.flush()
