@@ -38,7 +38,7 @@ class TestCountDeNovosPy(CompareTables):
         """
         
         self.de_novos = DataFrame({
-            "person_stable_id": ["1"],
+            "person_id": ["1"],
             "hgnc": ["KMT2A"],
             "chrom": ["1"],
             "start_pos": [1],
