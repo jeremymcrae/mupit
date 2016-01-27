@@ -20,7 +20,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
 import numpy
-from pandas import pivot_table, Series, DataFrame
+import pandas
 
 from mupit.constants import LOF_CQ, MISSENSE_CQ
 
@@ -49,8 +49,12 @@ def get_de_novo_counts(de_novos):
     de_novos["type"] = get_var_type(de_novos)
     
     # count the number of de novos for each type/consequence combination
-    counts = pivot_table(de_novos, values="person_id", rows=["hgnc"],
-        cols=["consequence", "type"], aggfunc=len, fill_value=0)
+    if pandas.__version__ < "0.14.0":
+        counts = pandas.pivot_table(de_novos, values="person_id", rows=["hgnc"],
+            cols=["consequence", "type"], aggfunc=len, fill_value=0)
+    else:
+        counts = pandas.pivot_table(de_novos, values="person_id", index=["hgnc"],
+            columns=["consequence", "type"], aggfunc=len, fill_value=0)
     
     counts = tidy_count_data(counts, de_novos)
     
@@ -70,7 +74,7 @@ def get_var_type(de_novos):
     if "type" in de_novos.columns:
         var_type = de_novos["type"]
     else:
-        var_type = Series(["snv"] * len(de_novos), index=de_novos.index)
+        var_type = pandas.Series(["snv"] * len(de_novos), index=de_novos.index)
         ref_length = de_novos["ref"].str.len()
         alt_length = de_novos["alt"].str.len()
         
@@ -90,7 +94,7 @@ def tidy_count_data(counts, de_novos):
         count table, with a flattened index, and standardised columns.
     """
     
-    counts.columns = ['_'.join(col).strip() for col in counts.columns.values]
+    counts.columns = [ '_'.join(col).strip() for col in counts.columns.values ]
     
     # Get the genome coordinates of the de novos at the minimum position for
     # each gene. This is so we can make Manhattan plots of significance by
