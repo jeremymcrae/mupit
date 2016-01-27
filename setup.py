@@ -33,8 +33,7 @@ setup(
     install_requires=['pandas >= 0.13.1',
                       'scipy >= 0.9.0',
                       'numpy >= 1.6.1',
-                      # 'matplotlib >= 1.3.1',
-                      # 'seaborn >= 0.6.0',
+                      'matplotlib >= 1.3.1',
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",
