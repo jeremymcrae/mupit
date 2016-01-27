@@ -1,7 +1,16 @@
 language: python
 python:
-  - 3.3
   - 2.7
+  - 3.3
+  - 3.5
+cache:
+  directories:
+    - $HOME/.cache/pip
+addons:
+  apt:
+    packages:
+      - libatlas-base-dev
+      - gfortran
 before_install:
  - mkdir -p $HOME/.cache/pip/wheels
  # build wheel only if none present
