@@ -1,14 +1,22 @@
-language: r
-sudo: required
-warnings_are_errors: true
-r_packages:
- - covr
- - testthat
-r_github_packages:
- - jeremymcrae/publishedDeNovos
- # install the latest version of qqman, which isn't available on CRAN yet
- - stephenturner/qqman
-r_binary_packages:
- - testthat
+language: python
+python:
+  - 3.3
+  - 2.7
+before_install:
+ - mkdir -p $HOME/.cache/pip/wheels
+ # build wheel only if none present
+ - travis_wait pip wheel --find-links=$HOME/.cache/pip/wheels --use-wheel --wheel-dir=$HOME/.cache/pip/wheels numpy
+ - travis_wait pip wheel --find-links=$HOME/.cache/pip/wheels --use-wheel --wheel-dir=$HOME/.cache/pip/wheels scipy
+ - travis_wait pip wheel --find-links=$HOME/.cache/pip/wheels --use-wheel --wheel-dir=$HOME/.cache/pip/wheels pandas
+ # now install from it
+ - pip install --no-index --find-links=$HOME/.cache/pip/wheels numpy
+ - pip install --no-index --find-links=$HOME/.cache/pip/wheels scipy
+ - pip install --no-index --find-links=$HOME/.cache/pip/wheels pandas
+install:
+  - python setup.py install
+  - pip install coveralls
+script:
+  - python setup.py test
+  - python -m coverage run --source=./mupit -m unittest discover
 after_success:
- - Rscript -e 'covr::coveralls()'
+  - coveralls
