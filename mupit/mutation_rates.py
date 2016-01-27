@@ -26,23 +26,33 @@ import urllib
 
 import pandas
 
-def get_mutation_rates(url="http://www.nature.com/ng/journal/v46/n9/extref/ng.3050-S2.xls"):
+from mupit.gtf import convert_gtf
+from mupit.util import is_url
+
+def get_default_rates(rates_url="http://www.nature.com/ng/journal/v46/n9/extref/ng.3050-S2.xls",
+        gencode_url="ftp://ftp.sanger.ac.uk/pub/gencode/Gencode_human/release_19/gencode.v19.annotation.gtf.gz"):
     """ obtain the table of mutation rates from the Samocha et al paper
     
     Rates for all genes can be obtained from the supplementary material of
     Samocha et al. Nature Genetics 2014 doi:10.1038/ng.3050
     
     Args:
-        url: url to supplementary mutation rates table
+        rates_url: url to supplementary mutation rates table
+        gencode_url: url to gencode, or local path. This is required to identify
+            chromosomes for the genes in the rates data, since we need to know
+            the chromosome in order to corrrect rates on chromosome X.
     
     Returns:
         dataframe of mutation rates, with an extra column for summed lof rate
     """
     
-    temp = tempfile.NamedTemporaryFile()
-    # get a list of lof mutation rates per gene
-    urllib.urlretrieve(url, temp.name)
-    rates = pandas.read_excel(temp.name, sheetname="mutation_probabilities")
+    if is_url(rates_url):
+        temp = tempfile.NamedTemporaryFile()
+        # get a list of lof mutation rates per gene
+        urllib.urlretrieve(rates_url, temp.name)
+        rates_url = temp.name
+        
+    rates = pandas.read_excel(rates_url, sheetname="mutation_probabilities")
     
     # convert rates from log-scaled values, so we can later multiply by the
     # number of transmissions
@@ -51,7 +61,7 @@ def get_mutation_rates(url="http://www.nature.com/ng/journal/v46/n9/extref/ng.30
     
     # sort out the required columns and names.
     rates["hgnc"] = rates["gene"]
-    gencode = load_gencode()
+    gencode = load_gencode(gencode_url)
     recode = dict(zip(gencode["hgnc"], gencode["chrom"]))
     rates["chrom"] = rates["hgnc"].map(recode)
     
@@ -59,28 +69,31 @@ def get_mutation_rates(url="http://www.nature.com/ng/journal/v46/n9/extref/ng.30
     
     return rates
 
-def load_gencode(path="/nfs/users/nfs_j/jm33/apps/recessiveStats/data-raw/all_gencode_genes_v19.txt.gz"):
+def load_gencode(path):
     """ load gencode table with HGNC symbols and chromosome coordinates
     
     Args:
-        path: path to gzipped tab-separated table of gencode gene entries
+        path: path to gzipped tab-separated table of gencode gene entries. This
+            can be either a url, or local path.
     
     Returns:
         pandas dataframe of HGNC symbols and genome coordiantes
     """
     
-    gencode = pandas.read_table(path, compression="gzip")
+    gencode = convert_gtf(path)
     
     # restrict outselves to protein coding genes (or genes which are protein
     # coding in at least some individuals)
     gencode = gencode[gencode["gene_type"].isin(["protein_coding",
         "polymorphic_pseudogene"])]
     
-    # get the required column names, and strip out all unnecessary columns
-    gencode["hgnc"] = gencode["gene"]
-    gencode["chrom"] = [ x.strip("chr") for x in gencode["chr"].astype(str) ]
+    gencode = gencode[gencode["feature"] == "gene"]
     
-    gencode = gencode[["hgnc", "chrom", "start", "stop"]]
+    # get the required column names, and strip out all unnecessary columns
+    gencode["hgnc"] = gencode["gene_name"]
+    gencode["chrom"] = [ x.strip("chr") for x in gencode["seqname"].astype(str) ]
+    
+    gencode = gencode[["hgnc", "chrom", "start", "end"]].copy()
     
     return gencode
 
@@ -104,6 +117,9 @@ def get_expected_mutations(rates, male, female):
         a dataframe of mutation rates for genes under different mutation
         classes.
     """
+    
+    if rates is None:
+        rates = get_default_rates()
     
     autosomal = 2 * (male + female)
     
