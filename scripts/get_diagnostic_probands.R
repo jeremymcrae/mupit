@@ -239,6 +239,8 @@ get_ddd_diagnosed <- function(diagnosed_path, de_novo_path,
     likely_diagnostic = variants[(variants$hgnc %in% ddg2p$gene[ddg2p$dominant] |
         (variants$hgnc %in% ddg2p$gene[ddg2p$hemizygous] & variants$sex == "male"))
         & (variants$pp_dnm > 0.1 | is.na(variants$pp_dnm)), ]
+    
+    likely_diagnostic = likely_diagnostic[likely_diagnostic$consequence != "synonymous_variant", ]
     likely_diagnostic = likely_diagnostic[, c("person_id", "chrom", "start_pos",
         "end_pos", "ref_allele", "alt_allele", "hgnc", "inheritance", "type",
         "sex")]
