@@ -290,8 +290,14 @@ def get_ddd_diagnosed(diagnosed_path, de_novo_path, low_pp_dnm_validations_path,
         (variants["hgnc"].isin(hemizygous) & (variants["sex"] == "male")))
         & ((variants["pp_dnm"] > 0.1) | variants["pp_dnm"].isnull())]
     
-    # remove the synonymous variants
-    likely_diagnostic = likely_diagnostic[likely_diagnostic["consequence"] != "synonymous_variant"]
+    # define the sufficiently pathogenic consequences
+    permitted = ["missense_variant", "frameshift_variant", "stop_gained",
+        "splice_donor_variant", "splice_acceptor_variant", "inframe_deletion",
+         "conserved_exon_terminus_variant", "initiator_codon_variant",
+         "inframe_insertion"]
+    
+    # remove the nonfunctional variants
+    likely_diagnostic = likely_diagnostic[likely_diagnostic["consequence"].isin(permitted)]
     likely_diagnostic = likely_diagnostic[["person_id", "chrom", "start_pos",
         "end_pos", "ref_allele", "alt_allele", "hgnc", "inheritance", "type",
         "sex"]]
