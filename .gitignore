@@ -2,3 +2,8 @@
 results/
 data-raw/de_novo_datasets/
 data-raw/*.json
+build/
+dist/
+*.egg-info/
+*.pyc
+*__pycache__/
