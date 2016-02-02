@@ -24,7 +24,8 @@ import sys
 
 import pandas
 
-from mupit.open_ddd_data import standardise_ddd_de_novos, open_known_genes
+from mupit.open_ddd_data import standardise_ddd_de_novos, open_known_genes, \
+    get_ddd_rates
 from mupit.gene_enrichment import analyse_enrichment
 from mupit.write_json_probands import write_probands_by_gene
 
@@ -258,29 +259,9 @@ def open_external_variants(meta_variants, meta_subset, diagnosed_path, known_gen
     
     return variants
 
-def get_rates_dataset(rates_path):
-    """
-    """
-    
-    rates = pandas.read_table(rates_path, sep="\t")
-    
-    # convert from my column names to those used when estimating the gene
-    # mutation rates given the cohort size
-    rates["hgnc"] =  rates["transcript_id"]
-    rates["mis"] = 10 ** rates["missense_rate"]
-    rates["non"] = 10 ** rates["nonsense_rate"]
-    rates["splice_site"] = 10 ** rates["splice_lof_rate"]
-    rates["syn"] = 10 ** rates["synonymous_rate"]
-    rates["frameshift"] = 10 ** rates["frameshift_rate"]
-    
-    rates = rates[["hgnc", "chrom", "length", "mis", "non", "splice_site",
-        "syn", "frameshift"]]
-    
-    return rates
-
 def main():
     args = get_options()
-    rates = get_rates_dataset(args.rates)
+    rates = get_ddd_rates(args.rates)
     
     # analyse the de novos
     trios = count_trios(args.families, args.trios, args.diagnosed,

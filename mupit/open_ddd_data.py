@@ -91,3 +91,30 @@ def open_known_genes(path):
     genes["hemizygous"] = genes["mode"] == "Hemizygous"
     
     return genes
+
+def get_ddd_rates(rates_path):
+    """ load DDD mutation rates, and rename columns to match Samocha et al.
+    
+    Args:
+        rates_path: path to table of mutation rates.
+    
+    Returns:
+        pandas dataframe of mutation rates per gene, across different consequence
+        types.
+    """
+    
+    rates = pandas.read_table(rates_path, sep="\t")
+    
+    # convert from my column names to those used when estimating the gene
+    # mutation rates given the cohort size
+    rates["hgnc"] =  rates["transcript_id"]
+    rates["mis"] = 10 ** rates["missense_rate"]
+    rates["non"] = 10 ** rates["nonsense_rate"]
+    rates["splice_site"] = 10 ** rates["splice_lof_rate"]
+    rates["syn"] = 10 ** rates["synonymous_rate"]
+    rates["frameshift"] = 10 ** rates["frameshift_rate"]
+    
+    rates = rates[["hgnc", "chrom", "length", "mis", "non", "splice_site",
+        "syn", "frameshift"]]
+    
+    return rates
