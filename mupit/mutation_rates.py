@@ -203,10 +203,11 @@ def adjust_indel_rates(expected):
         the rates data frame, with adjusted indel rates.
     """
     
-    # I think the following numbers were derived from the DDD dataset
-    valid_nonsense = 102
-    valid_frameshift = 95
-    ddd_ratio = valid_frameshift / valid_nonsense
+    # the following numbers were derived from the DDD 4K dataset, using candidates with
+    # pp_dnm > 0.9, or with pp_dnm == NA (for GATK-only derived candidates).
+    nonsense_n = 341
+    frameshift_n = 480
+    ddd_ratio = frameshift_n / nonsense_n
     samocha_ratio = 1.25  # Nature Genetics 46:944-950 frameshift to nonsense ratio
     
     # correct back from using the Samocha et al. ratio
