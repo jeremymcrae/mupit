@@ -35,8 +35,8 @@ def standardise_ddd_de_novos(path):
     variants = pandas.read_table(path, sep="\t")
     
     # standardise the SNV or INDEL flag
-    variants["type"] = "indel"
-    variants["type"][variants["var_type"] == "DENOVO-SNP"] = "snv"
+    variants["type"] = variants["var_type"].map({"DENOVO-SNP": "snv",
+        "DENOVO-INDEL": "indel"})
     
     # standardise the columns, and column names
     variants["person_id"] = variants["person_stable_id"]
@@ -52,12 +52,11 @@ def standardise_ddd_de_novos(path):
     variants["study_phenotype"] = "developmental_disorders"
     
     # standardise the sex codes
-    variants["sex"][variants["sex"] == "M"] = "male"
-    variants["sex"][variants["sex"] == "F"] = "female"
+    variants["sex"] = variants["sex"].map({"M": "male", "F": "female"})
     
     variants = variants[["person_id", "sex", "chrom", "start_pos",
         "end_pos", "ref_allele", "alt_allele", "hgnc", "consequence",
-        "study_code", "publication_doi", "study_phenotype", "type"]]
+        "study_code", "publication_doi", "study_phenotype", "type"]].copy()
     
     return variants
 
@@ -115,6 +114,6 @@ def get_ddd_rates(rates_path):
     rates["frameshift"] = 10 ** rates["frameshift_rate"]
     
     rates = rates[["hgnc", "chrom", "length", "mis", "non", "splice_site",
-        "syn", "frameshift"]]
+        "syn", "frameshift"]].copy()
     
-    return rates
+    return
