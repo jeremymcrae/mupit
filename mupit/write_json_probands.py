@@ -19,9 +19,10 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
+import os
 import json
 
-def write_probands_by_gene(de_novos, path):
+def write_probands_by_gene(de_novos, fp):
     """ Write a json-formatted list of probands per gene
     
     We want a correctly-formatted JSON list of probands per gene, for analysis
@@ -30,12 +31,15 @@ def write_probands_by_gene(de_novos, path):
     
     Args:
         de_novos: dataframe of de-novo mutations per proband
-        path: path to write the json data to.
+        fp: path or file handle to write the json data to.
     """
     
     probands_by_gene = {}
     for (gene, group) in de_novos.groupby("hgnc", sort=True):
         probands_by_gene[gene] = sorted(group["person_id"])
     
-    with open(path) as handle:
-        json.dumps(probands_by_gene, handle, indent=True)
+    try:
+        with open(fp, 'w') as handle:
+            json.dump(probands_by_gene, handle, indent=True)
+    except TypeError:
+        json.dump(probands_by_gene, fp, indent=True)
