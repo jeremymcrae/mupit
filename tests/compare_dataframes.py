@@ -49,7 +49,7 @@ class CompareTables(unittest.TestCase):
                 
                 # prepare a suitable diagnostic error message if the values are
                 #  not equal
-                if type(first_val) == str:
+                if type(first_val) == str or first_val is None or type(first_val) == numpy.bool_:
                     msg = "{} != {} at position {} in {}".format(first_val,
                         second_val, pos, column)
                 else:
