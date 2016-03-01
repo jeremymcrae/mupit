@@ -116,4 +116,4 @@ def get_ddd_rates(rates_path):
     rates = rates[["hgnc", "chrom", "length", "mis", "non", "splice_site",
         "syn", "frameshift"]].copy()
     
-    return
+    return rates
