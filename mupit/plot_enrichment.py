@@ -64,8 +64,8 @@ def plot_enrichment(enriched, num_tests, path, chrom="chrom", symbol="hgnc",
         enriched = enriched[~enriched[column].isnull()]
     
     # sort the table by genome coordinates
-    enriched = enriched.reset_index()
     enriched = enriched.sort([chrom, position])
+    enriched = enriched.reset_index()
     
     enriched["pos"] = adjust_coordinates(enriched, chrom, position)
     
@@ -97,14 +97,14 @@ def make_figure(enriched, num_tests, test, pdf, chrom="chrom", symbol="hgnc"):
     threshold = 0.01/num_tests
     
     # plot each chromosome one by one, in alternating colors
-    colors = ["lightblue", "darkblue"]
-    color = colors[0]
+    colors = {True: "lightblue", False: "darkblue"}
+    color = True
     for key in sorted(set(enriched[chrom])):
         points = enriched[enriched[chrom] == key]
         line2d = pyplot.plot(points["pos"], points["log10_p"],
             axes=ax, linestyle='None', marker="o", markeredgewidth=0,
-            markeredgecolor=color, markerfacecolor=color)
-        color = list(set(colors) - set([color]))[0]
+            markeredgecolor=colors[color], markerfacecolor=colors[color])
+        color = not color
     
     # expand the axis limits slightly
     xlim = ax.set_xlim([min(enriched["pos"]) * -0.03, max(enriched["pos"]) * 1.03])
