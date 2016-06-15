@@ -24,6 +24,7 @@ import math
 
 import numpy
 from pandas import DataFrame, Series, pivot_table, MultiIndex
+import pandas
 
 from mupit.count_de_novos import get_de_novo_counts, get_var_type, \
     tidy_count_data
@@ -126,12 +127,20 @@ class TestCountDeNovosPy(CompareTables):
             "feature_elongation", "regulatory_region_variant", \
             "feature_truncation", "intergenic_variant"]
         
-        # a dataframe with only nonfunctional consequences should raise an
-        # error, due to difficulties in counting rows
-        for cq in snv:
-            self.de_novos["consequence"] = cq
-            with self.assertRaises(KeyError):
+        if pandas.__version__ < '0.18.0':
+            # a dataframe with only nonfunctional consequences should raise an
+            # error, due to difficulties in counting rows
+            for cq in snv:
+                self.de_novos["consequence"] = cq
+                with self.assertRaises(KeyError):
+                    computed = get_de_novo_counts(self.de_novos)
+        else:
+            expected = DataFrame(columns=['hgnc', 'chrom', 'start_pos',
+                'lof_indel', 'lof_snv', 'missense_indel', 'missense_snv'])
+            for cq in snv:
+                self.de_novos["consequence"] = cq
                 computed = get_de_novo_counts(self.de_novos)
+                self.compare_tables(computed, expected)
         
         # add a functional variant to the dataframe, so that the counting
         # doesn't raise an error
@@ -229,5 +238,3 @@ class TestCountDeNovosPy(CompareTables):
             self.expected[col] = numpy.nan
         
         self.compare_tables(tidy_count_data(counts, self.de_novos), self.expected)
-        
-        
