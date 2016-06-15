@@ -51,9 +51,11 @@ def get_de_novo_counts(de_novos):
     
     # count the number of de novos for each type/consequence combination
     if pandas.__version__ < "0.14.0":
+        print(pandas.__version__)
         counts = de_novos.pivot_table(values="person_id", rows=["hgnc"],
             cols=["consequence", "type"], aggfunc=len, fill_value=0)
     else:
+        print(pandas.__version__)
         counts = de_novos.pivot_table(values="person_id", index=["hgnc"],
             columns=["consequence", "type"], aggfunc=len, fill_value=0)
     
