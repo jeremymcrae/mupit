@@ -16,12 +16,12 @@ mutations from [Kryukov et al. 2007](http://dx.doi.org/10.1086%2F513473).
 
 #### Install
 ```sh
-pip install git+git://github.com/jeremymcrae/muput.git --user
+pip install git+git://github.com/jeremymcrae/mupit.git --user
 
 # Alternatively:
 git clone https://github.com/jeremymcrae/mupit.git
 cd mupit
-python setup install --user
+python setup.py install --user
 ```
 
 #### Usage (in python):
