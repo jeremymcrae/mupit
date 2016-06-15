@@ -278,7 +278,7 @@ def main():
     # and write a list of probands with de novos per gene to a file. This is
     # for HPO similarity testing, so can only be used with DDD samples, since we
     # only have HPO phenotypes available for those individuals.
-    if args.external_cohorts is not None and args.out_probands_by_gene is not None:
+    if args.external_cohorts is None and args.out_probands_by_gene is not None:
         write_probands_by_gene(de_novos, args.out_probands_by_gene)
     
     if args.out_clustering is not None:
