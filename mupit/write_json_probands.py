@@ -22,7 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import os
 import json
 
-from constants import LOF_CQ, MISSENSE_CQ
+from mupit.constants import LOF_CQ, MISSENSE_CQ
 
 def write_probands_by_gene(de_novos, fp):
     """ Write a json-formatted list of probands per gene
