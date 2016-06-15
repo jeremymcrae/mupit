@@ -40,6 +40,8 @@ class TestWriteJsonProbands(unittest.TestCase):
         self.de_novos = DataFrame({
             "hgnc": ["ARID1B", "ARID1B", "AMELX"],
             "person_id": ["id_1", "id_2", "id_1"],
+            "consequence": ["missense_variant", "missense_variant",
+                "missense_variant"],
             })
     
     def tearDown(self):
@@ -57,6 +59,22 @@ class TestWriteJsonProbands(unittest.TestCase):
         with open(self.path) as handle:
             self.assertEqual(json.load(handle),
                 {'ARID1B': ['id_1', 'id_2'], 'AMELX': ['id_1']})
+    
+    def test_write_probands_removing_nonfunctional(self):
+        """ check that variants that don't alter protein sequence are removed
+        """
+        
+        de_novos = DataFrame({
+            "hgnc": ["ARID1B", "ARID1B", "AMELX"],
+            "person_id": ["id_1", "id_2", "id_1"],
+            "consequence": ["missense_variant", "synonymous_variant",
+                "missense_variant"],
+            })
+        
+        write_probands_by_gene(de_novos, self.path)
+        with open(self.path) as handle:
+            self.assertEqual(json.load(handle),
+                {'ARID1B': ['id_1'], 'AMELX': ['id_1']})
     
     def test_write_probands_by_gene_with_handle(self):
         """ check that we can pass a file handle into the json writing function

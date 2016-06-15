@@ -22,6 +22,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import os
 import json
 
+from constants import LOF_CQ, MISSENSE_CQ
+
 def write_probands_by_gene(de_novos, fp):
     """ Write a json-formatted list of probands per gene
     
@@ -33,6 +35,9 @@ def write_probands_by_gene(de_novos, fp):
         de_novos: dataframe of de-novo mutations per proband
         fp: path or file handle to write the json data to.
     """
+    
+    de_novos = de_novos.copy()
+    de_novos = de_novos[de_novos['consequence'].isin(LOF_CQ | MISSENSE_CQ)]
     
     probands_by_gene = {}
     for (gene, group) in de_novos.groupby("hgnc", sort=True):
