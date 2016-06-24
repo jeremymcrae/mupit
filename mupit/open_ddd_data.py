@@ -21,11 +21,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import pandas
 
-def standardise_ddd_de_novos(path):
+def standardise_ddd_de_novos(path, extra_columns=[]):
     """ get standardised de novo data for DDD study.
     
     Args:
         path: path to DDD de novo dataset
+        extra_columns: list of additional columns to retain (such as ['pp_dnm'])
     
     Returns:
         data frame of de novos, including gene symbol, functional consequence
@@ -35,8 +36,8 @@ def standardise_ddd_de_novos(path):
     variants = pandas.read_table(path, sep="\t")
     
     # standardise the SNV or INDEL flag
-    variants["type"] = variants["var_type"].map({"DENOVO-SNP": "snv",
-        "DENOVO-INDEL": "indel"})
+    variants["type"] = (variants["ref"].str.len() == 1) & (variants["alt"].str.len() == 1)
+    variants["type"] = variants["type"].map({True: "snv", False: "indel"})
     
     # standardise the columns, and column names
     variants["person_id"] = variants["person_stable_id"]
@@ -54,9 +55,12 @@ def standardise_ddd_de_novos(path):
     # standardise the sex codes
     variants["sex"] = variants["sex"].map({"M": "male", "F": "female"})
     
-    variants = variants[["person_id", "sex", "chrom", "start_pos",
-        "end_pos", "ref_allele", "alt_allele", "hgnc", "consequence",
-        "study_code", "publication_doi", "study_phenotype", "type"]].copy()
+    columns = ["person_id", "sex", "chrom", "start_pos", "end_pos", "ref_allele",
+        "alt_allele", "hgnc", "consequence", "study_code", "publication_doi",
+        "study_phenotype", "type"]
+    columns += extra_columns
+    
+    variants = variants[columns].copy()
     
     return variants
 
