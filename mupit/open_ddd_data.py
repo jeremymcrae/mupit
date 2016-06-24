@@ -19,6 +19,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
+import math
 import pandas
 
 def standardise_ddd_de_novos(path, extra_columns=[]):
@@ -82,10 +83,18 @@ def open_known_genes(path):
         sep = "|"
     
     genes = pandas.read_table(path, sep=sep, index_col=False)
-    if "ddg2p_status" in genes.columns:
-        genes = genes[genes["ddg2p_status"] != "Possible DD Gene"]
-    else:
-        genes = genes[genes["type"] != "Possible DD Gene"]
+    
+    genes = genes.rename(columns={'DDD.category': 'type',
+        'ddg2p_status': 'type', 'allelic.requirement': 'mode',
+        'mutation.consequence': 'mech'})
+    
+    genes = genes[~genes['type'].str.lower().isin(["possible dd gene"])]
+    
+    # clean up a few column values
+    genes['chr'] = genes['chr'].str.lstrip('chr')
+    
+    genes['mode'] = [ x[0].upper() + x[1:] if type(x) != float or not math.isnan(x) else None for x in genes['mode'] ]
+    genes['mech'] = [ x[0].upper() + x[1:] if type(x) != float or not math.isnan(x) else None for x in genes['mech'] ]
     
     if "gencode_gene_name" not in genes.columns:
         genes["gencode_gene_name"] = genes["gene"]
