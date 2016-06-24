@@ -24,7 +24,7 @@ from datetime import datetime
 
 import pandas
 
-from mupit.open_ddd_data import open_known_genes
+from mupit.open_ddd_data import open_known_genes, standardise_ddd_de_novos
 
 def get_options():
     """
@@ -197,24 +197,8 @@ def get_current_de_novos(path):
     """ load the current set of de novos to be analysed
     """
     
-    variants = pandas.read_table(path, sep="\t")
-    # standardise the SNV or INDEL flag
-    variants["type"] = "indel"
-    variants["type"][variants["var_type"] == "DENOVO-SNP"] = "snv"
-    
-    # standardise the columns, and column names
-    variants["person_id"] = variants["person_stable_id"]
-    variants["chrom"] = variants["chrom"].astype(str)
-    variants["start_pos"] = variants["pos"]
-    variants["ref_allele"] = variants["ref"]
-    variants["alt_allele"] = variants["alt"]
-    variants["end_pos"] = variants["start_pos"] + variants["ref_allele"].str.len() - 1
-    
-    variants["hgnc"] = variants["symbol"]
+    variants = standardise_ddd_de_novos(path, extra_columns=['pp_dnm'])
     variants["inheritance"] = "de_novo"
-    
-    variants["sex"] = variants["sex"].str.replace("M", "male")
-    variants["sex"] = variants["sex"].str.replace("F", "female")
     
     return variants
 
