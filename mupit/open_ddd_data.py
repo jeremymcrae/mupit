@@ -77,27 +77,19 @@ def open_known_genes(path):
     
     with open(path) as handle:
         header = handle.readline()
-    
-    sep = "\t"
-    if header.count("|") > 0:
-        sep = "|"
+        sep = '|' if header.count('|') > 0 else '\t'
     
     genes = pandas.read_table(path, sep=sep, index_col=False)
-    
     genes = genes.rename(columns={'DDD.category': 'type',
         'ddg2p_status': 'type', 'allelic.requirement': 'mode',
-        'mutation.consequence': 'mech'})
+        'mutation.consequence': 'mech', 'gencode_gene_name': 'gene'})
     
     genes = genes[~genes['type'].str.lower().isin(["possible dd gene"])]
     
     # clean up a few column values
     genes['chr'] = genes['chr'].str.lstrip('chr')
-    
-    genes['mode'] = [ x[0].upper() + x[1:] if type(x) != float or not math.isnan(x) else None for x in genes['mode'] ]
-    genes['mech'] = [ x[0].upper() + x[1:] if type(x) != float or not math.isnan(x) else None for x in genes['mech'] ]
-    
-    if "gencode_gene_name" not in genes.columns:
-        genes["gencode_gene_name"] = genes["gene"]
+    genes['mode'] = [ x[0].upper() + x[1:] if type(x) != float else None for x in genes['mode'] ]
+    genes['mech'] = [ x[0].upper() + x[1:] if type(x) != float else None for x in genes['mech'] ]
     
     genes["dominant"] = genes["mode"].isin(["Monoallelic", "X-linked dominant"])
     genes["hemizygous"] = genes["mode"] == "Hemizygous"

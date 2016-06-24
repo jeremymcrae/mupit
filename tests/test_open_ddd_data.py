@@ -42,7 +42,6 @@ class TestOpenDddData(CompareTables):
             'alt': ['T', 'GGG'],
             'symbol': ['TEMP1', 'TEMP2'],
             'consequence': ['missense_variant', 'frameshift_variant'],
-            'var_type': ['DENOVO-SNP', 'DENOVO-INDEL'],
         })
         
         expected = DataFrame({'person_id': ['id1', 'id2'],
@@ -74,16 +73,17 @@ class TestOpenDddData(CompareTables):
             'ddg2p_status': ['Confirmed DD Gene', 'Possible DD Gene'],
             'mode': ['Monoallelic', 'X-linked dominant'],
             'mech': ['loss-of-function', 'Activating'],
+            'chr': ['chr1', '1'],
             'start': [1000, 2000],
             'end': [1500, 2500],
         })
         
         expected = DataFrame({
-            'gencode_gene_name': ['TEMP1'],
             'gene': ['TEMP1'],
-            'ddg2p_status': ['Confirmed DD Gene'],
+            'type': ['Confirmed DD Gene'],
             'mode': ['Monoallelic'],
-            'mech': ['loss-of-function'],
+            'mech': ['Loss-of-function'],
+            'chr': ['1'],
             'start': [1000],
             'end': [1500],
             'dominant': [True],
@@ -109,15 +109,17 @@ class TestOpenDddData(CompareTables):
             'type': ['Confirmed DD Gene', 'Possible DD Gene'],
             'mode': ['Monoallelic', 'X-linked dominant'],
             'mech': ['loss-of-function', 'Activating'],
+            'chr': ['chr1', '1'],
             'start': [1000, 2000],
             'end': [1500, 2500],
         })
         
         expected = DataFrame({
-            'gencode_gene_name': ['TEMP1'],
+            'gene': ['TEMP1'],
             'type': ['Confirmed DD Gene'],
             'mode': ['Monoallelic'],
-            'mech': ['loss-of-function'],
+            'mech': ['Loss-of-function'],
+            'chr': ['1'],
             'start': [1000],
             'end': [1500],
             'dominant': [True],
