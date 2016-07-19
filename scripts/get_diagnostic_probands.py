@@ -83,8 +83,8 @@ def get_ddd_diagnostic_snvs(path):
     snvs["start_pos"] = snvs["position"]
     
     alleles = snvs["ref/alt_alleles"].str.split("/")
-    snvs["ref_allele"] = alleles.str.get(1)
-    snvs["alt_allele"] = alleles.str.get(2)
+    snvs["ref_allele"] = alleles.str.get(0)
+    snvs["alt_allele"] = alleles.str.get(1)
     snvs["end_pos"] = snvs["start_pos"] + snvs["ref_allele"].str.len() - 1
     
     snvs["hgnc"] = snvs["gene"]
