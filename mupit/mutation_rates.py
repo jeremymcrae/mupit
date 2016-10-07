@@ -157,13 +157,14 @@ def correct_for_x_chrom(expected, male_n, female_n):
         classes.
     """
     
-    # figure out the number of transmissions for autosomal, male and female
-    # transmissions
-    # TODO: why is male.transmissions equal to the number of females? Why is it
-    # TODO: not equal to the number of males?
+    # Calculate the number of transmissions for autosomal, male and female
+    # transmissions. The number of transmissions from males is equal to the
+    # number of  female probands (since only females receive a chrX from their
+    # fathers). Likewise, all offspring receive a chrX from their mothers, so
+    # the number of transmissions from females equals the number of probands.
     autosomal = 2 * (male_n + female_n)
-    female = male_n + female_n
-    male = female_n
+    female_transmissions = male_n + female_n
+    male_transmissions = female_n
     
     # get scaling factors using the alpha from the most recent SFHS (Scottish
     # Family Health Study) phased de novo data.
@@ -174,7 +175,7 @@ def correct_for_x_chrom(expected, male_n, female_n):
     # correct the non-PAR chrX genes for fewer transmissions and lower rate
     # (dependent on alpha)
     chrX = expected["chrom"].isin(["X", "chrX"])
-    x_factor = ((male * male_factor) + (female * female_factor)) / autosomal
+    x_factor = ((male_transmissions * male_factor) + (female_transmissions * female_factor)) / autosomal
     x_factor = pandas.Series([x_factor] * len(chrX), index=expected.index)
     x_factor[~chrX] = 1
     
