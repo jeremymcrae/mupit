@@ -120,7 +120,7 @@ def make_figure(enriched, num_tests, test, pdf, chrom="chrom", symbol="hgnc"):
     
     annotate_plot(ax, ticks, sorted(set(enriched[chrom])))
     
-    pdf.savefig()
+    pdf.savefig(bbox_inches='tight', pad_inches=0, transparent=True)
 
 def annotate_plot(ax, ticks, chroms):
     """ annotate a manhattan plot with axis labels, tickmarks etc
@@ -135,7 +135,7 @@ def annotate_plot(ax, ticks, chroms):
     e = ax.spines['right'].set_visible(False)
     e = ax.spines['top'].set_visible(False)
     e = ax.spines['bottom'].set_visible(False)
-    e = ax.tick_params(direction='out')
+    e = ax.tick_params(direction='out', length=10, width=1.2, labelsize='large')
     
     # Only show ticks on the left and bottom spines
     e = ax.yaxis.set_ticks_position('left')
@@ -146,8 +146,8 @@ def annotate_plot(ax, ticks, chroms):
     e = ax.set_xticklabels(chroms)
     
     # define the axes labels
-    e = ax.set_xlabel("Chromosome")
-    e = ax.set_ylabel("-log10(P)")
+    e = ax.set_xlabel("Chromosome", fontsize='large')
+    e = ax.set_ylabel("-log10(P)", fontsize='large')
 
 def adjust_coordinates(coords, chrom="chrom", position="start_pos"):
     """ get sequential positions across successive chromosomes
