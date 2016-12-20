@@ -54,12 +54,8 @@ def combine_enrichment_and_clustering(enriched, clust):
     """
     
     # read in p values from clustering analysis, only for genes with >1 mutation
-    if pandas.__version__ < "0.14.0":
-        clust = pandas.pivot_table(clust, rows=["gene_id"],
-            cols=["mutation_category"], values="probability", aggfunc=numpy.mean)
-    else:
-        clust = pandas.pivot_table(clust, index=["gene_id"],
-            columns=["mutation_category"], values="probability", aggfunc=numpy.mean)
+    clust = pandas.pivot_table(clust, index=["gene_id"],
+        columns=["mutation_category"], values="probability", aggfunc=numpy.mean)
     
     clust["hgnc"] = list(clust.index)
     columns = ["missense", "nonsense"]
