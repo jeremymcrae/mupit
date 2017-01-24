@@ -10,7 +10,10 @@ from collections import defaultdict
 import gzip
 import re
 import tempfile
-import urllib
+try:
+    from urllib.request import urlretrieve
+except ImportError:
+    from urllib import urlretrieve
 
 import pandas
 
@@ -50,11 +53,12 @@ def lines(path):
     if is_url(path):
         # if the path refers to a URL, download the file first
         temp = tempfile.NamedTemporaryFile()
-        urllib.urlretrieve(path, temp.name)
+        urlretrieve(path, temp.name)
         path = temp.name
     
     with fn_open(path) as handle:
         for line in handle:
+            line = line.decode('utf8')
             if line.startswith('#'):
                 continue
             else:
