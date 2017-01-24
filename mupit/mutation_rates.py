@@ -46,12 +46,6 @@ def get_default_rates(rates_url="http://www.nature.com/ng/journal/v46/n9/extref/
         dataframe of mutation rates, with an extra column for summed lof rate
     """
     
-    if is_url(rates_url):
-        temp = tempfile.NamedTemporaryFile()
-        # get a list of lof mutation rates per gene
-        urllib.urlretrieve(rates_url, temp.name)
-        rates_url = temp.name
-        
     rates = pandas.read_excel(rates_url, sheetname="mutation_probabilities")
     
     # convert rates from log-scaled values, so we can later multiply by the
