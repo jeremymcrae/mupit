@@ -55,16 +55,16 @@ def plot_enrichment(enriched, num_tests, path, chrom="chrom", symbol="hgnc",
     enriched = enriched[[symbol, chrom, position] + p_columns].copy()
     
     # recode the sex chromosomes as integers
-    enriched[chrom] = enriched[chrom].astype(str)
-    enriched[chrom][enriched[chrom] == "X"] = "23"
-    enriched[chrom] = enriched[chrom].astype(int)
+    chroms = enriched[chrom].astype(str)
+    chroms[chroms == "X"] = "23"
+    enriched[chrom] = chroms.astype(int)
     
     # drop rows with missing values
     for column in enriched.columns:
         enriched = enriched[~enriched[column].isnull()]
     
     # sort the table by genome coordinates
-    enriched = enriched.sort([chrom, position])
+    enriched = enriched.sort_values([chrom, position])
     enriched = enriched.reset_index()
     
     enriched["pos"] = adjust_coordinates(enriched, chrom, position)
