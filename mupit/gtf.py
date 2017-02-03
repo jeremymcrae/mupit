@@ -61,6 +61,8 @@ def lines(path):
             line = line.decode('utf8')
             if line.startswith('#'):
                 continue
+            elif line.split('\t', 3)[2] != 'gene':
+                continue
             else:
                 yield parse(line)
 
