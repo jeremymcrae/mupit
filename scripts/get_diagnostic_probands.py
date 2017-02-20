@@ -137,11 +137,19 @@ def get_previous(path, families_path):
     snvs = get_ddd_diagnostic_snvs(path)
     other = get_other_diagnostic_variants(path)
     
+    # convert the coordinates to objects, so that we don't end up with floats
+    # when we combine with the 'other' diagnoses, since those have missing
+    # positions, and pandas can't have missing data in an integer column
+    snvs.start_pos = snvs.start_pos.astype('object')
+    cnvs.start_pos = cnvs.start_pos.astype('object')
+    snvs.end_pos = snvs.end_pos.astype('object')
+    cnvs.end_pos = cnvs.end_pos.astype('object')
+    
     diagnosed = pandas.concat([cnvs, snvs, other], axis=0, ignore_index=True)
     diagnosed["chrom"] = diagnosed["chrom"].astype(str)
     
     # relabel the inheritance types
-    inheritance = diagnosed["inheritance"]
+    inheritance = diagnosed["inheritance"].copy()
     inheritance[inheritance.str.match("DNM") & ~inheritance.isnull()] = "de_novo"
     inheritance[inheritance.str.match("De novo constitutive") & ~inheritance.isnull()] = "de_novo"
     inheritance[inheritance.str.match("Maternal") & ~inheritance.isnull()] = "maternal"
@@ -178,7 +186,7 @@ def get_low_pp_dnm_validations(path):
     low_pp_dnm["chrom"] = low_pp_dnm["chrom"].astype(str)
     
     # recode the validation status codes to more understandable codes
-    status = low_pp_dnm["status"]
+    status = low_pp_dnm["status"].copy()
     status[status == "dnm"] = "de_novo"
     status[status == "dnm_low_alt"] = "de_novo"
     status[status == "fp"] = "false_positive"
