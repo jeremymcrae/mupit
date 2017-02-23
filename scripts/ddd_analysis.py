@@ -282,6 +282,7 @@ def main():
         write_probands_by_gene(de_novos, args.out_probands_by_gene)
     
     if args.out_clustering is not None:
+        de_novos['start_pos'] = de_novos['start_pos'].astype(int)
         # write the set of de novos for clustering analysis
         de_novos[["hgnc", "chrom", "start_pos", "consequence", "type"]].to_csv(
             args.out_clustering, sep="\t", index=False)
