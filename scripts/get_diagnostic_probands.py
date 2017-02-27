@@ -31,8 +31,11 @@ def get_options():
     """
     
     parser = argparse.ArgumentParser()
-    parser.add_argument("--ddd-1k-diagnoses", help="Path to DDD 1K diagnoses.",
+    parser.add_argument("--ddd-1k-diagnoses", help="Path to clinically reviewed diagnoses in the DDD 1K.",
         default="/nfs/ddd0/Data/datafreeze/1133trios_20131218/Diagnosis_Summary_1133_20140328.xlsx")
+    parser.add_argument("--updated-diagnoses",
+        help="Path to table of clinially reviewed diagnoses in the remainder.",
+        default="/lustre/scratch113/projects/ddd/users/jm33/de_novo_data/ddd.clinical_diagnoses.txt")
     parser.add_argument("--de-novos", help="Path to DDD de novo dataset.",
         default="/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_4k.ddd_only.2015-10-12.txt")
     parser.add_argument("--low-pp-dnm", help="Path to low PP_DNM validations.",
@@ -45,9 +48,7 @@ def get_options():
     parser.add_argument("--out", help="Path to output file.",
         default="/lustre/scratch113/projects/ddd/users/jm33/ddd_4k.diagnosed.{}.txt".format(datetime.today().strftime("%Y-%m-%d")))
         
-    args = parser.parse_args()
-    
-    return args
+    return parser.parse_args()
 
 def get_ddd_diagnostic_cnvs(path):
     """ load the CNVs
@@ -58,19 +59,17 @@ def get_ddd_diagnostic_cnvs(path):
     # redefine the columns we want from the CNVs table
     cnvs = reviewed_cnvs[reviewed_cnvs["Diagnostic?"] > 0].copy()
     cnvs["person_id"] = cnvs["DDDP_ID"]
-    cnvs["chrom"] = cnvs["Chr"]
-    cnvs["start_pos"] = cnvs["Start"]
-    cnvs["end_pos"] = cnvs["Stop"]
+    cnvs["chrom"] = cnvs["Chr"].astype(str)
+    cnvs["start_pos"] = cnvs["Start"].astype('object')
+    cnvs["end_pos"] = cnvs["Stop"].astype('object')
     cnvs["ref_allele"] = None
     cnvs["alt_allele"] = None
     cnvs["hgnc"] = None
     cnvs["inheritance"] = cnvs["Inheritance"]
     cnvs["type"] = "cnv"
     
-    cnvs = cnvs[["person_id", "chrom", "start_pos", "end_pos", "ref_allele",
+    return cnvs[["person_id", "chrom", "start_pos", "end_pos", "ref_allele",
         "alt_allele", "hgnc", "inheritance", "type"]]
-    
-    return cnvs
 
 def get_ddd_diagnostic_snvs(path):
     """ load the diagnostic SNVs
@@ -80,24 +79,24 @@ def get_ddd_diagnostic_snvs(path):
     snvs = reviewed_snvs[reviewed_snvs["DECISION"] == "Yes"].copy()
     
     snvs["person_id"] = snvs["proband"]
-    snvs["start_pos"] = snvs["position"]
+    snvs["start_pos"] = snvs["position"].astype('object')
+    snvs['chrom'] = snvs['chrom'].astype(str)
     
     alleles = snvs["ref/alt_alleles"].str.split("/")
     snvs["ref_allele"] = alleles.str.get(0)
     snvs["alt_allele"] = alleles.str.get(1)
     snvs["end_pos"] = snvs["start_pos"] + snvs["ref_allele"].str.len() - 1
+    snvs["end_pos"] = snvs["end_pos"].astype('object')
     
     snvs["hgnc"] = snvs["gene"]
     snvs.loc[:, "inheritance"] = snvs["inheritance (DECIPHER compatible)"]
     
     # determine the type of variant
-    snvs["type"] = "snv"
-    snvs["type"][(snvs["ref_allele"].str.len() > 1) | (snvs["alt_allele"].str.len() > 1)] = "indel"
+    is_indel = (snvs['ref_allele'].str.len() > 1) | (snvs['alt_allele'].str.len() > 1)
+    snvs['type'] = is_indel.map({True: 'indel', False: 'snv'})
     
-    snvs = snvs[["person_id", "chrom", "start_pos", "end_pos", "ref_allele",
-        "alt_allele", "hgnc", "inheritance", "type"]].copy()
-    
-    return snvs
+    return snvs[["person_id", "chrom", "start_pos", "end_pos", "ref_allele",
+        "alt_allele", "hgnc", "inheritance", "type"]]
 
 def get_other_diagnostic_variants(path):
     """ now load the other diagnostic variants
@@ -114,16 +113,43 @@ def get_other_diagnostic_variants(path):
     other["hgnc"] = None
     other["inheritance"] = None
     
-    other["type"] = other["type"].str.replace("Mosaicism", "mosaic_cnv")
-    other["type"] = other["type"].str.replace("UPD", "uniparental_disomy")
+    other['chrom'] = other['chrom'].astype(str)
+    other['start_pos'] = other['start_pos'].astype('object')
+    other['end_pos'] = other['end_pos'].astype('object')
     
-    other = other[["person_id", "chrom", "start_pos", "end_pos", "ref_allele",
+    recode = {"Mosaicism": "mosaic_cnv", "UPD": "uniparental_disomy"}
+    other["type"] = other["type"].map(recode)
+    
+    return other[["person_id", "chrom", "start_pos", "end_pos", "ref_allele",
         "alt_allele", "hgnc", "inheritance", "type"]]
-    
-    return other
 
-def get_previous(path, families_path):
-    """ find diagnosed probands in the DDD study, to exclude them from our data
+def get_updated_diagnoses(path):
+    ''' load clinically reviewed diagnoses made in later DDD datafreezes
+    '''
+    
+    data = pandas.read_table(path)
+    
+    data['start_pos'] = data['pos'].astype('object')
+    data['end_pos'] = data["start_pos"] + data["ref_allele"].str.len() - 1
+    data['end_pos'] = data['end_pos'].astype('object')
+    data['hgnc'] = data['symbol']
+    data['chrom'] = data['chrom'].astype(str)
+    
+    # subset down to the variants which have been assessed as possibly or
+    # definitely pathogenic
+    required_patho = ['Definitely pathogenic', 'Probably pathogenic',
+        'Possibly pathogenic']
+    data = data[data['patho'].isin(required_patho)]
+    
+    # determine the type of variant
+    is_indel = (data['ref_allele'].str.len() > 1) | (data['alt_allele'].str.len() > 1)
+    data['type'] = is_indel.map({True: 'indel', False: 'snv'})
+    
+    return data[["person_id", "chrom", "start_pos", "end_pos", "ref_allele",
+        "alt_allele", "hgnc", "inheritance", "type"]]
+
+def get_reviewed(path, families_path, updated_path):
+    """ find clinically reviewed diagnoses, to exclude probands from analyses
     
     Args:
         path: path to file defining diagnosed probands
@@ -136,37 +162,31 @@ def get_previous(path, families_path):
     cnvs = get_ddd_diagnostic_cnvs(path)
     snvs = get_ddd_diagnostic_snvs(path)
     other = get_other_diagnostic_variants(path)
+    updated = get_updated_diagnoses(updated_path)
     
-    # convert the coordinates to objects, so that we don't end up with floats
-    # when we combine with the 'other' diagnoses, since those have missing
-    # positions, and pandas can't have missing data in an integer column
-    snvs.start_pos = snvs.start_pos.astype('object')
-    cnvs.start_pos = cnvs.start_pos.astype('object')
-    snvs.end_pos = snvs.end_pos.astype('object')
-    cnvs.end_pos = cnvs.end_pos.astype('object')
+    diagnosed = pandas.concat([cnvs, snvs, other, updated], axis=0, ignore_index=True)
     
-    diagnosed = pandas.concat([cnvs, snvs, other], axis=0, ignore_index=True)
-    diagnosed["chrom"] = diagnosed["chrom"].astype(str)
+    # remove duplicate diagnoses
+    is_dup = diagnosed.duplicated(subset=['person_id', 'hgnc'], take_last=False)
+    diagnosed = diagnosed[~is_dup]
     
     # relabel the inheritance types
-    inheritance = diagnosed["inheritance"].copy()
-    inheritance[inheritance.str.match("DNM") & ~inheritance.isnull()] = "de_novo"
-    inheritance[inheritance.str.match("De novo constitutive") & ~inheritance.isnull()] = "de_novo"
-    inheritance[inheritance.str.match("Maternal") & ~inheritance.isnull()] = "maternal"
-    inheritance[inheritance.str.match("Biparental") & ~inheritance.isnull()] = "biparental"
-    inheritance[inheritance.str.match("[Pp]aternally inherited, constitutive in father") & ~inheritance.isnull()] = "paternal"
-    inheritance[inheritance.str.match("[Mm]aternally inherited, constitutive in mother") & ~inheritance.isnull()] = "maternal"
-    diagnosed["inheritance"] = inheritance
+    recode = {'DNM': 'de_novo',
+        'De novo constitutive': 'de_novo',
+        'Maternal': 'maternal',
+        'Biparental': 'Biparental',
+        '[Pp]aternally inherited, constitutive in father': 'paternal',
+        'Maternally inherited, mosaic in mother': 'de_novo',
+        'Paternally inherited, mosaic in father': 'de_novo',
+        'De novo mosaic': 'de_novo'}
+    diagnosed['inheritance'] = diagnosed['inheritance'].map(recode)
     
     # get the sex info for each proband
     families = pandas.read_table(families_path, sep="\t")
-    families = families[["individual_id", "sex"]].copy()
-    families.columns = ["person_id", "sex"]
+    families['sex'] = families['sex'].map({'M': 'male', 'F': 'female'})
+    recode = dict(zip(families['individual_id'], families['sex']))
     
-    families["sex"] = families["sex"].str.replace("M", "male")
-    families["sex"] = families["sex"].str.replace("F", "female")
-    
-    diagnosed = diagnosed.merge(families, how="left", on="person_id")
+    diagnosed['sex'] = diagnosed['person_id'].map(recode)
     
     return diagnosed
 
@@ -174,32 +194,16 @@ def get_low_pp_dnm_validations(path):
     """ load the validation data for candidates with low pp_dnm scores
     """
     
-    low_pp_dnm = pandas.read_excel(path, sheetname="Summary_Final_forDB")
+    data = pandas.read_excel(path, sheetname="Sheet1")
     
-    # only select the most useful columns
-    low_pp_dnm = low_pp_dnm[["ID", "CHR", "POS", "REF", "ALT", "TYPE",
-        "manual_score"]]
-        
-    low_pp_dnm.columns = ["person_id", "chrom", "start_pos", "ref_allele",
-        "alt_allele", "type", "status"]
+    data.rename(columns={'pos': 'start_pos'}, inplace=True)
     
-    low_pp_dnm["chrom"] = low_pp_dnm["chrom"].astype(str)
+    data["chrom"] = data["chrom"].astype(str)
+    is_indel = (data['ref_allele'].str.len() > 1) | (data['alt_allele'].str.len() > 1)
+    data['type'] = is_indel.map({True: 'indel', False: 'snv'})
     
-    # recode the validation status codes to more understandable codes
-    status = low_pp_dnm["status"].copy()
-    status[status == "dnm"] = "de_novo"
-    status[status == "dnm_low_alt"] = "de_novo"
-    status[status == "fp"] = "false_positive"
-    status[status == "inherited_pat"] = "inherited"
-    status[status == "p/u"] = "uncertain"
-    status[status == "unclear"] = "uncertain"
-    status[status == "parental_mosaic"] = "de_novo"
-    low_pp_dnm["status"] = status
-    
-    low_pp_dnm["type"][low_pp_dnm["type"] == "DENOVO-SNP"] = "snv"
-    low_pp_dnm["type"][low_pp_dnm["type"] == "DENOVO-INDEL"] = "indel"
-    
-    return low_pp_dnm
+    return data[["person_id", "chrom", "start_pos", "ref_allele",
+        "alt_allele", "type", "status"]]
 
 def get_current_de_novos(path):
     """ load the current set of de novos to be analysed
@@ -210,45 +214,31 @@ def get_current_de_novos(path):
     
     return variants
 
-def check_for_match(site, initial, pos=False):
+def check_for_match(site, initial):
     """ checks if a sites has a match in a previous dataset
     
     Some de novos in the current dataset were also present in a previous
     datafreeze. We need to remove these so as to not double count diagnostic
-    variants. Unfortunately, som sites have shifted location slightly such as
+    variants. Unfortunately, some sites have shifted location slightly such as
     indels, which can be difficult to locate.
     """
     
-    # set the missing match type dependent on whether we are looking for whether
-    # we have a match, or the matching position.
-    if pos:
-        no_match = None
-    else:
-        no_match = False
+    data = initial[(initial["person_id"] == site["person_id"])]
+    data = data[(data["chrom"] == site["chrom"]) & ~data["chrom"].isnull()]
     
-    vars = initial[(initial["person_id"] == site["person_id"])]
-    vars = vars[(vars["chrom"] == site["chrom"]) & ~vars["chrom"].isnull()]
+    if len(data) == 0:
+        return False
     
-    if len(vars) == 0:
-        return no_match
-    
-    delta = abs(vars["start_pos"] - site["start_pos"])
+    delta = abs(data["start_pos"] - site["start_pos"])
     
     if min(delta) > 20:
-        return no_match
+        return False
     
-    close = delta == min(delta)
-    
-    if sum(close) == 1:
-        if not pos:
-            return True
-        else:
-            return vars["start_pos"][close]
-    else:
-        return no_match
+    return sum(delta == min(delta)) == 1
 
-def get_ddd_diagnosed(diagnosed_path, de_novo_path, low_pp_dnm_validations_path,
-        known_genes_path, families_path, recessive_path):
+def get_diagnosed(diagnosed_path, updated_path, de_novo_path,
+        low_pp_dnm_validations_path, known_genes_path, families_path,
+        recessive_path):
     """ find probands likely to have diagnoses, to exclude them from our data
     
     Args:
@@ -258,7 +248,7 @@ def get_ddd_diagnosed(diagnosed_path, de_novo_path, low_pp_dnm_validations_path,
         A table of probands with diagnoses
     """
     
-    initial_diagnosed = get_previous(diagnosed_path, families_path)
+    initial_diagnosed = get_reviewed(diagnosed_path, families_path, updated_path)
     
     known_genes = open_known_genes(known_genes_path)
     variants = get_current_de_novos(de_novo_path)
@@ -311,8 +301,9 @@ def main():
     
     args = get_options()
     
-    diagnosed = get_ddd_diagnosed(args.ddd_1k_diagnoses, args.de_novos,
-        args.low_pp_dnm, args.known_genes, args.families, args.recessive_diagnoses)
+    diagnosed = get_diagnosed(args.ddd_1k_diagnoses, args.updated_diagnoses,
+        args.de_novos, args.low_pp_dnm, args.known_genes, args.families,
+        args.recessive_diagnoses)
     
     diagnosed.to_csv(args.out, sep="\t", na_rep="NA", index=False)
 
