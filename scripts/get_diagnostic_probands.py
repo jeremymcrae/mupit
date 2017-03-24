@@ -66,10 +66,11 @@ def get_ddd_diagnostic_cnvs(path):
     cnvs["alt_allele"] = None
     cnvs["hgnc"] = None
     cnvs["inheritance"] = cnvs["Inheritance"]
+    cnvs['confirmed'] = 'yes'
     cnvs["type"] = "cnv"
     
     return cnvs[["person_id", "chrom", "start_pos", "end_pos", "ref_allele",
-        "alt_allele", "hgnc", "inheritance", "type"]]
+        "alt_allele", "hgnc", "inheritance", "confirmed", "type"]]
 
 def get_ddd_diagnostic_snvs(path):
     """ load the diagnostic SNVs
@@ -90,13 +91,14 @@ def get_ddd_diagnostic_snvs(path):
     
     snvs["hgnc"] = snvs["gene"]
     snvs.loc[:, "inheritance"] = snvs["inheritance (DECIPHER compatible)"]
+    snvs['confirmed'] = 'yes'
     
     # determine the type of variant
     is_indel = (snvs['ref_allele'].str.len() > 1) | (snvs['alt_allele'].str.len() > 1)
     snvs['type'] = is_indel.map({True: 'indel', False: 'snv'})
     
     return snvs[["person_id", "chrom", "start_pos", "end_pos", "ref_allele",
-        "alt_allele", "hgnc", "inheritance", "type"]]
+        "alt_allele", "hgnc", "inheritance", "confirmed", "type"]]
 
 def get_other_diagnostic_variants(path):
     """ now load the other diagnostic variants
@@ -112,6 +114,7 @@ def get_other_diagnostic_variants(path):
     other["alt_allele"] = None
     other["hgnc"] = None
     other["inheritance"] = None
+    other['confirmed'] = 'yes'
     
     other['chrom'] = other['chrom'].astype(str)
     other['start_pos'] = other['start_pos'].astype('object')
@@ -121,7 +124,7 @@ def get_other_diagnostic_variants(path):
     other["type"] = other["type"].map(recode)
     
     return other[["person_id", "chrom", "start_pos", "end_pos", "ref_allele",
-        "alt_allele", "hgnc", "inheritance", "type"]]
+        "alt_allele", "hgnc", "inheritance", "confirmed", "type"]]
 
 def get_updated_diagnoses(path):
     ''' load clinically reviewed diagnoses made in later DDD datafreezes
@@ -140,13 +143,14 @@ def get_updated_diagnoses(path):
     required_patho = ['Definitely pathogenic', 'Probably pathogenic',
         'Possibly pathogenic']
     data = data[data['patho'].isin(required_patho)]
+    data['confirmed'] = 'yes'
     
     # determine the type of variant
     is_indel = (data['ref_allele'].str.len() > 1) | (data['alt_allele'].str.len() > 1)
     data['type'] = is_indel.map({True: 'indel', False: 'snv'})
     
     return data[["person_id", "chrom", "start_pos", "end_pos", "ref_allele",
-        "alt_allele", "hgnc", "inheritance", "type"]]
+        "alt_allele", "hgnc", "inheritance", "confirmed", "type"]]
 
 def get_reviewed(path, families_path, updated_path):
     """ find clinically reviewed diagnoses, to exclude probands from analyses
@@ -167,7 +171,7 @@ def get_reviewed(path, families_path, updated_path):
     diagnosed = pandas.concat([cnvs, snvs, other, updated], axis=0, ignore_index=True)
     
     # remove duplicate diagnoses
-    is_dup = diagnosed.duplicated(subset=['person_id', 'hgnc'], take_last=False)
+    is_dup = diagnosed.duplicated(subset=['person_id', 'hgnc'], keep='first')
     diagnosed = diagnosed[~is_dup]
     
     # relabel the inheritance types
@@ -188,7 +192,8 @@ def get_reviewed(path, families_path, updated_path):
     
     diagnosed['sex'] = diagnosed['person_id'].map(recode)
     
-    return diagnosed
+    return diagnosed[["person_id", "sex", "chrom", "start_pos", "end_pos",
+         "ref_allele", "alt_allele", "hgnc", "inheritance", "confirmed", "type"]]
 
 def get_low_pp_dnm_validations(path):
     """ load the validation data for candidates with low pp_dnm scores
@@ -211,8 +216,11 @@ def get_current_de_novos(path):
     
     variants = standardise_ddd_de_novos(path, extra_columns=['pp_dnm'])
     variants["inheritance"] = "de_novo"
+    variants['confirmed'] = "no"
     
-    return variants
+    return variants[["person_id", "sex", "chrom", "start_pos", "end_pos",
+         "ref_allele", "alt_allele", "hgnc", "inheritance", "confirmed", "type",
+         "consequence", "pp_dnm"]]
 
 def check_for_match(site, initial):
     """ checks if a sites has a match in a previous dataset
@@ -280,9 +288,8 @@ def get_diagnosed(diagnosed_path, updated_path, de_novo_path,
     
     # remove the nonfunctional variants
     likely_diagnostic = likely_diagnostic[likely_diagnostic["consequence"].isin(permitted)]
-    likely_diagnostic = likely_diagnostic[["person_id", "chrom", "start_pos",
-        "end_pos", "ref_allele", "alt_allele", "hgnc", "inheritance", "type",
-        "sex"]]
+    likely_diagnostic = likely_diagnostic[["person_id", "sex", "chrom", "start_pos",
+        "end_pos", "ref_allele", "alt_allele", "hgnc", "inheritance", "confirmed", "type"]]
     
     # remove the sites from the likely diagnoses that form part of a confirmed
     # diagnosis
