@@ -35,7 +35,7 @@ def get_options():
         default="/nfs/ddd0/Data/datafreeze/1133trios_20131218/Diagnosis_Summary_1133_20140328.xlsx")
     parser.add_argument("--updated-diagnoses",
         help="Path to table of clinially reviewed diagnoses in the remainder.",
-        default="/lustre/scratch113/projects/ddd/users/jm33/de_novo_data/ddd.clinical_diagnoses.txt")
+        default="/lustre/scratch113/projects/ddd/users/jm33/de_novo_data/ddd.reported_variants.txt")
     parser.add_argument("--de-novos", help="Path to DDD de novo dataset.",
         default="/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_4k.ddd_only.2015-10-12.txt")
     parser.add_argument("--low-pp-dnm", help="Path to low PP_DNM validations.",
@@ -132,22 +132,15 @@ def get_updated_diagnoses(path):
     
     data = pandas.read_table(path)
     
-    data['start_pos'] = data['pos'].astype('object')
-    data['end_pos'] = data["start_pos"] + data["ref_allele"].str.len() - 1
-    data['end_pos'] = data['end_pos'].astype('object')
+    data['start_pos'] = data['start'].astype('object')
+    data['end_pos'] = data['end'].astype('object')
     data['hgnc'] = data['symbol']
     data['chrom'] = data['chrom'].astype(str)
     
-    # subset down to the variants which have been assessed as possibly or
-    # definitely pathogenic
-    required_patho = ['Definitely pathogenic', 'Probably pathogenic',
-        'Possibly pathogenic']
-    data = data[data['patho'].isin(required_patho)]
+    # subset to the pathogenic variants
+    required = ['Definitely pathogenic', 'Likely pathogenic']
+    data = data[data['pathogenicity'].isin(required)]
     data['confirmed'] = 'yes'
-    
-    # determine the type of variant
-    is_indel = (data['ref_allele'].str.len() > 1) | (data['alt_allele'].str.len() > 1)
-    data['type'] = is_indel.map({True: 'indel', False: 'snv'})
     
     return data[["person_id", "chrom", "start_pos", "end_pos", "ref_allele",
         "alt_allele", "hgnc", "inheritance", "confirmed", "type"]]
@@ -177,12 +170,13 @@ def get_reviewed(path, families_path, updated_path):
     # relabel the inheritance types
     recode = {'DNM': 'de_novo',
         'De novo constitutive': 'de_novo',
+        'De novo mosaic': 'de_novo',
+        'Biparental': 'biparental',
         'Maternal': 'maternal',
-        'Biparental': 'Biparental',
         '[Pp]aternally inherited, constitutive in father': 'paternal',
+        '[Mm]aternally inherited, constitutive in mother ': 'maternal',
         'Maternally inherited, mosaic in mother': 'de_novo',
-        'Paternally inherited, mosaic in father': 'de_novo',
-        'De novo mosaic': 'de_novo'}
+        'Paternally inherited, mosaic in father': 'de_novo',}
     diagnosed['inheritance'] = diagnosed['inheritance'].map(recode)
     
     # get the sex info for each proband
