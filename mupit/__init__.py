@@ -1,3 +1,6 @@
+from pkg_resources import get_distribution
+
+__version__ = get_distribution('mupit').version
 
 # define the VEP consequence types for loss of function and missense variants
 LOF_CQ = set(["stop_gained", "splice_acceptor_variant", "splice_donor_variant",

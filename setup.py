@@ -23,7 +23,7 @@ from setuptools import setup
 
 setup(
     name = "mupit",
-    version = "0.3.0",
+    version = "0.4.0",
     author = "Jeremy McRae",
     author_email = "jeremy.mcrae@sanger.ac.uk",
     description = ("Tests for enrichment of de novo mutations within genes." \
