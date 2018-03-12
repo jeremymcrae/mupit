@@ -22,7 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import numpy
 import pandas
 
-from mupit import LOF_CQ, MISSENSE_CQ
+from mupit import LOF_CQ, MISSENSE_CQ, SYNONYMOUS_CQ
 
 def get_de_novo_counts(de_novos):
     """ tallies the mutation types observed for each gene
@@ -44,8 +44,10 @@ def get_de_novo_counts(de_novos):
     consequence = de_novos["consequence"].copy()
     consequence[consequence.isin(LOF_CQ)] = "lof"
     consequence[consequence.isin(MISSENSE_CQ)] = "missense"
+    consequence[consequence.isin(SYNONYMOUS_CQ)] = "synonymous"
     de_novos["consequence"] = consequence
-    de_novos = de_novos[de_novos["consequence"].isin(["missense", "lof"])]
+    de_novos = de_novos[de_novos["consequence"].isin(["missense", "lof",
+        "synonymous"])]
     
     de_novos["type"] = get_var_type(de_novos)
     
@@ -102,7 +104,8 @@ def tidy_count_data(counts, de_novos):
     
     # make sure all the required count column are present in the table, so that
     # we can later refer to each of the columns
-    for col in ["lof_indel", "lof_snv", "missense_indel", "missense_snv"]:
+    for col in ["lof_indel", "lof_snv", "missense_indel", "missense_snv",
+            "synonymous_snv"]:
         if col not in counts.columns:
             counts[col] = 0
     
@@ -111,6 +114,6 @@ def tidy_count_data(counts, de_novos):
     
     # sort the columns to a standard order
     counts = counts[["hgnc", "chrom", "start_pos", "lof_indel", "lof_snv",
-        "missense_indel", "missense_snv"]]
+        "missense_indel", "missense_snv", "synonymous_snv"]]
     
     return counts

@@ -84,6 +84,7 @@ class TestGeneEnrichmentPy(CompareTables):
             'hgnc': ['KMT2A'], 'chrom': ['11'],
             'lof_indel': [0], 'lof_snv': [0],
             'missense_indel': [0], 'missense_snv': [1],
+            'synonymous_snv': [0],
             'p_func': [0.00894529269978444619], 'p_lof': [1.0],
             })
         

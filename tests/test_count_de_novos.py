@@ -55,7 +55,8 @@ class TestCountDeNovosPy(CompareTables):
             "lof_indel": [0],
             "lof_snv": [0],
             "missense_indel": [0],
-            "missense_snv": [0]
+            "missense_snv": [0],
+            "synonymous_snv": [0]
             })
     
     def test_get_de_novo_counts_missense(self):
@@ -111,13 +112,22 @@ class TestCountDeNovosPy(CompareTables):
             computed = get_de_novo_counts(self.de_novos)
             self.compare_tables(computed, self.expected)
     
+    def test_get_de_novo_counts_synonymous(self):
+        """ check the de novo counts for synonymous consequences
+        """
+        
+        self.expected["synonymous_snv"] = 1
+        self.de_novos["consequence"] = 'synonymous_variant'
+        computed = get_de_novo_counts(self.de_novos)
+        self.compare_tables(computed, self.expected)
+    
     def test_get_de_novo_counts_nonfunctional(self):
         """ check the de novo counts for nonfunctional consequence types
         """
         
         snv = ["transcript_ablation", "transcript_amplification", \
             "incomplete_terminal_codon_variant", "stop_retained_variant", \
-            "synonymous_variant", "mature_miRNA_variant", \
+            "mature_miRNA_variant", \
             "5_prime_UTR_variant", "3_prime_UTR_variant", \
             "non_coding_transcript_exon_variant", "intron_variant", \
             "NMD_transcript_variant", "non_coding_transcript_variant", \
@@ -136,7 +146,8 @@ class TestCountDeNovosPy(CompareTables):
                     computed = get_de_novo_counts(self.de_novos)
         else:
             expected = DataFrame(columns=['hgnc', 'chrom', 'start_pos',
-                'lof_indel', 'lof_snv', 'missense_indel', 'missense_snv'])
+                'lof_indel', 'lof_snv', 'missense_indel', 'missense_snv',
+                'synonymous_snv'])
             for cq in snv:
                 self.de_novos["consequence"] = cq
                 computed = get_de_novo_counts(self.de_novos)
