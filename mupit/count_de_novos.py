@@ -22,7 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import numpy
 import pandas
 
-from mupit.constants import LOF_CQ, MISSENSE_CQ
+from mupit import LOF_CQ, MISSENSE_CQ
 
 def get_de_novo_counts(de_novos):
     """ tallies the mutation types observed for each gene
