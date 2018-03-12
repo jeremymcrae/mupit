@@ -12,24 +12,10 @@ addons:
       - libatlas-base-dev
       - gfortran
 before_install:
- - mkdir -p $HOME/.cache/pip/wheels
- # build and install cython
- - travis_wait pip wheel --find-links=$HOME/.cache/pip/wheels --use-wheel --wheel-dir=$HOME/.cache/pip/wheels cython
- - pip install --no-index --find-links=$HOME/.cache/pip/wheels cython
-  # build wheel only if none present
- - travis_wait pip wheel --find-links=$HOME/.cache/pip/wheels --use-wheel --wheel-dir=$HOME/.cache/pip/wheels numpy
- - travis_wait pip wheel --find-links=$HOME/.cache/pip/wheels --use-wheel --wheel-dir=$HOME/.cache/pip/wheels scipy
- - travis_wait pip wheel --find-links=$HOME/.cache/pip/wheels --use-wheel --wheel-dir=$HOME/.cache/pip/wheels pandas
- - travis_wait pip wheel --find-links=$HOME/.cache/pip/wheels --use-wheel --wheel-dir=$HOME/.cache/pip/wheels matplotlib
- # now install from it
- - pip install --no-index --find-links=$HOME/.cache/pip/wheels numpy
-
- - pip install --no-index --find-links=$HOME/.cache/pip/wheels scipy
- - pip install --no-index --find-links=$HOME/.cache/pip/wheels pandas
- - pip install --no-index --find-links=$HOME/.cache/pip/wheels matplotlib
+ - pip install --upgrade pip setuptools wheel
+ - pip install --only-binary=all scipy cython numpy pandas matplotlib coveralls
 install:
   - python setup.py install
-  - pip install coveralls
 script:
   - python setup.py test
   - python -m coverage run --source=./mupit -m unittest discover
