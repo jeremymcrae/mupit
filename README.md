@@ -1,5 +1,4 @@
-[![Build Status](https://travis-ci.org/jeremymcrae/mupit.svg?branch=master)]
-(https://travis-ci.org/jeremymcrae/mupit)
+[![Build Status](https://travis-ci.org/jeremymcrae/mupit.svg?branch=master)](https://travis-ci.org/jeremymcrae/mupit)
 
 ### Mupit: de novo mutation recurrence significance testing
 program to calculate the significance of seeing N DNMs of a specific
