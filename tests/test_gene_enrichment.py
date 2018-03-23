@@ -118,6 +118,28 @@ class TestGeneEnrichmentPy(CompareTables):
         computed = test_enrich(self.expected, self.observed, func_columns)
         self.assertEqual(list(computed), [9.4599516119858809e-07, 6.7606180094051796e-02])
     
+    def test_enrich_missing_gene(self):
+        """ check the behaviour for genes with missing data
+        """
+        
+        # check if we lack mutation rates for a gene, we get P=NA
+        self.expected['lof_indel'] = [float('nan'), 0.01]
+        self.expected['lof_snv'] = [float('nan'), 0.005]
+        
+        lof_columns = ["lof_indel", "lof_snv"]
+        computed = test_enrich(self.expected, self.observed, lof_columns)
+        self.assertTrue(math.isnan(list(computed)[0]))
+        self.assertEqual(list(computed)[1], 1.0)
+        
+        # but if we have at least one mutation rate (for either SNV or indel),
+        # then we still compute a P-value
+        self.expected['lof_indel'] = [0.01, 0.01]
+        self.expected['lof_snv'] = [float('nan'), 0.005]
+        
+        lof_columns = ["lof_indel", "lof_snv"]
+        computed = test_enrich(self.expected, self.observed, lof_columns)
+        self.assertEqual(list(computed), [4.966791334026596e-05, 1.0])
+    
     def test_gene_enrichment(self):
         """ check that LoF and func P-value columns are added to the dataframe
         """
