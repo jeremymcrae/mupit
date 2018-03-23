@@ -25,6 +25,8 @@ from mupit.count_de_novos import get_de_novo_counts
 from mupit.mutation_rates import get_expected_mutations
 from mupit.plot_enrichment import plot_enrichment
 
+import pandas
+
 def analyse_enrichment(de_novos, trios, rates=None, plot_path=None):
     """ analyse whether de novo mutations are enriched in genes
     
@@ -104,9 +106,14 @@ def test_enrich(expected, observed, columns):
     
     enriched = observed.merge(expected, how="left", on=["hgnc", "chrom"])
     
+    # account for how different pandas versions sum series with only NA
+    kwargs = {}
+    if pandas.__version__ >= '0.22.0':
+        kwargs = {'min_count': 1}
+    
     # sum the observed and expected de novo mutations per gene
-    observed = enriched[columns].sum(axis=1)
-    expected = enriched[expected_columns].sum(axis=1)
+    observed = enriched[columns].sum(axis=1, **kwargs)
+    expected = enriched[expected_columns].sum(axis=1, **kwargs)
     
     # calculate the probability of getting the observed number of de novos,
     # given the expected rate of mutations.
