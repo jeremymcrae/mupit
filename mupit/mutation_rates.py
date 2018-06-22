@@ -119,9 +119,14 @@ def get_expected_mutations(rates, male, female):
     
     expected = rates[["hgnc", "chrom"]].copy()
     
+    # account for how different pandas versions sum series with only NA
+    kwargs = {}
+    if pandas.__version__ >= '0.22.0':
+        kwargs = {'min_count': 1}
+    
     # get the number of expected mutations, given the number of transmissions
     expected["lof_indel"] = rates["frameshift"] * autosomal
-    expected["lof_snv"] = (rates[["non", "splice_site"]].sum(axis=1, skipna=True)) * autosomal
+    expected["lof_snv"] = (rates[["non", "splice_site"]].sum(axis=1, skipna=True, **kwargs)) * autosomal
     expected["missense_indel"] = (rates["frameshift"] / 9) * autosomal
     expected["missense_snv"] = rates["mis"] * autosomal
     expected["synonymous_snv"] = rates["syn"] * autosomal
