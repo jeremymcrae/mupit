@@ -51,8 +51,10 @@ def get_de_novo_counts(de_novos):
     
     de_novos["type"] = get_var_type(de_novos)
     
+    gene_col = 'hgnc' if 'hgnc' in de_novos else 'symbol'
+    
     # count the number of de novos for each type/consequence combination
-    counts = de_novos.pivot_table(values="person_id", index=["hgnc"],
+    counts = de_novos.pivot_table(values="person_id", index=[gene_col],
         columns=["consequence", "type"], aggfunc=len, fill_value=0)
     
     counts = tidy_count_data(counts, de_novos)
@@ -95,12 +97,15 @@ def tidy_count_data(counts, de_novos):
     
     counts.columns = [ '_'.join(col).strip() for col in counts.columns.values ]
     
+    gene_col = 'hgnc' if 'hgnc' in de_novos else 'symbol'
+    pos_col = 'start_pos' if 'start_pos' in de_novos else 'pos'
+    
     # Get the genome coordinates of the de novos at the minimum position for
     # each gene. This is so we can make Manhattan plots of significance by
     # genome location.
-    counts["hgnc"] = list(counts.index)
-    counts["chrom"] = de_novos.groupby("hgnc")["chrom"].agg(min)
-    counts["start_pos"] = de_novos.groupby("hgnc")["start_pos"].agg(min)
+    counts[gene_col] = list(counts.index)
+    counts["chrom"] = de_novos.groupby(gene_col)["chrom"].agg(min)
+    counts["start_pos"] = de_novos.groupby(gene_col)[pos_col].agg(min)
     
     # make sure all the required count column are present in the table, so that
     # we can later refer to each of the columns
@@ -113,7 +118,7 @@ def tidy_count_data(counts, de_novos):
     counts = counts.reset_index(drop=True)
     
     # sort the columns to a standard order
-    counts = counts[["hgnc", "chrom", "start_pos", "lof_indel", "lof_snv",
+    counts = counts[[gene_col, "chrom", "start_pos", "lof_indel", "lof_snv",
         "missense_indel", "missense_snv", "synonymous_snv"]]
     
     return counts

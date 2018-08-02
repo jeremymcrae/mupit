@@ -104,6 +104,9 @@ def test_enrich(expected, observed, columns):
     rename = dict(zip(columns, expected_columns))
     expected = expected.rename(columns=rename)
     
+    if 'hgnc' not in observed:
+        observed['hgnc'] = observed['symbol']
+    
     enriched = observed.merge(expected, how="left", on=["hgnc", "chrom"])
     
     # account for how different pandas versions sum series with only NA
